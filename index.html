@@ -2,123 +2,504 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestor de Estudos</title>
+  <title>Gestão de Revisão por Questões & Flashcards</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-    .card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
-    h2 { margin-top: 0; font-size: 1.25rem; }
-    input, select, button { width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #fff; box-sizing: border-box; }
-    button { background: #2563eb; font-weight: 600; cursor: pointer; border: none; margin-top: 16px; }
-    button:hover { background: #1d4ed8; }
-    .flashcard { min-height: 140px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 1.1rem; cursor: pointer; background: #334155; border-radius: 8px; padding: 16px; }
-    .btn-group { display: flex; gap: 8px; margin-top: 12px; }
-    .btn-errar { background: #dc2626; }
-    .btn-acertar { background: #16a34a; }
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    .tab-btn-active { background-color: #4f46e5; color: #ffffff; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+    .tab-btn-inactive { color: #cbd5e1; }
+    .tab-btn-inactive:hover { background-color: #1e293b; color: #ffffff; }
+    .subtab-active { background-color: #0f172a; color: #ffffff; font-weight: 700; }
+    .subtab-inactive { background-color: #f1f5f9; color: #475569; font-weight: 600; }
+    .subtab-inactive:hover { background-color: #e2e8f0; color: #0f172a; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <!-- Aquecimento: Flashcards -->
-    <div class="card" id="card-area">
-      <h2>Aquecimento: Revisão Espaçada</h2>
-      <div id="flashcard" class="flashcard">Clique em "Iniciar" para carregar os cartões do dia</div>
-      <div class="btn-group" id="card-actions" style="display: none;">
-        <button class="btn-errar" onclick="responderCard(false)">Errei (Amanhã)</button>
-        <button class="btn-acertar" onclick="responderCard(true)">Acertei (+Intervalo)</button>
+<body class="min-h-screen flex flex-col">
+
+  <!-- HEADER E NAVEGAÇÃO -->
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-sm shadow">GR</div>
+        <div>
+          <h1 class="text-base font-bold leading-tight">Gestão de Estudos & Flashcards</h1>
+          <p class="text-[11px] text-slate-400">Banco de Dados Cloud Ultrarrápido | Sessão Micro (&ge; 80%) vs Macro | Revisão Espaçada Integrada</p>
+        </div>
       </div>
-      <button id="btn-iniciar" onclick="carregarCards()">Iniciar Revisão</button>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="exportarRelatorioCSV()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+          <span>Exportar Planilha (Excel/CSV)</span>
+        </button>
+        <button onclick="abrirModalTeoriaHoje()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition">
+          + Teoria Estudada
+        </button>
+        <button onclick="carregarSistema()" id="btnSync" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium transition">
+          Sincronizar
+        </button>
+      </div>
     </div>
 
-    <!-- Registo de Questões -->
-    <div class="card">
-      <h2>Registo da Bateria</h2>
-      <input type="text" id="materia" placeholder="Matéria (ex.: Dir. Constitucional)">
-      <input type="text" id="assunto" placeholder="Assunto (ex.: Direitos Fundamentais)">
-      <input type="number" id="total" placeholder="Total de questões feitas">
-      <input type="number" id="acertos" placeholder="Total de acertos">
-      <button onclick="salvarBateria()">Salvar Bateria</button>
-    </div>
+    <!-- NAVEGAÇÃO ENTRE ABAS -->
+    <nav class="max-w-7xl mx-auto px-4 py-2 flex items-center gap-1.5 overflow-x-auto text-xs">
+      <button onclick="irParaAba('painel')" id="nav-painel" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-active">Painel Principal</button>
+      <button onclick="irParaAba('flashcards')" id="nav-flashcards" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">
+        Flashcards (Aquecimento) <span id="badgeMenuCards" class="ml-1 px-1.5 py-0.2 rounded-full bg-indigo-500 text-white text-[10px] hidden">0</span>
+      </button>
+      <button onclick="irParaAba('registrar')" id="nav-registrar" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Registrar Questões</button>
+      <button onclick="irParaAba('ciclo')" id="nav-ciclo" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">
+        Ciclo de Estudos <span id="badgeMenuCiclo" class="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] hidden">0</span>
+      </button>
+      <button onclick="irParaAba('cadastros')" id="nav-cadastros" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Matérias e Tópicos</button>
+      <button onclick="irParaAba('estatisticas')" id="nav-estatisticas" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Estatísticas</button>
+      <button onclick="irParaAba('config')" id="nav-config" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Configurações</button>
+    </nav>
+  </header>
+
+  <!-- TOAST DE FEEDBACK -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden max-w-md bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center justify-between gap-3 text-xs">
+    <span id="toastTexto"></span>
+    <button onclick="document.getElementById('toast').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold">Fechar</button>
   </div>
 
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="max-w-7xl w-full mx-auto px-4 py-5 flex-1 space-y-5">
+
+    <!-- ABA 1: PAINEL PRINCIPAL -->
+    <section id="aba-painel" class="space-y-5">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Meta de Hoje (Micro)</span>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="pHojeResolvidas" class="text-2xl font-bold text-slate-900">0 / 100</span>
+            <span id="pHojePercMeta" class="text-xs font-bold text-indigo-600">0%</span>
+          </div>
+          <div class="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+            <div id="pBarraMetaHoje" class="h-full bg-indigo-600 transition-all" style="width:0%"></div>
+          </div>
+          <p id="pHojeAcertos" class="text-[11px] text-slate-500 mt-2">Acertos hoje: 0 (0%)</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Desempenho Acumulado (Macro)</span>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="pSemanaResolvidas" class="text-2xl font-bold text-slate-900">0 q.</span>
+            <span id="pDiasMetaBatida" class="text-xs font-bold text-emerald-600">Global: 0%</span>
+          </div>
+          <p id="pMetaSemanalTxt" class="text-[11px] text-slate-500 mt-2">Total de acertos históricos acumulados</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Fila Diária de Tópicos</span>
+          <div class="mt-1 flex items-baseline justify-between">
+            <span id="pRevHoje" class="text-2xl font-bold text-slate-900">0 pendentes</span>
+            <span id="pRevAtrasadasBadge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700">0 atrasadas</span>
+          </div>
+          <button onclick="reorganizarFilaDiaria()" class="mt-2 text-xs font-bold text-amber-600 hover:underline">Reorganizar Fila Diária</button>
+        </div>
+      </div>
+
+      <!-- LISTA DE TÓPICOS PROGRAMADOS PARA HOJE -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+          <h2 class="text-sm font-bold text-slate-800">Tópicos Programados para Hoje</h2>
+          <span class="text-[11px] text-slate-500">Aquecimento por Flashcards antes da Bateria de Questões</span>
+        </div>
+        <div id="listaHojePainel" class="p-4 space-y-3 text-xs"></div>
+      </div>
+    </section>
+
+    <!-- ABA 2: FLASHCARDS (SEU ANKI INTEGRADO) -->
+    <section id="aba-flashcards" class="hidden space-y-5">
+      <div class="max-w-2xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div class="flex items-center justify-between border-b pb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Sessão de Flashcards: Aquecimento da Memória</h2>
+            <p id="fcMateriaAssunto" class="text-xs text-indigo-600 font-semibold mt-0.5">Selecione ou inicie a revisão de um tópico</p>
+          </div>
+          <span id="fcContador" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold">0 / 0</span>
+        </div>
+
+        <div id="boxCardVisual" onclick="virarCard()" class="min-h-[180px] p-6 rounded-xl bg-slate-50 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-center cursor-pointer select-none transition hover:bg-slate-100">
+          <span id="fcLabelLado" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Frente (Pergunta)</span>
+          <div id="fcTextoCard" class="text-sm font-semibold text-slate-800">Nenhum cartão carregado para este tópico.</div>
+          <span class="text-[11px] text-slate-400 mt-4">(Clique no cartão para virar)</span>
+        </div>
+
+        <div id="botoesRespostaCard" class="hidden grid grid-cols-2 gap-3 pt-2">
+          <button onclick="responderFlashcard(false)" class="py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition">
+            Errei (Rever Amanhã)
+          </button>
+          <button onclick="responderFlashcard(true)" class="py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition">
+            Acertei (+Intervalo Espaçado)
+          </button>
+        </div>
+
+        <div class="border-t pt-4 flex items-center justify-between">
+          <button onclick="abrirModalNovoCard()" class="text-xs font-bold text-indigo-600 hover:underline">+ Criar Novo Flashcard Neste Tópico</button>
+          <button id="btnLiberarBateriaAposCards" onclick="irParaBateriaTopicoAtual()" class="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs">
+            Ir para a Bateria de Questões &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 3: REGISTRAR QUESTÕES -->
+    <section id="aba-registrar" class="hidden space-y-4">
+      <div class="max-w-xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4 text-xs">
+        <h2 class="text-sm font-bold text-slate-800 border-b pb-2">Registrar Bateria de Questões</h2>
+        <form id="formSessao" onsubmit="salvarBateriaSupabase(event)" class="space-y-4">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Matéria *</label>
+            <select id="sesMateria" required onchange="filtrarTopicosSelectSessao()" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Tópico *</label>
+            <select id="sesTopico" required class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white"></select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Total de Questões Feitas *</label>
+              <input type="number" id="sesTotal" min="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Acertos *</label>
+              <input type="number" id="sesAcertos" min="0" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow">
+            Salvar Desempenho e Atualizar Fila
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ABA 4: CICLO DE ESTUDOS -->
+    <section id="aba-ciclo" class="hidden space-y-4">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 text-xs">
+        <h2 class="text-sm font-bold text-slate-800 mb-3">Cronograma da Fila de Estudos</h2>
+        <div id="containerCicloPlanejado" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- ABA 5: MATÉRIAS E TÓPICOS -->
+    <section id="aba-cadastros" class="hidden space-y-4">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 text-xs max-w-xl mx-auto space-y-3">
+        <h2 class="text-sm font-bold text-slate-800 border-b pb-2">Cadastrar Matéria ou Tópico</h2>
+        <input type="text" id="cadNovoMateria" placeholder="Nome da Matéria (ex.: Direito Constitucional)" class="w-full rounded-lg border px-3 py-2">
+        <input type="text" id="cadNovoTopico" placeholder="Nome do Tópico (ex.: Controle de Constitucionalidade)" class="w-full rounded-lg border px-3 py-2">
+        <button onclick="cadastrarMateriaETopico()" class="w-full py-2 rounded-lg bg-indigo-600 text-white font-bold">Salvar no Banco</button>
+      </div>
+    </section>
+
+    <!-- ABA 6: ESTATÍSTICAS -->
+    <section id="aba-estatisticas" class="hidden space-y-4">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 text-xs">
+        <h2 class="text-sm font-bold text-slate-800 mb-3">Desempenho Geral</h2>
+        <div class="max-w-md mx-auto">
+          <canvas id="chartRoscaAcertosErros" height="200"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 7: CONFIGURAÇÕES -->
+    <section id="aba-config" class="hidden space-y-4">
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 text-xs max-w-md mx-auto space-y-3">
+        <h2 class="text-sm font-bold text-slate-800 border-b pb-2">Metas do Sistema</h2>
+        <div>
+          <label class="block font-semibold mb-1">Capacidade Diária de Tópicos</label>
+          <input type="number" id="cfgMaxTopicos" value="3" class="w-full rounded-lg border px-3 py-2">
+        </div>
+        <button onclick="notificar('Configuração atualizada.')" class="w-full py-2 rounded-lg bg-indigo-600 text-white font-bold">Salvar Metas</button>
+      </div>
+    </section>
+
+  </main>
+
   <script>
+    /* ==========================================================================
+     * CONEXÃO COM O SUPABASE (INSIRA SUAS CHAVES AQUI)
+     * ========================================================================== */
     const SUPABASE_URL = "COLE_AQUI_A_SUA_PROJECT_URL";
     const SUPABASE_KEY = "COLE_AQUI_A_SUA_PUBLISHABLE_KEY";
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let cards = [];
-    let cardAtual = 0;
-    let mostrandoVerso = false;
+    let ESTADO = { materias: [], topicos: [], sessoes: [], revisoes: [], cartoes: [] };
+    let topicoAtivoFlashcards = null;
+    let cardsDoTopico = [];
+    let indiceCardAtual = 0;
+    let cardLadoVerso = false;
 
-    async function carregarCards() {
-      const hoje = new Date().toISOString().split('T')[0];
-      const { data, error } = await _supabase.from('cartoes').select('*').lte('proxima_revisao', hoje);
-      if (error || !data || data.length === 0) {
-        document.getElementById('flashcard').innerText = "Nenhum cartão pendente para hoje!";
-        return;
-      }
-      cards = data;
-      cardAtual = 0;
-      exibirCard();
+    window.addEventListener('DOMContentLoaded', () => {
+      carregarSistema();
+    });
+
+    async function carregarSistema() {
+      const btn = document.getElementById('btnSync');
+      if (btn) btn.textContent = 'Carregando...';
+
+      const [resMat, resTop, resSes, resRev, resCard] = await Promise.all([
+        _supabase.from('materias').select('*').order('ordem'),
+        _supabase.from('topicos').select('*'),
+        _supabase.from('sessoes').select('*').order('data_sessao', { ascending: false }),
+        _supabase.from('revisoes').select('*'),
+        _supabase.from('cartoes').select('*')
+      ]);
+
+      ESTADO.materias = resMat.data || [];
+      ESTADO.topicos = resTop.data || [];
+      ESTADO.sessoes = resSes.data || [];
+      ESTADO.revisoes = resRev.data || [];
+      ESTADO.cartoes = resCard.data || [];
+
+      renderizarPainel();
+      popularSelects();
+      if (btn) btn.textContent = 'Sincronizar';
     }
 
-    function exibirCard() {
-      if (cardAtual >= cards.length) {
-        document.getElementById('flashcard').innerText = "Revisão concluída! Pronto para a bateria.";
-        document.getElementById('card-actions').style.display = 'none';
+    function irParaAba(aba) {
+      ['painel', 'flashcards', 'registrar', 'ciclo', 'cadastros', 'estatisticas', 'config'].forEach(a => {
+        const el = document.getElementById(`aba-${a}`);
+        const nav = document.getElementById(`nav-${a}`);
+        if (el) el.classList.toggle('hidden', a !== aba);
+        if (nav) nav.className = `px-3 py-1.5 rounded-lg whitespace-nowrap transition ${a === aba ? 'tab-btn-active' : 'tab-btn-inactive'}`;
+      });
+    }
+
+    function renderizarPainel() {
+      const hoje = new Date().toISOString().split('T')[0];
+      const sessoesHoje = ESTADO.sessoes.filter(s => s.data_sessao === hoje);
+      const resHoje = sessoesHoje.reduce((acc, s) => acc + s.resolvidas, 0);
+      const acHoje = sessoesHoje.reduce((acc, s) => acc + s.acertos, 0);
+
+      document.getElementById('pHojeResolvidas').textContent = `${resHoje} / 100`;
+      document.getElementById('pHojePercMeta').textContent = `${Math.min(100, Math.round((resHoje / 100) * 100))}%`;
+      document.getElementById('pBarraMetaHoje').style.width = `${Math.min(100, Math.round((resHoje / 100) * 100))}%`;
+      document.getElementById('pHojeAcertos').textContent = `Acertos hoje: ${acHoje} (${resHoje > 0 ? Math.round((acHoje / resHoje) * 100) : 0}%)`;
+
+      const revPendentes = ESTADO.revisoes.filter(r => r.data_prevista_atual <= hoje && r.status !== 'Concluída');
+      document.getElementById('pRevHoje').textContent = `${revPendentes.length} pendentes`;
+
+      const cont = document.getElementById('listaHojePainel');
+      if (revPendentes.length === 0) {
+        cont.innerHTML = '<p class="text-slate-500 py-4 text-center">Nenhum tópico pendente para hoje.</p>';
         return;
       }
-      mostrandoVerso = false;
-      document.getElementById('flashcard').innerText = cards[cardAtual].frente;
-      document.getElementById('flashcard').onclick = virarCard;
-      document.getElementById('btn-iniciar').style.display = 'none';
-      document.getElementById('card-actions').style.display = 'none';
+
+      cont.innerHTML = revPendentes.map(r => `
+        <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+          <div>
+            <span class="px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold uppercase">${r.materia}</span>
+            <div class="text-sm font-bold text-slate-900 mt-1">${r.topico}</div>
+            <div class="text-[11px] text-slate-500">Etapa ${r.etapa}/${r.total_etapas} | Previsto: ${r.data_prevista_atual}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="iniciarAquecimentoTopico('${r.id_topico}')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow">
+              Revisar Flashcards
+            </button>
+            <button onclick="atalhoBateria('${r.id_materia}', '${r.id_topico}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow">
+              Fazer Questões
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* ==========================================================================
+     * ROTINA DE FLASHCARDS INTEGRADA
+     * ========================================================================== */
+    function iniciarAquecimentoTopico(idTopico) {
+      const topico = ESTADO.topicos.find(t => t.id === idTopico);
+      if (!topico) return;
+
+      topicoAtivoFlashcards = topico;
+      cardsDoTopico = ESTADO.cartoes.filter(c => c.id_topico === idTopico);
+      indiceCardAtual = 0;
+      cardLadoVerso = false;
+
+      document.getElementById('fcMateriaAssunto').textContent = `${topico.materia} &bull; ${topico.topico}`;
+      irParaAba('flashcards');
+      exibirCardAtual();
+    }
+
+    function exibirCardAtual() {
+      const boxTexto = document.getElementById('fcTextoCard');
+      const boxLado = document.getElementById('fcLabelLado');
+      const boxBotoes = document.getElementById('botoesRespostaCard');
+      const contador = document.getElementById('fcContador');
+
+      if (cardsDoTopico.length === 0) {
+        boxTexto.textContent = "Nenhum cartão cadastrado neste tópico.";
+        boxLado.textContent = "Vazio";
+        boxBotoes.classList.add('hidden');
+        contador.textContent = "0 / 0";
+        return;
+      }
+
+      if (indiceCardAtual >= cardsDoTopico.length) {
+        boxTexto.textContent = "Aquecimento concluído! Todos os cartões foram revisados.";
+        boxLado.textContent = "Concluído";
+        boxBotoes.classList.add('hidden');
+        contador.textContent = `${cardsDoTopico.length} / ${cardsDoTopico.length}`;
+        return;
+      }
+
+      cardLadoVerso = false;
+      boxLado.textContent = "Frente (Pergunta)";
+      boxTexto.textContent = cardsDoTopico[indiceCardAtual].frente;
+      boxBotoes.classList.add('hidden');
+      contador.textContent = `${indiceCardAtual + 1} / ${cardsDoTopico.length}`;
     }
 
     function virarCard() {
-      if (!mostrandoVerso && cards[cardAtual]) {
-        document.getElementById('flashcard').innerText = cards[cardAtual].verso;
-        document.getElementById('card-actions').style.display = 'flex';
-        mostrandoVerso = true;
+      if (cardsDoTopico.length === 0 || indiceCardAtual >= cardsDoTopico.length) return;
+      cardLadoVerso = !cardLadoVerso;
+      const boxTexto = document.getElementById('fcTextoCard');
+      const boxLado = document.getElementById('fcLabelLado');
+      const boxBotoes = document.getElementById('botoesRespostaCard');
+
+      if (cardLadoVerso) {
+        boxLado.textContent = "Verso (Resposta / Memória)";
+        boxTexto.textContent = cardsDoTopico[indiceCardAtual].verso;
+        boxBotoes.classList.remove('hidden');
+      } else {
+        boxLado.textContent = "Frente (Pergunta)";
+        boxTexto.textContent = cardsDoTopico[indiceCardAtual].frente;
+        boxBotoes.classList.add('hidden');
       }
     }
 
-    async function responderCard(acertou) {
-      const c = cards[cardAtual];
-      let novoIntervalo = acertou ? Math.max(c.intervalo * 2, 2) : 1;
+    async function responderFlashcard(acertou) {
+      const card = cardsDoTopico[indiceCardAtual];
+      let novoIntervalo = acertou ? Math.max((card.intervalo || 1) * 2, 2) : 1;
       let prox = new Date();
       prox.setDate(prox.getDate() + novoIntervalo);
 
       await _supabase.from('cartoes').update({
         intervalo: novoIntervalo,
         proxima_revisao: prox.toISOString().split('T')[0]
-      }).eq('id', c.id);
+      }).eq('id', card.id);
 
-      cardAtual++;
-      exibirCard();
+      indiceCardAtual++;
+      exibirCardAtual();
     }
 
-    async function salvarBateria() {
-      const materia = document.getElementById('materia').value;
-      const assunto = document.getElementById('assunto').value;
-      const total = parseInt(document.getElementById('total').value);
-      const acertos = parseInt(document.getElementById('acertos').value);
-
-      if (!materia || isNaN(total) || isNaN(acertos)) {
-        alert("Preencha todos os campos da bateria.");
+    function irParaBateriaTopicoAtual() {
+      if (!topicoAtivoFlashcards) {
+        irParaAba('registrar');
         return;
       }
+      atalhoBateria(topicoAtivoFlashcards.id_materia, topicoAtivoFlashcards.id);
+    }
 
-      const { error } = await _supabase.from('baterias').insert([{ materia, assunto, total_questoes: total, acertos }]);
-      if (error) {
-        alert("Erro ao salvar: " + error.message);
-      } else {
-        alert("Bateria registrada com sucesso!");
-        document.getElementById('total').value = '';
-        document.getElementById('acertos').value = '';
+    function atalhoBateria(idMateria, idTopico) {
+      irParaAba('registrar');
+      document.getElementById('sesMateria').value = idMateria;
+      filtrarTopicosSelectSessao();
+      document.getElementById('sesTopico').value = idTopico;
+    }
+
+    async function salvarBateriaSupabase(e) {
+      e.preventDefault();
+      const idTopico = document.getElementById('sesTopico').value;
+      const total = Number(document.getElementById('sesTotal').value);
+      const acertos = Number(document.getElementById('sesAcertos').value);
+
+      const topico = ESTADO.topicos.find(t => t.id === idTopico);
+      if (!topico) return;
+
+      const erros = Math.max(0, total - acertos);
+      const aprov = Number(((acertos / total) * 100).toFixed(1));
+      const hoje = new Date().toISOString().split('T')[0];
+
+      await _supabase.from('sessoes').insert([{
+        id: 'SES_' + Date.now(),
+        data_sessao: hoje,
+        id_materia: topico.id_materia,
+        materia: topico.materia,
+        id_topico: topico.id,
+        topico: topico.topico,
+        resolvidas: total,
+        acertos,
+        erros,
+        aproveitamento: aprov
+      }]);
+
+      let dias = aprov >= 80 ? 3 : 1;
+      let proxData = new Date();
+      proxData.setDate(proxData.getDate() + dias);
+
+      await _supabase.from('revisoes').update({
+        status: 'Concluída',
+        data_conclusao: hoje
+      }).eq('id_topico', topico.id).eq('status', 'Programada');
+
+      await _supabase.from('revisoes').insert([{
+        id: 'REV_' + Date.now(),
+        id_materia: topico.id_materia,
+        materia: topico.materia,
+        id_topico: topico.id,
+        topico: topico.topico,
+        data_prevista_original: proxData.toISOString().split('T')[0],
+        data_prevista_atual: proxData.toISOString().split('T')[0],
+        etapa: aprov >= 80 ? 2 : 1,
+        status: 'Programada'
+      }]);
+
+      notificar('Bateria registrada com sucesso no banco de dados!');
+      document.getElementById('formSessao').reset();
+      carregarSistema();
+      irParaAba('painel');
+    }
+
+    /* ==========================================================================
+     * EXPORTAR PARA EXCEL (CSV COMPATÍVEL COM IMPRESSÃO)
+     * ========================================================================== */
+    function exportarRelatorioCSV() {
+      if (ESTADO.sessoes.length === 0) {
+        notificar('Nenhuma sessão para exportar.', true);
+        return;
       }
+      let csv = 'Data;Materia;Topico;Resolvidas;Acertos;Erros;Aproveitamento (%)\n';
+      ESTADO.sessoes.forEach(s => {
+        csv += `${s.data_sessao};${s.materia};${s.topico};${s.resolvidas};${s.acertos};${s.erros};${s.aproveitamento}%\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `relatorio_estudos_${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+    }
+
+    function popularSelects() {
+      const selMat = document.getElementById('sesMateria');
+      if (selMat) {
+        selMat.innerHTML = '<option value="">Selecione...</option>' +
+          ESTADO.materias.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+      }
+    }
+
+    function filtrarTopicosSelectSessao() {
+      const idMat = document.getElementById('sesMateria').value;
+      const selTop = document.getElementById('sesTopico');
+      const tops = ESTADO.topicos.filter(t => t.id_materia === idMat);
+      selTop.innerHTML = tops.map(t => `<option value="${t.id}">${t.topico}</option>`).join('');
+    }
+
+    function notificar(msg, erro = false) {
+      const el = document.getElementById('toast');
+      const txt = document.getElementById('toastTexto');
+      txt.textContent = msg;
+      el.className = `fixed bottom-5 right-5 z-50 max-w-md px-4 py-3 rounded-xl shadow-2xl border flex items-center justify-between gap-3 ${
+        erro ? 'bg-rose-900 text-white border-rose-700' : 'bg-slate-900 text-white border-slate-700'
+      }`;
+      el.classList.remove('hidden');
+      setTimeout(() => el.classList.add('hidden'), 4000);
     }
   </script>
 </body>
