@@ -1121,7 +1121,3662 @@
        BLOCO DE SCRIPT: COLE AQUI O CONTEÚDO INTEGRAL DA ETAPA 3
        ========================================================================== -->
   <script>
-    // A ETAPA 3 ENTRARÁ EXATAMENTE AQUI
+    /* ==========================================================================
+     * 1. CONFIGURAÇÃO E CONEXÃO SUPABASE (SA-EAST-1)
+     * ========================================================================== */
+    const DEFAULT_SUPABASE_URL = 'https://SUA-URL-DO-PROJETO.supabase.co';
+    const DEFAULT_SUPABASE_ANON_KEY = 'SUA-CHAVE-ANON-PUBLIC-AQUI';
+
+    let supabaseClient = null;
+    let ESTADO = null;
+    let filtroPeriodoCiclo = 'tudo';
+    let chartRoscaInstance = null;
+    let chartEvolucaoInstance = null;
+    let chartMateriasInstance = null;
+    let idArrastandoMateria = null;
+
+    function obterCredenciaisSupabase() {
+      const urlSalva = localStorage.getItem('GR_SUPABASE_URL');
+      const keySalva = localStorage.getItem('GR_SUPABASE_KEY');
+      return {
+        url: (urlSalva && urlSalva.trim()) ? urlSalva.trim() : DEFAULT_SUPABASE_URL,
+        key: (keySalva && keySalva.trim()) ? keySalva.trim() : DEFAULT_SUPABASE_ANON_KEY
+      };
+    }
+
+    function inicializarClienteSupabase() {
+      const { url, key } = obterCredenciaisSupabase();
+      const badge = document.getElementById('statusConexaoBadge');
+      if (!url || !key || url.includes('SUA-URL-DO-PROJETO') || key.includes('SUA-CHAVE-ANON')) {
+        if (badge) {
+          badge.textContent = '● Configurar Supabase';
+          badge.className = 'cursor-pointer px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700';
+        }
+        return null;
+      }
+      try {
+        supabaseClient = window.supabase.createClient(url, key, {
+          auth: { persistSession: false }
+        });
+        if (badge) {
+          badge.textContent = '● Supabase sa-east-1 Conectado';
+          badge.className = 'cursor-pointer px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-700/60';
+        }
+        return supabaseClient;
+      } catch (err) {
+        console.error('Erro ao inicializar Supabase:', err);
+        return null;
+      }
+    }
+
+    function abrirModalConexaoSupabase() {
+      const { url, key } = obterCredenciaisSupabase();
+      document.getElementById('inputSbUrl').value = url.includes('SUA-URL-DO-PROJETO') ? '' : url;
+      document.getElementById('inputSbKey').value = key.includes('SUA-CHAVE-ANON') ? '' : key;
+      document.getElementById('modalConexaoSupabase').classList.remove('hidden');
+    }
+
+    function fecharModalConexaoSupabase() {
+      document.getElementById('modalConexaoSupabase').classList.add('hidden');
+    }
+
+    async function salvarCredenciaisSupabaseModal(e) {
+      e.preventDefault();
+      const url = document.getElementById('inputSbUrl').value.trim();
+      const key = document.getElementById('inputSbKey').value.trim();
+      if (!url || !key) {
+        notificar('Preencha a URL e a API Key do Supabase.', true);
+        return;
+      }
+      localStorage.setItem('GR_SUPABASE_URL', url);
+      localStorage.setItem('GR_SUPABASE_KEY', key);
+      fecharModalConexaoSupabase();
+      inicializarClienteSupabase();
+      await carregarSistema();
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      Chart.defaults.color = '#94a3b8';
+      Chart.defaults.borderColor = '#1e293b';
+      const cli = inicializarClienteSupabase();
+      if (!cli) {
+        abrirModalConexaoSupabase();
+        notificar('Configure a URL e a Anon Key do seu projeto Supabase para carregar seus dados.', true);
+        return;
+      }
+      await carregarSistema();
+    });
+
+    /* ==========================================================================
+     * 2. UTILITÁRIOS DE DATA, ID E FORMATAÇÃO (MIGRADOS DO CODE.GS)
+     * ========================================================================== */
+    function gerarId_(prefixo) {
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      return `${prefixo}_${new Date().getTime()}_${rand}`;
+    }
+
+    function formatarDataYMD_(data) {
+      if (!data) return '';
+      if (typeof data === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.trim())) {
+        return data.trim();
+      }
+      const d = data instanceof Date ? data : new Date(data);
+      if (isNaN(d.getTime())) return '';
+      const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).formatToParts(d);
+      const y = partes.find(p => p.type === 'year').value;
+      const m = partes.find(p => p.type === 'month').value;
+      const day = partes.find(p => p.type === 'day').value;
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatarDataBR(ymdStr) {
+      if (!ymdStr || ymdStr === '-') return '—';
+      const partes = String(ymdStr).split('-');
+      if (partes.length !== 3) return String(ymdStr);
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    function formatarDataBR_(ymdStr) {
+      return formatarDataBR(ymdStr);
+    }
+
+    function parseDataYMD_(ymdStr) {
+      if (!ymdStr) return null;
+      const p = String(ymdStr).split('-').map(Number);
+      if (p.length !== 3 || isNaN(p[0])) return null;
+      return new Date(p[0], p[1] - 1, p[2], 12, 0, 0);
+    }
+
+    function diferencaDias_(ymdInicio, ymdFim) {
+      const d1 = parseDataYMD_(ymdInicio);
+      const d2 = parseDataYMD_(ymdFim);
+      if (!d1 || !d2) return 0;
+      return Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+    }
+
+    function somarDiasYMD_(ymdBase, dias) {
+      const d = parseDataYMD_(ymdBase);
+      if (!d) return ymdBase;
+      d.setDate(d.getDate() + Number(dias));
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function somarDiasLocal(ymd, dias) {
+      return somarDiasYMD_(ymd, dias);
+    }
+
+    function nomeDiaSemana_(ymdStr) {
+      const d = parseDataYMD_(ymdStr);
+      if (!d) return '';
+      const nomes = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+      return nomes[d.getDay()];
+    }
+
+    function obterEscalaIntervalos_(configStr) {
+      const padrao = [1, 3, 7, 15, 30];
+      if (!configStr) return padrao;
+      const arr = String(configStr)
+        .split(',')
+        .map(x => Number(x.trim()))
+        .filter(x => !isNaN(x) && x > 0);
+      return arr.length >= 5 ? arr.slice(0, 5) : padrao;
+    }
+
+    /* ==========================================================================
+     * 3. REGRAS DE NEGÓCIO E MOTOR DE REPETIÇÃO ESPAÇADA (FIEL AO CODE.GS)
+     * ========================================================================== */
+    function obterInfoFluxoExplicito_(topicoObj, etapaAtual, totalEtapas, metaAprov, tipoDataOrigem, escalaArr, intervaloReforco) {
+      const resolvidas = topicoObj ? topicoObj.resolvidasTotal : 0;
+      const aprovSessao = topicoObj && topicoObj.ultimoAproveitamentoSessao !== undefined
+        ? topicoObj.ultimoAproveitamentoSessao
+        : (topicoObj ? topicoObj.aproveitamento : 0);
+      const aprovAcumulado = topicoObj ? topicoObj.aproveitamento : 0;
+      const escala = escalaArr || [1, 3, 7, 15, 30];
+      const diasReforco = Number(intervaloReforco || 3);
+
+      if (resolvidas === 0) {
+        return {
+          codigoFluxo: 'POS_TEORIA',
+          prioridadeOrdem: 0,
+          prioridadeExplicita: 'Prioridade 1 (Maxima - 0 Questoes Respondidas)',
+          tituloFluxo: '1a BATERIA POS-TEORIA (0 Questoes Respondidas)',
+          fluxoNomeCurto: '1a Bateria Pos-Teoria',
+          situacaoCiclo: 'Primeira Bateria Pendente',
+          etapaLabel: 'Pre-Ciclo (1a Bateria)',
+          intervaloCalculo: 'Imediato (Dia Seguinte / +1 dia)',
+          intervaloDiasNum: 1,
+          corFluxo: 'indigo',
+          regraExplicita: 'Topico sem nenhuma questao respondida (0 resolvidas). Possui prioridade maxima sobre todas as revisoes para realizacao da 1a bateria.',
+          proximoPasso: 'Realizar 1a bateria -> Definir fluxo pela sessao (<80% ou >=80%)'
+        };
+      }
+
+      if (aprovSessao < metaAprov) {
+        const etapaRef = Math.min(Math.max(1, etapaAtual), totalEtapas);
+        return {
+          codigoFluxo: 'REFORCO_ABAIXO_80',
+          prioridadeOrdem: 1,
+          prioridadeExplicita: `Prioridade 2 (Reforco Curto - Sessao ${aprovSessao}% < ${metaAprov}%)`,
+          tituloFluxo: `FLUXO DE REFORCO CURTO (Sessao: ${aprovSessao}% | Acumulado: ${aprovAcumulado}%)`,
+          fluxoNomeCurto: 'Fluxo de Reforco Curto (<80%)',
+          situacaoCiclo: 'Revisao Programada',
+          etapaLabel: `Etapa ${etapaRef}/${totalEtapas} (Retida)`,
+          intervaloCalculo: `+${diasReforco} dias (Reforco Curto)`,
+          intervaloDiasNum: diasReforco,
+          corFluxo: 'rose',
+          regraExplicita: `Aproveitamento na ultima sessao foi de ${aprovSessao}% (abaixo da meta de ${metaAprov}% | Media acumulada: ${aprovAcumulado}%). Programado no Fluxo de Reforco Curto (+${diasReforco} dias), mantendo a Etapa ${etapaRef}/${totalEtapas} ate atingir >= ${metaAprov}% na sessao.`,
+          proximoPasso: `Repetir em +${diasReforco} dias (Mantem Etapa ${etapaRef}/${totalEtapas})`
+        };
+      }
+
+      const emConsolidacao = etapaAtual > totalEtapas || tipoDataOrigem === 'Consolidacao' || (topicoObj && topicoObj.bloco === 'Conteudos Consolidados' && etapaAtual >= totalEtapas);
+
+      if (emConsolidacao) {
+        return {
+          codigoFluxo: 'CONSOLIDACAO',
+          prioridadeOrdem: 3,
+          prioridadeExplicita: `Prioridade 4 (Consolidacao - Sessao ${aprovSessao}% >= ${metaAprov}%)`,
+          tituloFluxo: `CONSOLIDACAO (Sessao: ${aprovSessao}% | Acumulado: ${aprovAcumulado}%)`,
+          fluxoNomeCurto: 'Consolidacao (Ciclo Concluido)',
+          situacaoCiclo: 'Consolidacao',
+          etapaLabel: 'Consolidacao (Pos-Etapa 5)',
+          intervaloCalculo: '+15 dias (Manutencao Consolidada)',
+          intervaloDiasNum: 15,
+          corFluxo: 'teal',
+          regraExplicita: `Sequencia progressiva (${escala.join(', ')} dias) concluida com aproveitamento na sessao de ${aprovSessao}% (>= ${metaAprov}% | Media acumulada: ${aprovAcumulado}%). Topico em Consolidacao com revisoes a cada 15 dias.`,
+          proximoPasso: 'Revisao de consolidacao a cada +15 dias'
+        };
+      }
+
+      const etapaNorm = Math.min(Math.max(1, etapaAtual), totalEtapas);
+      const diasEtapaAtual = escala[etapaNorm - 1] || 1;
+      const proxEtapa = etapaNorm + 1;
+      const proxDias = proxEtapa <= totalEtapas ? (escala[proxEtapa - 1] || 30) : 15;
+
+      return {
+        codigoFluxo: 'PROGRESSAO_ACIMA_80',
+        prioridadeOrdem: 2,
+        prioridadeExplicita: `Prioridade 3 (Progressao Espacada - Etapa ${etapaNorm}/${totalEtapas} | Sessao ${aprovSessao}%)`,
+        tituloFluxo: `FLUXO DE PROGRESSAO ESPACADA (Sessao: ${aprovSessao}% | Acumulado: ${aprovAcumulado}%)`,
+        fluxoNomeCurto: 'Fluxo de Progressao Espacada (>=80%)',
+        situacaoCiclo: 'Revisao Programada',
+        etapaLabel: `Etapa ${etapaNorm}/${totalEtapas}`,
+        intervaloCalculo: `+${diasEtapaAtual} dia(s) (Escala: ${escala.join('->')}d)`,
+        intervaloDiasNum: diasEtapaAtual,
+        corFluxo: 'emerald',
+        regraExplicita: `Aproveitamento na ultima sessao foi de ${aprovSessao}% (>= ${metaAprov}% | Media acumulada: ${aprovAcumulado}%). Segue o Fluxo de Progressao Espacada (${escala.join(', ')} dias). Etapa atual: ${etapaNorm}/${totalEtapas} (+${diasEtapaAtual} dia(s)).`,
+        proximoPasso: proxEtapa <= totalEtapas ? `Avancar para Etapa ${proxEtapa}/${totalEtapas} (+${proxDias} dias)` : 'Entrar em Consolidacao (+15 dias)'
+      };
+    }
+
+    function redistribuirRevisoesPorCapacidade_(pendentes, concluidas, materias, limiteDiario, diasEstudoArr, hojeYMD, amanhaYMD, opcoes) {
+      const opts = opcoes || {};
+      const reorganizar = Boolean(opts.reorganizarFila);
+      const corrigirDeficit = Boolean(opts.corrigirDeficit);
+      const iniciarAmanha = Boolean(opts.iniciarAmanha);
+      const dataBaseReorganizacao = iniciarAmanha ? amanhaYMD : hojeYMD;
+
+      const mapaOrdem = {};
+      materias.forEach(m => { mapaOrdem[m.id] = m.ordem; });
+
+      const alocacaoPorData = {};
+      concluidas.forEach(r => {
+        if (r.dataConclusao === hojeYMD) {
+          alocacaoPorData[hojeYMD] = (alocacaoPorData[hojeYMD] || 0) + 1;
+        }
+      });
+
+      const encontrarProximoDiaComVaga = (dataMinimaYMD, permitirHojeMesmoForaDiaEstudo) => {
+        let d = parseDataYMD_(dataMinimaYMD) || parseDataYMD_(hojeYMD);
+        let iteracoes = 0;
+        while (iteracoes < 365) {
+          const sem = d.getDay();
+          const str = formatarDataYMD_(d);
+          const qtdAtual = alocacaoPorData[str] || 0;
+          const diaValido = diasEstudoArr.includes(sem) || (permitirHojeMesmoForaDiaEstudo && str === dataBaseReorganizacao);
+
+          if (diaValido && qtdAtual < limiteDiario) {
+            return str;
+          }
+          d.setDate(d.getDate() + 1);
+          iteracoes++;
+        }
+        return formatarDataYMD_(d);
+      };
+
+      if (reorganizar) {
+        const filaUnificada = pendentes.slice();
+
+        filaUnificada.sort((a, b) => {
+          const aAtrasado = a.resolvidasTotal > 0 && a.dataPrevistaAtual < hojeYMD;
+          const bAtrasado = b.resolvidasTotal > 0 && b.dataPrevistaAtual < hojeYMD;
+          if (aAtrasado !== bAtrasado) return aAtrasado ? -1 : 1;
+
+          const aHoje = a.dataPrevistaAtual === hojeYMD;
+          const bHoje = b.dataPrevistaAtual === hojeYMD;
+          if (aHoje !== bHoje) return aHoje ? -1 : 1;
+
+          if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) {
+            return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
+          }
+
+          if (a.dataPrevistaOriginal !== b.dataPrevistaOriginal) {
+            return a.dataPrevistaOriginal.localeCompare(b.dataPrevistaOriginal);
+          }
+
+          const ordA = mapaOrdem[a.idMateria] || 99;
+          const ordB = mapaOrdem[b.idMateria] || 99;
+          if (ordA !== ordB) return ordA - ordB;
+
+          return String(a.idTopico).localeCompare(String(b.idTopico));
+        });
+
+        filaUnificada.forEach(rev => {
+          rev.antecipadaHoje = false;
+          const eraAtrasado = rev.resolvidasTotal > 0 && rev.dataPrevistaAtual < hojeYMD;
+          const eraHoje = rev.dataPrevistaAtual === hojeYMD;
+
+          let dataMinima = rev.dataPrevistaOriginal;
+          if (eraAtrasado || eraHoje || corrigirDeficit || dataMinima < dataBaseReorganizacao) {
+            dataMinima = dataBaseReorganizacao;
+          } else if (rev.resolvidasTotal === 0 && dataMinima < amanhaYMD && !corrigirDeficit) {
+            dataMinima = amanhaYMD;
+          }
+
+          const dataAlocada = encontrarProximoDiaComVaga(dataMinima, true);
+          alocacaoPorData[dataAlocada] = (alocacaoPorData[dataAlocada] || 0) + 1;
+          rev.dataPrevistaAtual = dataAlocada;
+          rev.status = dataAlocada === hojeYMD ? 'Para Hoje' : 'Programada';
+
+          if (eraAtrasado) {
+            rev.motivoAgendamentoData = `Topico atrasado priorizado na reorganizacao para ${formatarDataBR_(dataAlocada)} (limite fixo de ${limiteDiario} topicos/dia).`;
+          } else if (rev.resolvidasTotal === 0) {
+            rev.motivoAgendamentoData = `Prioridade 1 (0 questoes respondidas). Alocado em ${formatarDataBR_(dataAlocada)} respeitando o limite de ${limiteDiario} topicos/dia.`;
+          } else if (dataAlocada !== rev.dataPrevistaOriginal) {
+            rev.motivoAgendamentoData = `Alocado em ${formatarDataBR_(dataAlocada)} para manter a meta diaria constante de ${limiteDiario} topicos/dia.`;
+          } else {
+            rev.motivoAgendamentoData = `Calculado: Estudo em ${formatarDataBR_(rev.dataOrigem)} + ${rev.intervaloCalculo} = ${formatarDataBR_(dataAlocada)}.`;
+          }
+        });
+
+        return;
+      }
+
+      // MODO ESTÁVEL (Preserva datas agendadas)
+      const paraAlocarNovo = [];
+
+      pendentes.forEach(rev => {
+        if (rev.antecipadaHoje) {
+          rev.dataPrevistaAtual = hojeYMD;
+          rev.status = 'Para Hoje';
+          rev.motivoAgendamentoData = `Antecipado manualmente para hoje (${formatarDataBR_(hojeYMD)}).`;
+          alocacaoPorData[hojeYMD] = (alocacaoPorData[hojeYMD] || 0) + 1;
+          return;
+        }
+
+        if (rev.jaPossuiaAgendamento && !rev.recemGerada) {
+          const dtFixa = rev.dataPrevistaAtual;
+          alocacaoPorData[dtFixa] = (alocacaoPorData[dtFixa] || 0) + 1;
+
+          if (dtFixa < hojeYMD) {
+            rev.status = 'Atrasada';
+            const diasAtraso = diferencaDias_(dtFixa, hojeYMD);
+            rev.motivoAgendamentoData = `Atividade atrasada ha ${diasAtraso} dia(s) (prevista para ${formatarDataBR_(dtFixa)}). Clique em Reorganizar Fila Diaria se desejar redistribuir.`;
+          } else if (dtFixa === hojeYMD) {
+            rev.status = 'Para Hoje';
+            rev.motivoAgendamentoData = `Agendado para hoje (${formatarDataBR_(dtFixa)}) conforme cronograma.`;
+          } else {
+            rev.status = 'Programada';
+            rev.motivoAgendamentoData = rev.dataPrevistaOriginal === dtFixa
+              ? `Calculado: Estudo em ${formatarDataBR_(rev.dataOrigem)} + ${rev.intervaloCalculo} = ${formatarDataBR_(dtFixa)}.`
+              : `Agendado no cronograma para ${formatarDataBR_(dtFixa)} (respeitando o limite de ${limiteDiario} topicos/dia).`;
+          }
+          return;
+        }
+
+        paraAlocarNovo.push(rev);
+      });
+
+      paraAlocarNovo.sort((a, b) => {
+        if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) {
+          return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
+        }
+        if (a.dataPrevistaOriginal !== b.dataPrevistaOriginal) {
+          return a.dataPrevistaOriginal.localeCompare(b.dataPrevistaOriginal);
+        }
+        const ordA = mapaOrdem[a.idMateria] || 99;
+        const ordB = mapaOrdem[b.idMateria] || 99;
+        if (ordA !== ordB) return ordA - ordB;
+        return String(a.idTopico).localeCompare(String(b.idTopico));
+      });
+
+      paraAlocarNovo.forEach(rev => {
+        let dataMinima = rev.dataPrevistaOriginal || amanhaYMD;
+        if (dataMinima < amanhaYMD) {
+          dataMinima = amanhaYMD;
+        }
+
+        const dataAlocada = encontrarProximoDiaComVaga(dataMinima, false);
+        alocacaoPorData[dataAlocada] = (alocacaoPorData[dataAlocada] || 0) + 1;
+        rev.dataPrevistaAtual = dataAlocada;
+        rev.status = dataAlocada === hojeYMD ? 'Para Hoje' : 'Programada';
+
+        if (dataAlocada === rev.dataPrevistaOriginal) {
+          rev.motivoAgendamentoData = `Calculado: Estudo em ${formatarDataBR_(rev.dataOrigem)} + ${rev.intervaloCalculo} = ${formatarDataBR_(dataAlocada)}.`;
+        } else {
+          rev.motivoAgendamentoData = `Data base (${formatarDataBR_(rev.dataPrevistaOriginal)}, intervalo ${rev.intervaloCalculo}) alocada em ${formatarDataBR_(dataAlocada)} respeitando o limite de ${limiteDiario} topicos/dia.`;
+        }
+      });
+    }
+
+    function construirCronogramaUnificado_(params) {
+      const {
+        hojeYMD, topicos, revisoes, revisoesPendentes, metaDiaria, capacidadeDiaria, minQuestoesMateria, diasEstudoArr
+      } = params;
+
+      const mapaTopicos = {};
+      topicos.forEach(t => { mapaTopicos[t.id] = t; });
+
+      const itensQuestoes = [];
+      const itensRevisoes = [];
+      const avisosCapacidade = [];
+      const gruposPorData = {};
+
+      revisoes.forEach(rv => {
+        let dtExibicao = rv.dataPrevistaAtual;
+        if (rv.status === 'Concluída') {
+          if (rv.dataConclusao !== hojeYMD) return;
+          dtExibicao = hojeYMD;
+        }
+        if (!gruposPorData[dtExibicao]) gruposPorData[dtExibicao] = [];
+        gruposPorData[dtExibicao].push(rv);
+      });
+
+      const datasOrdenadas = Object.keys(gruposPorData).sort();
+
+      datasOrdenadas.forEach(dt => {
+        const listaDia = gruposPorData[dt];
+        listaDia.sort((a, b) => {
+          const aConc = a.status === 'Concluída' ? 1 : 0;
+          const bConc = b.status === 'Concluída' ? 1 : 0;
+          if (aConc !== bConc) return aConc - bConc;
+
+          if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) {
+            return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
+          }
+          if ((a.ordemMateria || 99) !== (b.ordemMateria || 99)) {
+            return (a.ordemMateria || 99) - (b.ordemMateria || 99);
+          }
+          return String(a.idTopico).localeCompare(String(b.idTopico));
+        });
+
+        const qtdTopicosDia = Math.max(1, listaDia.length);
+        const quotaPadraoPorTopico = Math.max(minQuestoesMateria, Math.round(metaDiaria / qtdTopicosDia));
+
+        listaDia.forEach((rv, idxNoDia) => {
+          const tObj = mapaTopicos[rv.idTopico];
+          const disp = tObj && tObj.restantesRodada > 0 ? tObj.restantesRodada : quotaPadraoPorTopico;
+          const questoesSugeridas = Math.min(disp, quotaPadraoPorTopico);
+
+          let situacaoItem = 'Planejada';
+          if (rv.status === 'Concluída') {
+            situacaoItem = 'Realizada';
+          } else if (rv.status === 'Atrasada' || dt < hojeYMD) {
+            situacaoItem = 'Atrasada';
+          } else if (dt === hojeYMD) {
+            situacaoItem = rv.antecipadaHoje ? 'Antecipada para Hoje' : 'Pendente Hoje';
+          }
+
+          const itemUnificado = {
+            idRevisao: rv.id,
+            ordemNoDia: idxNoDia + 1,
+            dataPlanejada: dt,
+            diaSemana: nomeDiaSemana_(dt),
+            ordemMateria: rv.ordemMateria || (tObj ? tObj.ordemMateria : 99),
+            idMateria: rv.idMateria,
+            materia: rv.materia,
+            idTopico: rv.idTopico,
+            topico: rv.topico,
+            etapa: rv.etapa,
+            totalEtapas: rv.totalEtapas,
+            etapaLabel: rv.etapaLabel,
+            dataEstudoInicial: rv.dataEstudoInicial || (tObj ? tObj.primeiraDataEstudo : rv.dataOrigem),
+            dataOrigem: rv.dataOrigem,
+            dataPrevistaOriginal: rv.dataPrevistaOriginal,
+            tipoDataOrigem: rv.tipoDataOrigem,
+            questoesPlanejadas: questoesSugeridas,
+            ineditasRestantes: tObj ? tObj.restantesRodada : 0,
+            restantesRodadaAtual: tObj ? tObj.restantesRodada : 0,
+            totalBanco: tObj ? tObj.totalBanco : 0,
+            resolvidasRodada: tObj ? tObj.resolvidasRodada : 0,
+            resolvidasTotal: tObj ? tObj.resolvidasTotal : 0,
+            acertosTotal: tObj ? tObj.acertosTotal : 0,
+            errosTotal: tObj ? tObj.errosTotal : 0,
+            aproveitamento: tObj ? tObj.aproveitamentoAcumulado : 0,
+            aproveitamentoAcumulado: tObj ? tObj.aproveitamentoAcumulado : 0,
+            ultimoAproveitamentoSessao: tObj ? tObj.ultimoAproveitamentoSessao : 0,
+            ultimaSessaoResolvidas: tObj ? tObj.ultimaSessaoResolvidas : 0,
+            ultimaSessaoAcertos: tObj ? tObj.ultimaSessaoAcertos : 0,
+            ultimaSessaoErros: tObj ? tObj.ultimaSessaoErros : 0,
+            aproveitamentoMateriaMacro: tObj ? tObj.aproveitamentoMateriaMacro : 0,
+            aproveitamentoGlobalMacro: tObj ? tObj.aproveitamentoGlobalMacro : 0,
+            conclusaoBanco: tObj ? tObj.conclusaoBanco : 0,
+            rodadaAtual: tObj ? tObj.rodadaAtual : 1,
+            situacaoTopico: tObj ? tObj.situacao : '',
+            situacaoCiclo: rv.situacaoCiclo,
+            bloco: tObj ? tObj.bloco : 'Ciclo Frequente',
+            prioridadeTopico: tObj ? tObj.prioridadeLabel : 'Alta',
+            prioridadeOrdem: rv.prioridadeOrdem,
+            prioridadeExplicita: rv.prioridadeExplicita,
+            codigoFluxo: rv.codigoFluxo,
+            tituloFluxo: rv.tituloFluxo,
+            fluxoNomeCurto: rv.fluxoNomeCurto,
+            intervaloCalculo: rv.intervaloCalculo,
+            corFluxo: rv.corFluxo,
+            regraExplicita: rv.regraExplicita,
+            motivoAgendamentoData: rv.motivoAgendamentoData,
+            proximoPasso: rv.proximoPasso,
+            motivo: `${rv.tituloFluxo} | ${rv.etapaLabel} | ${rv.regraExplicita}`,
+            situacao: situacaoItem
+          };
+
+          itensQuestoes.push(itemUnificado);
+
+          itensRevisoes.push({
+            idRevisao: rv.id,
+            dataPrevista: dt,
+            dataPrevistaReal: rv.dataPrevistaAtual,
+            diaSemana: nomeDiaSemana_(dt),
+            materia: rv.materia,
+            topico: rv.topico,
+            etapa: rv.etapa,
+            totalEtapas: rv.totalEtapas,
+            etapaLabel: rv.etapaLabel,
+            dataOrigem: rv.dataOrigem,
+            situacao: situacaoItem
+          });
+        });
+      });
+
+      const programacaoCompleta = (revisoesPendentes || []).slice().sort((a, b) => {
+        if (a.dataPrevistaAtual !== b.dataPrevistaAtual) {
+          return a.dataPrevistaAtual.localeCompare(b.dataPrevistaAtual);
+        }
+        if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) {
+          return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
+        }
+        if ((a.ordemMateria || 99) !== (b.ordemMateria || 99)) {
+          return (a.ordemMateria || 99) - (b.ordemMateria || 99);
+        }
+        return String(a.idTopico).localeCompare(String(b.idTopico));
+      }).map((rv, indexGlobal) => ({
+        posicaoFila: indexGlobal + 1,
+        idRevisao: rv.id,
+        idMateria: rv.idMateria,
+        materia: rv.materia,
+        ordemMateria: rv.ordemMateria,
+        idTopico: rv.idTopico,
+        topico: rv.topico,
+        dataEstudoInicial: rv.resolvidasTotal > 0 ? rv.dataEstudoInicial : 'Sem estudo pratico',
+        dataUltimoEstudo: rv.resolvidasTotal > 0 ? rv.dataOrigem : '-',
+        questoesRespondidas: rv.resolvidasTotal,
+        acertosTotal: rv.acertosTotal,
+        errosTotal: rv.errosTotal,
+        totalBanco: rv.totalBanco,
+        aproveitamento: rv.ultimoAproveitamentoSessao,
+        ultimoAproveitamentoSessao: rv.ultimoAproveitamentoSessao,
+        ultimaSessaoResolvidas: rv.ultimaSessaoResolvidas,
+        ultimaSessaoAcertos: rv.ultimaSessaoAcertos,
+        ultimaSessaoErros: rv.ultimaSessaoErros,
+        aproveitamentoAcumulado: rv.aproveitamentoAcumulado,
+        aproveitamentoMateriaMacro: rv.aproveitamentoMateriaMacro,
+        aproveitamentoGlobalMacro: rv.aproveitamentoGlobalMacro,
+        codigoFluxo: rv.codigoFluxo,
+        corFluxo: rv.corFluxo,
+        fluxoRevisao: rv.fluxoNomeCurto,
+        tituloFluxo: rv.tituloFluxo,
+        prioridadeOrdem: rv.prioridadeOrdem,
+        prioridadeExplicita: rv.prioridadeExplicita,
+        etapaAtual: rv.etapaLabel,
+        etapaNum: rv.etapa,
+        totalEtapas: rv.totalEtapas,
+        dataProximaAtividade: rv.dataPrevistaAtual,
+        diaSemanaProxima: nomeDiaSemana_(rv.dataPrevistaAtual),
+        dataCalculadaTeorica: rv.dataPrevistaOriginal,
+        intervaloUtilizado: rv.intervaloCalculo,
+        situacaoAtual: rv.status === 'Atrasada' ? 'Atrasada' : rv.situacaoCiclo,
+        statusAgendamento: rv.status,
+        explicacaoCalculo: rv.motivoAgendamentoData,
+        regraFluxo: rv.regraExplicita
+      }));
+
+      const topicosAtivos = topicos.filter(t => t.status === 'Ativo' && t.materiaAtiva);
+      const totalIneditasRestantesGlobal = topicosAtivos.reduce((acc, t) => acc + t.restantesRodada, 0);
+      const diasEstudoPorSemana = Math.max(1, diasEstudoArr.length);
+      const diasUteisNecessarios = totalIneditasRestantesGlobal > 0 ? Math.ceil(totalIneditasRestantesGlobal / metaDiaria) : 0;
+      const diasCorridosEstimados = Math.ceil((diasUteisNecessarios / diasEstudoPorSemana) * 7);
+      const dataEstimadaConclusao = totalIneditasRestantesGlobal > 0
+        ? somarDiasYMD_(hojeYMD, diasCorridosEstimados)
+        : hojeYMD;
+
+      const qtdAtrasadasCiclo = itensQuestoes.filter(i => i.situacao === 'Atrasada').length;
+      const qtdZeroQuestoesNaFila = (revisoesPendentes || []).filter(r => r.resolvidasTotal === 0).length;
+      const datasComDeficit = datasOrdenadas.filter(dt => dt >= hojeYMD && gruposPorData[dt].length < (capacidadeDiaria || 3)).length;
+
+      return {
+        itensQuestoes,
+        itensRevisoes,
+        programacaoCompleta,
+        avisosCapacidade,
+        qtdAtrasadasCiclo,
+        qtdZeroQuestoesNaFila,
+        datasComDeficit,
+        dataInicioEfetiva: hojeYMD,
+        previsaoConclusao: {
+          questoesRestantes: totalIneditasRestantesGlobal,
+          metaDiaria,
+          diasEstudoPorSemana,
+          sessoesDiariasEstimadas: diasUteisNecessarios,
+          diasCorridosEstimados,
+          dataEstimadaFormatada: formatarDataBR_(dataEstimadaConclusao)
+        }
+      };
+    }
+
+    function calcularIndicadoresPainel_(params) {
+      const { hojeYMD, materias, topicos, sessoes, revisoes, metaDiaria, diasEstudoArr, resultadoCiclo } = params;
+
+      const inicioSemanaYMD = somarDiasYMD_(hojeYMD, -6);
+      const metaSemanal = metaDiaria * Math.max(1, diasEstudoArr.length);
+
+      let resolvidasHoje = 0;
+      let acertosHoje = 0;
+      let resolvidasSemana = 0;
+      let acertosSemana = 0;
+      let resolvidasGlobal = 0;
+      let acertosGlobal = 0;
+      const volumePorDia = {};
+
+      sessoes.forEach(s => {
+        volumePorDia[s.dataSessao] = (volumePorDia[s.dataSessao] || 0) + s.resolvidas;
+        resolvidasGlobal += s.resolvidas;
+        acertosGlobal += s.acertos;
+        if (s.dataSessao === hojeYMD) {
+          resolvidasHoje += s.resolvidas;
+          acertosHoje += s.acertos;
+        }
+        if (s.dataSessao >= inicioSemanaYMD && s.dataSessao <= hojeYMD) {
+          resolvidasSemana += s.resolvidas;
+          acertosSemana += s.acertos;
+        }
+      });
+
+      const diasMetaAtingida = Object.keys(volumePorDia).filter(dt => dt >= inicioSemanaYMD && dt <= hojeYMD && volumePorDia[dt] >= metaDiaria).length;
+
+      const percCumprimentoMetaHoje = Math.min(100, Number(((resolvidasHoje / metaDiaria) * 100).toFixed(1)));
+      const aproveitamentoHoje = resolvidasHoje > 0 ? Number(((acertosHoje / resolvidasHoje) * 100).toFixed(1)) : 0;
+      const aproveitamentoSemana = resolvidasSemana > 0 ? Number(((acertosSemana / resolvidasSemana) * 100).toFixed(1)) : 0;
+      const aproveitamentoGlobal = resolvidasGlobal > 0 ? Number(((acertosGlobal / resolvidasGlobal) * 100).toFixed(1)) : 0;
+
+      const revPrevistasHoje = resultadoCiclo.itensQuestoes.filter(i => i.dataPlanejada === hojeYMD && i.situacao !== 'Realizada').length;
+      const revConcluidasHoje = revisoes.filter(r => r.status === 'Concluída' && r.dataConclusao === hojeYMD).length;
+      const revConcluidasTotal = revisoes.filter(r => r.status === 'Concluída').length;
+      const revAtrasadas = revisoes.filter(r => r.status === 'Atrasada' || (r.status !== 'Concluída' && r.dataPrevistaAtual < hojeYMD)).length;
+
+      const topicosAtivos = topicos.filter(t => t.status === 'Ativo' && t.materiaAtiva);
+      const totalBancoDisponivel = topicosAtivos.reduce((acc, t) => acc + t.totalBanco, 0);
+      const totalResolvidasRodada = topicosAtivos.reduce((acc, t) => acc + t.resolvidasRodada, 0);
+      const totalRestantesBanco = topicosAtivos.reduce((acc, t) => acc + t.restantesRodada, 0);
+      const percConclusaoBanco = totalBancoDisponivel > 0
+        ? Number(((totalResolvidasRodada / totalBancoDisponivel) * 100).toFixed(1))
+        : 0;
+
+      const pioresTopicos = topicosAtivos
+        .filter(t => t.resolvidasTotal > 0 && t.ultimoAproveitamentoSessao < 80)
+        .sort((a, b) => a.ultimoAproveitamentoSessao - b.ultimoAproveitamentoSessao)
+        .slice(0, 5);
+
+      const materiasPrioritarias = materias
+        .filter(m => m.status === 'Ativo')
+        .sort((a, b) => a.ordem - b.ordem)
+        .slice(0, 5);
+
+      const atividadesHoje = resultadoCiclo.itensQuestoes.filter(i => i.dataPlanejada === hojeYMD || i.situacao === 'Atrasada');
+
+      const datasFuturas = resultadoCiclo.itensQuestoes
+        .filter(i => i.dataPlanejada > hojeYMD)
+        .map(i => i.dataPlanejada)
+        .sort();
+      const proximaDataPlanejada = datasFuturas.length > 0 ? datasFuturas[0] : '';
+      const proximasSugestoesAdiantar = proximaDataPlanejada
+        ? resultadoCiclo.itensQuestoes.filter(i => i.dataPlanejada === proximaDataPlanejada)
+        : [];
+
+      return {
+        resolvidasHoje,
+        metaDiaria,
+        percCumprimentoMetaHoje,
+        acertosHoje,
+        aproveitamentoHoje,
+        resolvidasSemana,
+        metaSemanal,
+        aproveitamentoSemana,
+        aproveitamentoGlobal,
+        resolvidasGlobal,
+        acertosGlobal,
+        diasMetaAtingida,
+        revPrevistasHoje,
+        revConcluidasHoje,
+        revConcluidasTotal,
+        revAtrasadas,
+        cicloAtrasadas: resultadoCiclo.qtdAtrasadasCiclo || 0,
+        totalBancoDisponivel,
+        totalResolvidasRodada,
+        totalRestantesBanco,
+        percConclusaoBanco,
+        pioresTopicos,
+        materiasPrioritarias,
+        atividadesHoje,
+        proximaDataPlanejada,
+        proximasSugestoesAdiantar
+      };
+    }
+
+    async function salvarValorConfigDB_(chave, valor) {
+      if (!supabaseClient) return;
+      await supabaseClient.from('configuracoes').upsert(
+        { chave, valor: String(valor), descricao: 'Configuracao do sistema' },
+        { onConflict: 'chave' }
+      );
+    }
+
+    /**
+     * MOTOR CENTRAL UNIFICADO ASSÍNCRONO (SUPABASE)
+     */
+    async function recalcularERetornarEstado_(opcoes) {
+      if (!supabaseClient) {
+        inicializarClienteSupabase();
+        if (!supabaseClient) throw new Error('Supabase não configurado.');
+      }
+
+      const opts = opcoes || {};
+      const hojeYMD = formatarDataYMD_(new Date());
+      const amanhaYMD = somarDiasYMD_(hojeYMD, 1);
+
+      if (opts.reorganizarFila) {
+        await salvarValorConfigDB_('Antecipados_Hoje', '[]');
+      }
+
+      const [resCfg, resMat, resTop, resQue, resSes, resRev] = await Promise.all([
+        supabaseClient.from('configuracoes').select('*'),
+        supabaseClient.from('materias').select('*').order('ordem', { ascending: true }),
+        supabaseClient.from('topicos').select('*').order('id', { ascending: true }),
+        supabaseClient.from('questoes').select('*'),
+        supabaseClient.from('sessoes').select('*').order('ordem_insercao', { ascending: true }),
+        supabaseClient.from('revisoes').select('*').order('ordem_insercao', { ascending: true })
+      ]);
+
+      if (resCfg.error) throw resCfg.error;
+      if (resMat.error) throw resMat.error;
+      if (resTop.error) throw resTop.error;
+      if (resSes.error) throw resSes.error;
+      if (resRev.error) throw resRev.error;
+
+      const config = {};
+      (resCfg.data || []).forEach(r => {
+        if (r.chave) config[String(r.chave).trim()] = String(r.valor !== undefined ? r.valor : '').trim();
+      });
+
+      const metaDiaria = Math.max(1, Number(config.Meta_Diaria_Questoes || 30));
+      const capacidadeDiaria = Math.max(1, Number(config.Max_Revisoes_Dia || config.Max_Topicos_Dia || 3));
+      const metaAprov = Number(config.Meta_Aproveitamento || 80);
+      const amostraMinima = Math.max(1, Number(config.Amostra_Minima || 10));
+      const minQuestoesMateria = Math.max(1, Number(config.Min_Questoes_Materia || 10));
+      const escalaIntervalos = obterEscalaIntervalos_(config.Intervalos_Revisao);
+      const intervaloReforco = Math.max(1, Number(config.Intervalo_Reforco_Abaixo_Meta || 3));
+
+      let diasEstudoArr = String(config.Dias_Estudo || '1,2,3,4,5,0')
+        .split(',')
+        .map(x => Number(x.trim()))
+        .filter(x => !isNaN(x));
+      if (diasEstudoArr.length === 0) diasEstudoArr = [1, 2, 3, 4, 5, 0];
+
+      let antecipadosHojeList = [];
+      if (!opts.reorganizarFila) {
+        try {
+          antecipadosHojeList = JSON.parse(config.Antecipados_Hoje || '[]');
+          if (!Array.isArray(antecipadosHojeList)) antecipadosHojeList = [];
+          antecipadosHojeList = antecipadosHojeList.filter(a => a && a.dataAlvo === hojeYMD);
+        } catch (e) {
+          antecipadosHojeList = [];
+        }
+      }
+
+      // 1. MATERIAS
+      let materias = (resMat.data || []).map((r, idx) => ({
+        rowIndex: idx + 1,
+        id: String(r.id).trim(),
+        ordem: Number(r.ordem || idx + 1),
+        nome: String(r.nome || '').trim(),
+        estudoDiario: String(r.estudo_diario || 'Nao').trim() === 'Sim' ? 'Sim' : 'Nao',
+        freqSemanal: Number(r.freq_semanal || 3),
+        minQuestoes: Number(r.min_questoes || minQuestoesMateria),
+        status: String(r.status || 'Ativo').trim(),
+        dataCadastro: formatarDataYMD_(r.data_cadastro) || hojeYMD
+      }));
+      materias.sort((a, b) => a.ordem - b.ordem || String(a.id).localeCompare(String(b.id)));
+      materias.forEach((m, idx) => { m.ordem = idx + 1; });
+      const mapaMaterias = {};
+      materias.forEach(m => { mapaMaterias[m.id] = m; });
+
+      // 2. QUESTOES INDIVIDUAIS
+      const questoes = [];
+      const questoesPorTopico = {};
+      (resQue.data || []).forEach((r, idx) => {
+        const q = {
+          rowIndex: idx + 1,
+          id: String(r.id).trim(),
+          idTopico: String(r.id_topico || '').trim(),
+          idMateria: String(r.id_materia || '').trim(),
+          materia: String(r.materia || '').trim(),
+          topico: String(r.topico || '').trim(),
+          fonteBanca: String(r.fonte_banca || '').trim(),
+          codigoExterno: String(r.codigo_externo || '').trim(),
+          statusRodada: String(r.status_rodada || 'Inedita').trim(),
+          ultimoResultado: String(r.ultimo_resultado || '-').trim(),
+          rodadaResolvida: Number(r.rodada_resolvida || 0),
+          dataCadastro: formatarDataYMD_(r.data_cadastro) || hojeYMD
+        };
+        questoes.push(q);
+        if (!questoesPorTopico[q.idTopico]) questoesPorTopico[q.idTopico] = [];
+        questoesPorTopico[q.idTopico].push(q);
+      });
+
+      // 3. SESSOES DE ESTUDO (MACRO & MICRO)
+      const sessoes = [];
+      const datasSessoesPorTopico = {};
+      (resSes.data || []).forEach((r, idx) => {
+        const resolvidas = Number(r.questoes_resolvidas || 0);
+        const acertos = Number(r.acertos || 0);
+        const erros = Math.max(0, resolvidas - acertos);
+        const aprov = resolvidas > 0 ? Number(((acertos / resolvidas) * 100).toFixed(1)) : 0;
+        const topId = String(r.id_topico || '').trim();
+        const dtSessao = formatarDataYMD_(r.data_sessao) || hojeYMD;
+
+        sessoes.push({
+          rowIndex: Number(r.ordem_insercao || idx + 1),
+          id: String(r.id).trim(),
+          dataSessao: dtSessao,
+          idMateria: String(r.id_materia || '').trim(),
+          materia: String(r.materia || '').trim(),
+          idTopico: topId,
+          topico: String(r.topico || '').trim(),
+          rodada: Number(r.rodada || 1),
+          resolvidas,
+          acertos,
+          erros,
+          aproveitamento: aprov,
+          metaDiariaEpoca: Number(r.meta_diaria_epoca || metaDiaria),
+          metaAprovEpoca: Number(r.meta_aprov_epoca || metaAprov),
+          observacoes: String(r.observacoes || '').trim(),
+          tipoRegistro: String(r.tipo_registro || 'Confirmado').trim()
+        });
+
+        if (topId && resolvidas > 0) {
+          if (!datasSessoesPorTopico[topId]) datasSessoesPorTopico[topId] = [];
+          if (!datasSessoesPorTopico[topId].includes(dtSessao)) {
+            datasSessoesPorTopico[topId].push(dtSessao);
+          }
+        }
+      });
+
+      const macroPorMateria = {};
+      let globalResolvidas = 0;
+      let globalAcertos = 0;
+      sessoes.forEach(s => {
+        globalResolvidas += s.resolvidas;
+        globalAcertos += s.acertos;
+        if (!macroPorMateria[s.idMateria]) {
+          macroPorMateria[s.idMateria] = { resolvidas: 0, acertos: 0 };
+        }
+        macroPorMateria[s.idMateria].resolvidas += s.resolvidas;
+        macroPorMateria[s.idMateria].acertos += s.acertos;
+      });
+      const aproveitamentoGlobalMacro = globalResolvidas > 0
+        ? Number(((globalAcertos / globalResolvidas) * 100).toFixed(1))
+        : 0;
+
+      // 4. TOPICOS
+      const topicos = [];
+      const mapaTopicosObj = {};
+      (resTop.data || []).forEach((r, idx) => {
+        const idTopico = String(r.id).trim();
+        const idMateria = String(r.id_materia || '').trim();
+        const matObj = mapaMaterias[idMateria];
+        const nomeMateria = matObj ? matObj.nome : String(r.materia || '').trim();
+        const nomeTopico = String(r.topico || '').trim();
+        const statusTopico = String(r.status || 'Ativo').trim();
+        const rodadaAtual = Math.max(1, Number(r.rodada_atual || 1));
+        let totalBancoInformado = Math.max(0, Number(r.total_banco || 0));
+        let blocoPlanilha = String(r.bloco || '').trim();
+
+        const listaQIndiv = questoesPorTopico[idTopico] || [];
+        const modoBanco = listaQIndiv.length > 0 ? 'Individual' : 'Agregado';
+        if (listaQIndiv.length > totalBancoInformado) totalBancoInformado = listaQIndiv.length;
+
+        const sessoesTopico = sessoes.filter(s => s.idTopico === idTopico && s.resolvidas > 0);
+        let resolvidasTotalHistorico = 0;
+        let acertosTotalHistorico = 0;
+        let resolvidasNaRodadaSessoes = 0;
+        let primeiraDataEstudo = '';
+        let ultimaData = '';
+        let ultimaObs = '';
+        let ultimaSessaoObj = null;
+
+        sessoesTopico.forEach(s => {
+          resolvidasTotalHistorico += s.resolvidas;
+          acertosTotalHistorico += s.acertos;
+          if (s.rodada === rodadaAtual) resolvidasNaRodadaSessoes += s.resolvidas;
+          if (!primeiraDataEstudo || s.dataSessao < primeiraDataEstudo) {
+            primeiraDataEstudo = s.dataSessao;
+          }
+          if (!ultimaData || s.dataSessao > ultimaData || (s.dataSessao === ultimaData && (!ultimaSessaoObj || s.rowIndex >= ultimaSessaoObj.rowIndex))) {
+            ultimaData = s.dataSessao;
+            ultimaSessaoObj = s;
+            if (s.observacoes) ultimaObs = s.observacoes;
+          }
+        });
+
+        if (!ultimaData && r.ultima_data) {
+          const dtSalva = formatarDataYMD_(r.ultima_data);
+          if (resolvidasTotalHistorico > 0) ultimaData = dtSalva;
+        }
+
+        let resolvidasUnicasRodada = totalBancoInformado > 0
+          ? Math.min(totalBancoInformado, resolvidasNaRodadaSessoes)
+          : resolvidasNaRodadaSessoes;
+
+        const restantesRodada = Math.max(0, totalBancoInformado - resolvidasUnicasRodada);
+        const errosTotalHistorico = Math.max(0, resolvidasTotalHistorico - acertosTotalHistorico);
+
+        const aproveitamentoAcumulado = resolvidasTotalHistorico > 0
+          ? Number(((acertosTotalHistorico / resolvidasTotalHistorico) * 100).toFixed(1))
+          : 0;
+
+        const ultimaSessaoResolvidas = ultimaSessaoObj ? ultimaSessaoObj.resolvidas : 0;
+        const ultimaSessaoAcertos = ultimaSessaoObj ? ultimaSessaoObj.acertos : 0;
+        const ultimaSessaoErros = ultimaSessaoObj ? ultimaSessaoObj.erros : 0;
+        const ultimoAproveitamentoSessao = ultimaSessaoObj
+          ? ultimaSessaoObj.aproveitamento
+          : aproveitamentoAcumulado;
+
+        const matMacro = macroPorMateria[idMateria] || { resolvidas: 0, acertos: 0 };
+        const aproveitamentoMateriaMacro = matMacro.resolvidas > 0
+          ? Number(((matMacro.acertos / matMacro.resolvidas) * 100).toFixed(1))
+          : 0;
+
+        const conclusaoBanco = totalBancoInformado > 0
+          ? Number(((resolvidasUnicasRodada / totalBancoInformado) * 100).toFixed(1))
+          : 0;
+
+        const diasSemEstudo = ultimaData ? Math.max(0, diferencaDias_(ultimaData, hojeYMD)) : 999;
+        const amostraSuficiente = resolvidasTotalHistorico >= amostraMinima;
+
+        let situacao = 'Primeira Bateria Pendente';
+        let prioridadeLabel = 'Prioridade 1 (0 Questoes)';
+        let scorePrioridade = 100;
+        let blocoAtual = '1a Bateria Pos-Teoria';
+        let motivoExplicito = '';
+
+        if (resolvidasTotalHistorico === 0) {
+          situacao = 'Primeira Bateria Pendente';
+          prioridadeLabel = 'Prioridade 1 (Maxima - 0 Questoes)';
+          scorePrioridade = 100;
+          blocoAtual = '1a Bateria Pos-Teoria';
+          motivoExplicito = '0 questoes respondidas -> Prioridade maxima para realizacao da 1a bateria a partir de amanha.';
+        } else if (ultimoAproveitamentoSessao < metaAprov) {
+          situacao = `Revisao Programada (Sessao <${metaAprov}%)`;
+          prioridadeLabel = 'Prioridade 2 (Reforco Curto)';
+          const deficit = metaAprov - ultimoAproveitamentoSessao;
+          scorePrioridade = 85 + Math.min(14, Math.round(deficit));
+          blocoAtual = 'Fluxo de Reforco (<80%)';
+          motivoExplicito = `Sessao atual: ${ultimoAproveitamentoSessao}% (< ${metaAprov}% | Acumulado: ${aproveitamentoAcumulado}%) -> Fluxo de Reforco Curto (+${intervaloReforco} dias, mantem etapa).`;
+        } else if (blocoPlanilha === 'Conteudos Consolidados' || blocoPlanilha === 'Conteúdos Consolidados') {
+          situacao = 'Consolidacao';
+          prioridadeLabel = 'Prioridade 4 (Consolidacao 15d)';
+          scorePrioridade = 40;
+          blocoAtual = 'Conteudos Consolidados';
+          motivoExplicito = `Sessao atual: ${ultimoAproveitamentoSessao}% (>= ${metaAprov}% | Acumulado: ${aproveitamentoAcumulado}%) e ciclo completo -> Consolidacao a cada 15 dias.`;
+        } else {
+          situacao = `Revisao Programada (Sessao >=${metaAprov}%)`;
+          prioridadeLabel = 'Prioridade 3 (Progressao Espacada)';
+          scorePrioridade = 60 + Math.min(20, Math.floor(diasSemEstudo / 3));
+          blocoAtual = 'Fluxo Espacado (>=80%)';
+          motivoExplicito = `Sessao atual: ${ultimoAproveitamentoSessao}% (>= ${metaAprov}% | Acumulado: ${aproveitamentoAcumulado}%) -> Segue intervalos de ${escalaIntervalos.join(', ')} dias.`;
+        }
+
+        const tObj = {
+          rowIndex: idx + 1,
+          id: idTopico,
+          idMateria,
+          materia: nomeMateria,
+          ordemMateria: matObj ? matObj.ordem : 999,
+          minQuestoesMateria: matObj ? matObj.minQuestoes : minQuestoesMateria,
+          materiaAtiva: matObj ? matObj.status === 'Ativo' : true,
+          topico: nomeTopico,
+          status: statusTopico,
+          rodadaAtual,
+          totalBanco: totalBancoInformado,
+          resolvidasRodada: resolvidasUnicasRodada,
+          restantesRodada,
+          resolvidasTotal: resolvidasTotalHistorico,
+          acertosTotal: acertosTotalHistorico,
+          errosTotal: errosTotalHistorico,
+          aproveitamento: aproveitamentoAcumulado,
+          aproveitamentoAcumulado,
+          ultimoAproveitamentoSessao,
+          ultimaSessaoResolvidas,
+          ultimaSessaoAcertos,
+          ultimaSessaoErros,
+          aproveitamentoMateriaMacro,
+          aproveitamentoGlobalMacro,
+          conclusaoBanco,
+          amostraSuficiente,
+          prioridadeLabel,
+          scorePrioridade,
+          situacao,
+          motivoPrioridade: motivoExplicito,
+          modoBanco,
+          primeiraDataEstudo: primeiraDataEstudo || ultimaData || formatarDataYMD_(r.ultima_data) || hojeYMD,
+          ultimaData,
+          diasSemEstudo,
+          ultimaObs,
+          bloco: blocoAtual,
+          datasEstudo: (datasSessoesPorTopico[idTopico] || []).sort()
+        };
+
+        topicos.push(tObj);
+        mapaTopicosObj[idTopico] = tObj;
+      });
+
+      sessoes.forEach(s => {
+        const tRef = mapaTopicosObj[s.idTopico];
+        const mMacro = macroPorMateria[s.idMateria] || { resolvidas: 0, acertos: 0 };
+        s.aproveitamentoTopicoMacro = tRef ? tRef.aproveitamentoAcumulado : s.aproveitamento;
+        s.aproveitamentoMateriaMacro = mMacro.resolvidas > 0
+          ? Number(((mMacro.acertos / mMacro.resolvidas) * 100).toFixed(1))
+          : s.aproveitamento;
+        s.aproveitamentoGlobalMacro = aproveitamentoGlobalMacro;
+      });
+
+      // 5. REVISOES
+      const revisoesConcluidas = [];
+      const pendentesPorTopico = {};
+      const concluidasCountPorTopico = {};
+
+      (resRev.data || []).forEach(r => {
+        const idTop = String(r.id_topico || '').trim();
+        const topicoRef = mapaTopicosObj[idTop];
+        if (!topicoRef) return;
+
+        const statusOriginal = String(r.status || 'Programada').trim();
+        const dataConclusao = formatarDataYMD_(r.data_conclusao);
+        const etapaLida = Math.max(1, Number(r.etapa || 1));
+        const totalEtapasLido = Math.max(1, Number(r.total_etapas || 5));
+        const dataOrigemLida = formatarDataYMD_(r.data_origem) || topicoRef.ultimaData || hojeYMD;
+        const dataPrevOrigLida = formatarDataYMD_(r.data_prevista_original) || amanhaYMD;
+        const dataPrevAtualLida = formatarDataYMD_(r.data_prevista_atual) || dataPrevOrigLida;
+        const tipoDataOrigemLido = String(r.tipo_data_origem || 'Confirmada').trim();
+
+        if (statusOriginal === 'Concluída' || statusOriginal === 'Concluida') {
+          concluidasCountPorTopico[idTop] = (concluidasCountPorTopico[idTop] || 0) + 1;
+          const infoHist = obterInfoFluxoExplicito_(topicoRef, etapaLida, totalEtapasLido, metaAprov, tipoDataOrigemLido, escalaIntervalos, intervaloReforco);
+          revisoesConcluidas.push({
+            id: String(r.id).trim(),
+            idSessaoOrigem: String(r.id_sessao_origem || '').trim(),
+            idMateria: topicoRef.idMateria,
+            materia: topicoRef.materia,
+            ordemMateria: topicoRef.ordemMateria,
+            idTopico: idTop,
+            topico: topicoRef.topico,
+            dataEstudoInicial: topicoRef.primeiraDataEstudo || dataOrigemLida,
+            dataOrigem: dataOrigemLida,
+            dataPrevistaOriginal: dataPrevOrigLida,
+            dataPrevistaAtual: dataPrevAtualLida,
+            etapa: etapaLida,
+            totalEtapas: totalEtapasLido,
+            status: 'Concluída',
+            dataConclusao: dataConclusao || dataPrevAtualLida,
+            tipoDataOrigem: tipoDataOrigemLido,
+            totalBanco: topicoRef.totalBanco,
+            resolvidasRodada: topicoRef.resolvidasRodada,
+            restantesRodada: topicoRef.restantesRodada,
+            resolvidasTotal: topicoRef.resolvidasTotal,
+            acertosTotal: topicoRef.acertosTotal,
+            errosTotal: topicoRef.errosTotal,
+            aproveitamento: topicoRef.aproveitamentoAcumulado,
+            aproveitamentoAcumulado: topicoRef.aproveitamentoAcumulado,
+            ultimoAproveitamentoSessao: topicoRef.ultimoAproveitamentoSessao,
+            ultimaSessaoResolvidas: topicoRef.ultimaSessaoResolvidas,
+            ultimaSessaoAcertos: topicoRef.ultimaSessaoAcertos,
+            ultimaSessaoErros: topicoRef.ultimaSessaoErros,
+            conclusaoBanco: topicoRef.conclusaoBanco,
+            rodadaAtual: topicoRef.rodadaAtual,
+            bloco: topicoRef.bloco,
+            datasEstudo: topicoRef.datasEstudo,
+            codigoFluxo: infoHist.codigoFluxo,
+            prioridadeOrdem: infoHist.prioridadeOrdem,
+            prioridadeExplicita: infoHist.prioridadeExplicita,
+            tituloFluxo: infoHist.tituloFluxo,
+            fluxoNomeCurto: infoHist.fluxoNomeCurto,
+            situacaoCiclo: 'Atividade Concluida',
+            etapaLabel: infoHist.etapaLabel,
+            intervaloCalculo: infoHist.intervaloCalculo,
+            intervaloDiasNum: infoHist.intervaloDiasNum,
+            corFluxo: infoHist.corFluxo,
+            regraExplicita: infoHist.regraExplicita,
+            proximoPasso: infoHist.proximoPasso,
+            motivoAgendamentoData: `Concluida em ${formatarDataBR_(dataConclusao || dataPrevAtualLida)}`
+          });
+        } else {
+          if (!pendentesPorTopico[idTop]) {
+            pendentesPorTopico[idTop] = {
+              id: String(r.id).trim(),
+              idSessaoOrigem: String(r.id_sessao_origem || '').trim(),
+              dataOrigem: dataOrigemLida,
+              dataPrevistaOriginal: dataPrevOrigLida,
+              dataPrevistaAtual: dataPrevAtualLida,
+              etapa: etapaLida,
+              totalEtapas: totalEtapasLido,
+              statusOriginal,
+              tipoDataOrigem: tipoDataOrigemLido
+            };
+          }
+        }
+      });
+
+      const revisoesPendentes = [];
+
+      topicos.forEach(topicoRef => {
+        if (topicoRef.status !== 'Ativo' || !topicoRef.materiaAtiva) return;
+
+        const existente = pendentesPorTopico[topicoRef.id];
+        const qtdRevConcluidas = concluidasCountPorTopico[topicoRef.id] || 0;
+
+        let idRev = existente ? existente.id : gerarId_('REV');
+        let idSessaoOrig = existente ? existente.idSessaoOrigem : ('AUTO_' + hojeYMD);
+        let dataOrig = topicoRef.ultimaData || (existente ? existente.dataOrigem : hojeYMD);
+        let etapaCorreta = existente ? existente.etapa : 1;
+        let totalEtapas = 5;
+        let tipoOrigem = existente ? existente.tipoDataOrigem : 'Confirmada';
+        let dataCalculadaBase = existente ? existente.dataPrevistaOriginal : amanhaYMD;
+
+        if (topicoRef.resolvidasTotal === 0) {
+          etapaCorreta = 1;
+          tipoOrigem = existente && existente.tipoDataOrigem === 'Reprogramada_Manual' ? 'Reprogramada_Manual' : 'Teoria_Estudada';
+          dataOrig = existente ? existente.dataOrigem : hojeYMD;
+          dataCalculadaBase = (existente && existente.dataPrevistaOriginal) ? existente.dataPrevistaOriginal : amanhaYMD;
+          topicoRef.bloco = '1a Bateria Pos-Teoria';
+          topicoRef.situacao = 'Primeira Bateria Pendente';
+        } else if (topicoRef.ultimoAproveitamentoSessao < metaAprov) {
+          etapaCorreta = Math.min(Math.max(1, existente ? existente.etapa : (qtdRevConcluidas + 1)), 5);
+          tipoOrigem = existente && existente.tipoDataOrigem === 'Reprogramada_Manual' ? 'Reprogramada_Manual' : 'Reforco_Curto';
+          const baseRef = topicoRef.ultimaData || dataOrig || hojeYMD;
+          dataCalculadaBase = somarDiasYMD_(baseRef, intervaloReforco);
+          topicoRef.bloco = 'Fluxo de Reforco (<80%)';
+          topicoRef.situacao = `Revisao Programada (Sessao <${metaAprov}%)`;
+        } else {
+          if (!existente) {
+            etapaCorreta = Math.min(qtdRevConcluidas + 1, 6);
+          } else {
+            etapaCorreta = Math.max(1, existente.etapa);
+          }
+
+          const baseRef = topicoRef.ultimaData || dataOrig || hojeYMD;
+
+          if (etapaCorreta > 5 || topicoRef.bloco === 'Conteudos Consolidados') {
+            etapaCorreta = 6;
+            tipoOrigem = existente && existente.tipoDataOrigem === 'Reprogramada_Manual' ? 'Reprogramada_Manual' : 'Consolidacao';
+            dataCalculadaBase = somarDiasYMD_(baseRef, 15);
+            topicoRef.bloco = 'Conteudos Consolidados';
+            topicoRef.situacao = 'Consolidacao';
+          } else {
+            tipoOrigem = existente && existente.tipoDataOrigem === 'Reprogramada_Manual' ? 'Reprogramada_Manual' : 'Progressao_Espacada';
+            const intervaloEtapa = escalaIntervalos[etapaCorreta - 1] || 1;
+            dataCalculadaBase = somarDiasYMD_(baseRef, intervaloEtapa);
+            topicoRef.bloco = 'Fluxo Espacado (>=80%)';
+            topicoRef.situacao = `Revisao Programada (Sessao >=${metaAprov}%)`;
+          }
+        }
+
+        let dataPrevAtual = existente ? existente.dataPrevistaAtual : dataCalculadaBase;
+        if (existente && existente.tipoDataOrigem === 'Reprogramada_Manual' && !opts.reorganizarFila) {
+          dataPrevAtual = existente.dataPrevistaAtual;
+          tipoOrigem = 'Reprogramada_Manual';
+        }
+
+        const infoFluxo = obterInfoFluxoExplicito_(
+          topicoRef,
+          etapaCorreta,
+          totalEtapas,
+          metaAprov,
+          tipoOrigem,
+          escalaIntervalos,
+          intervaloReforco
+        );
+
+        revisoesPendentes.push({
+          id: idRev,
+          idSessaoOrigem: idSessaoOrig,
+          idMateria: topicoRef.idMateria,
+          materia: topicoRef.materia,
+          ordemMateria: topicoRef.ordemMateria,
+          idTopico: topicoRef.id,
+          topico: topicoRef.topico,
+          dataEstudoInicial: topicoRef.primeiraDataEstudo || dataOrig,
+          dataOrigem: dataOrig,
+          dataPrevistaOriginal: dataCalculadaBase,
+          dataPrevistaAtual: dataPrevAtual,
+          jaPossuiaAgendamento: Boolean(existente && existente.dataPrevistaAtual),
+          recemGerada: Boolean(opts.idTopicoRecemAtualizado && opts.idTopicoRecemAtualizado === topicoRef.id),
+          etapa: etapaCorreta > 5 ? 5 : etapaCorreta,
+          etapaInterna: etapaCorreta,
+          totalEtapas,
+          status: existente ? existente.statusOriginal : 'Programada',
+          dataConclusao: '',
+          tipoDataOrigem: tipoOrigem,
+          totalBanco: topicoRef.totalBanco,
+          resolvidasRodada: topicoRef.resolvidasRodada,
+          restantesRodada: topicoRef.restantesRodada,
+          resolvidasTotal: topicoRef.resolvidasTotal,
+          acertosTotal: topicoRef.acertosTotal,
+          errosTotal: topicoRef.errosTotal,
+          aproveitamento: topicoRef.aproveitamentoAcumulado,
+          aproveitamentoAcumulado: topicoRef.aproveitamentoAcumulado,
+          ultimoAproveitamentoSessao: topicoRef.ultimoAproveitamentoSessao,
+          ultimaSessaoResolvidas: topicoRef.ultimaSessaoResolvidas,
+          ultimaSessaoAcertos: topicoRef.ultimaSessaoAcertos,
+          ultimaSessaoErros: topicoRef.ultimaSessaoErros,
+          aproveitamentoMateriaMacro: topicoRef.aproveitamentoMateriaMacro,
+          aproveitamentoGlobalMacro: topicoRef.aproveitamentoGlobalMacro,
+          conclusaoBanco: topicoRef.conclusaoBanco,
+          rodadaAtual: topicoRef.rodadaAtual,
+          bloco: topicoRef.bloco,
+          datasEstudo: topicoRef.datasEstudo,
+          codigoFluxo: infoFluxo.codigoFluxo,
+          prioridadeOrdem: infoFluxo.prioridadeOrdem,
+          prioridadeExplicita: infoFluxo.prioridadeExplicita,
+          tituloFluxo: infoFluxo.tituloFluxo,
+          fluxoNomeCurto: infoFluxo.fluxoNomeCurto,
+          situacaoCiclo: infoFluxo.situacaoCiclo,
+          etapaLabel: infoFluxo.etapaLabel,
+          intervaloCalculo: infoFluxo.intervaloCalculo,
+          intervaloDiasNum: infoFluxo.intervaloDiasNum,
+          corFluxo: infoFluxo.corFluxo,
+          regraExplicita: infoFluxo.regraExplicita,
+          proximoPasso: infoFluxo.proximoPasso,
+          motivoAgendamentoData: ''
+        });
+      });
+
+      if (antecipadosHojeList.length > 0 && !opts.reorganizarFila) {
+        antecipadosHojeList.forEach(ant => {
+          const revPend = revisoesPendentes.find(r => r.idTopico === ant.idTopico);
+          if (revPend) {
+            revPend.dataPrevistaAtual = hojeYMD;
+            revPend.status = 'Para Hoje';
+            revPend.antecipadaHoje = true;
+          }
+        });
+      }
+
+      redistribuirRevisoesPorCapacidade_(
+        revisoesPendentes,
+        revisoesConcluidas,
+        materias,
+        capacidadeDiaria,
+        diasEstudoArr,
+        hojeYMD,
+        amanhaYMD,
+        opts
+      );
+
+      const revisoes = revisoesPendentes.concat(revisoesConcluidas);
+
+      // Persiste atualizações calculadas de Tópicos e Revisões Pendentes no Supabase em lote
+      const payloadTopicos = topicos.map(t => ({
+        id: t.id,
+        id_materia: t.idMateria,
+        materia: t.materia,
+        topico: t.topico,
+        status: t.status,
+        rodada_atual: t.rodadaAtual,
+        total_banco: t.totalBanco,
+        resolvidas_rodada: t.resolvidasRodada,
+        restantes_rodada: t.restantesRodada,
+        acertos_total: t.acertosTotal,
+        erros_total: t.errosTotal,
+        aproveitamento: t.aproveitamentoAcumulado,
+        conclusao_banco: t.conclusaoBanco,
+        prioridade_calculada: t.prioridadeLabel,
+        situacao: t.situacao,
+        motivo_prioridade: t.motivoPrioridade,
+        modo_banco: t.modoBanco,
+        ultima_data: t.ultimaData || '',
+        ultima_obs: t.ultimaObs || '',
+        bloco: t.bloco
+      }));
+
+      const payloadRevisoesPendentes = revisoesPendentes.map(rv => ({
+        id: rv.id,
+        id_sessao_origem: rv.idSessaoOrigem,
+        id_materia: rv.idMateria,
+        materia: rv.materia,
+        id_topico: rv.idTopico,
+        topico: rv.topico,
+        data_origem: rv.dataOrigem,
+        data_prevista_original: rv.dataPrevistaOriginal,
+        data_prevista_atual: rv.dataPrevistaAtual,
+        etapa: rv.etapa,
+        total_etapas: rv.totalEtapas,
+        status: rv.status,
+        data_conclusao: rv.dataConclusao || '',
+        tipo_data_origem: rv.tipoDataOrigem
+      }));
+
+      await Promise.all([
+        payloadTopicos.length > 0 ? supabaseClient.from('topicos').upsert(payloadTopicos, { onConflict: 'id' }) : Promise.resolve(),
+        payloadRevisoesPendentes.length > 0 ? supabaseClient.from('revisoes').upsert(payloadRevisoesPendentes, { onConflict: 'id' }) : Promise.resolve()
+      ]);
+
+      const resultadoCiclo = construirCronogramaUnificado_({
+        hojeYMD,
+        amanhaYMD,
+        materias,
+        topicos,
+        sessoes,
+        revisoes,
+        revisoesPendentes,
+        metaDiaria,
+        capacidadeDiaria,
+        metaAprov,
+        minQuestoesMateria,
+        diasEstudoArr
+      });
+
+      const indicadoresPainel = calcularIndicadoresPainel_({
+        hojeYMD,
+        amanhaYMD,
+        materias,
+        topicos,
+        sessoes,
+        revisoes,
+        metaDiaria,
+        capacidadeDiaria,
+        diasEstudoArr,
+        resultadoCiclo
+      });
+
+      return {
+        hojeYMD,
+        amanhaYMD,
+        dataInicioCiclo: hojeYMD,
+        config,
+        materias,
+        topicos,
+        questoes: questoes.slice().reverse().slice(0, 300),
+        totalQuestoesIndividuais: questoes.length,
+        sessoes: sessoes.slice().sort((a, b) => b.dataSessao.localeCompare(a.dataSessao) || b.rowIndex - a.rowIndex),
+        revisoes,
+        programacaoCompleta: resultadoCiclo.programacaoCompleta,
+        ciclo: resultadoCiclo,
+        painel: indicadoresPainel
+      };
+    }
+
+    /* ==========================================================================
+     * 4. EXPORTAÇÃO FORMATADA PARA EXCEL (.XLSX VIA SHEETJS)
+     * ========================================================================== */
+    function ajustarLarguraColunasExcel_(ws, jsonRows) {
+      if (!jsonRows || jsonRows.length === 0) return;
+      const headers = Object.keys(jsonRows[0]);
+      ws['!cols'] = headers.map(h => {
+        let maxLen = h.length;
+        jsonRows.forEach(r => {
+          const val = r[h] !== null && r[h] !== undefined ? String(r[h]) : '';
+          if (val.length > maxLen) maxLen = val.length;
+        });
+        return { wch: Math.min(Math.max(maxLen + 4, 12), 55) };
+      });
+    }
+
+    function exportarRelatorioExcel() {
+      if (!ESTADO) {
+        notificar('Aguarde o carregamento do sistema antes de exportar.', true);
+        return;
+      }
+      if (typeof XLSX === 'undefined') {
+        notificar('Biblioteca SheetJS (XLSX) não encontrada.', true);
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      // ABA 1: Desempenho Consolidado por Tópico
+      const rowsTopicos = ESTADO.topicos.map(t => ({
+        'Ordem Matéria': t.ordemMateria,
+        'Matéria': t.materia,
+        'Tópico': t.topico,
+        'Status': t.status,
+        'Rodada': `${t.rodadaAtual}ª`,
+        'Total Banca': t.totalBanco,
+        'Respondidas': t.resolvidasTotal,
+        'Restantes': t.restantesRodada,
+        'Acertos Acum.': t.acertosTotal,
+        'Erros Acum.': t.errosTotal,
+        'Última Sessão (Micro)': `${Number(t.ultimoAproveitamentoSessao || 0).toFixed(1)}%`,
+        'Média Acumulada (Macro)': `${Number(t.aproveitamentoAcumulado || 0).toFixed(1)}%`,
+        'Conclusão Banca': `${Number(t.conclusaoBanco || 0).toFixed(1)}%`,
+        'Fluxo Atual': t.bloco,
+        'Prioridade': limparCerquilha(t.prioridadeLabel),
+        'Último Estudo': formatarDataBR(t.ultimaData),
+        'Observações': t.ultimaObs || ''
+      }));
+      const wsTopicos = XLSX.utils.json_to_sheet(rowsTopicos);
+      ajustarLarguraColunasExcel_(wsTopicos, rowsTopicos);
+      XLSX.utils.book_append_sheet(wb, wsTopicos, 'Desempenho Consolidado');
+
+      // ABA 2: Histórico Geral de Sessões (Micro vs Macro)
+      const rowsSessoes = ESTADO.sessoes.map(s => ({
+        'Data da Sessão': formatarDataBR(s.dataSessao),
+        'Matéria': s.materia,
+        'Tópico': s.topico,
+        'Rodada': `${s.rodada}ª`,
+        'Questões Resolvidas': s.resolvidas,
+        'Acertos': s.acertos,
+        'Erros': s.erros,
+        'Aproveitamento Sessão (Micro)': `${Number(s.aproveitamento || 0).toFixed(1)}%`,
+        'Acumulado Tópico (Macro)': `${Number(s.aproveitamentoTopicoMacro !== undefined ? s.aproveitamentoTopicoMacro : s.aproveitamento).toFixed(1)}%`,
+        'Acumulado Matéria (Macro)': `${Number(s.aproveitamentoMateriaMacro || 0).toFixed(1)}%`,
+        'Média Global (Macro)': `${Number(s.aproveitamentoGlobalMacro || 0).toFixed(1)}%`,
+        'Observações / Caderno de Erros': s.observacoes || ''
+      }));
+      const wsSessoes = XLSX.utils.json_to_sheet(rowsSessoes);
+      ajustarLarguraColunasExcel_(wsSessoes, rowsSessoes);
+      XLSX.utils.book_append_sheet(wb, wsSessoes, 'Historico Geral Sessoes');
+
+      // ABA 3: Fila Completa de Revisões Programadas
+      const rowsFila = (ESTADO.programacaoCompleta || []).map(item => ({
+        'Posição': `${item.posicaoFila}º`,
+        'Próxima Data': formatarDataBR(item.dataProximaAtividade),
+        'Dia da Semana': item.diaSemanaProxima,
+        'Matéria': item.materia,
+        'Tópico': item.topico,
+        'Etapa Atual': limparCerquilha(item.etapaAtual),
+        'Fluxo de Revisão': limparCerquilha(item.fluxoRevisao),
+        'Intervalo Aplicado': limparCerquilha(item.intervaloUtilizado),
+        'Sessão Atual (Micro)': `${Number(item.ultimoAproveitamentoSessao || 0).toFixed(1)}%`,
+        'Média Acumulada (Macro)': `${Number(item.aproveitamentoAcumulado || 0).toFixed(1)}%`,
+        'Situação': limparCerquilha(item.situacaoAtual),
+        'Explicação do Cálculo': limparCerquilha(item.explicacaoCalculo)
+      }));
+      const wsFila = XLSX.utils.json_to_sheet(rowsFila);
+      ajustarLarguraColunasExcel_(wsFila, rowsFila);
+      XLSX.utils.book_append_sheet(wb, wsFila, 'Fila de Revisoes');
+
+      // ABA 4: Resumo Consolidado por Matéria
+      const rowsMaterias = ESTADO.materias.map(m => {
+        const topMat = ESTADO.topicos.filter(t => t.idMateria === m.id);
+        const totBanco = topMat.reduce((acc, x) => acc + x.totalBanco, 0);
+        const totResp = topMat.reduce((acc, x) => acc + x.resolvidasTotal, 0);
+        const totAc = topMat.reduce((acc, x) => acc + x.acertosTotal, 0);
+        const totEr = topMat.reduce((acc, x) => acc + x.errosTotal, 0);
+        const pctMacro = totResp > 0 ? ((totAc / totResp) * 100).toFixed(1) : '0.0';
+        return {
+          'Ordem Prioridade': `${m.ordem}º`,
+          'Matéria': m.nome,
+          'Status': m.status,
+          'Qtd. Tópicos': topMat.length,
+          'Total Questões Banca': totBanco,
+          'Total Respondidas': totResp,
+          'Total Acertos': totAc,
+          'Total Erros': totEr,
+          'Aproveitamento Macro': `${pctMacro}%`,
+          'Mín. Questões/Dia': m.minQuestoes
+        };
+      });
+      const wsMaterias = XLSX.utils.json_to_sheet(rowsMaterias);
+      ajustarLarguraColunasExcel_(wsMaterias, rowsMaterias);
+      XLSX.utils.book_append_sheet(wb, wsMaterias, 'Resumo por Materia');
+
+      const nomeArquivo = `Relatorio_Estudos_Davi_${ESTADO.hojeYMD}.xlsx`;
+      XLSX.writeFile(wb, nomeArquivo);
+      notificar(`Relatório Excel (${nomeArquivo}) exportado com sucesso!`);
+    }
+
+    /* ==========================================================================
+     * 5. CONTROLE DE NAVEGAÇÃO E SUB-ABAS
+     * ========================================================================== */
+    function alternarSubAbaPainelEsq(qual) {
+      document.getElementById('subpainel-esq-hoje').classList.toggle('hidden', qual !== 'hoje');
+      document.getElementById('subpainel-esq-amanha').classList.toggle('hidden', qual !== 'amanha');
+      document.getElementById('subbtn-painel-hoje').className = `px-3 py-1.5 rounded-lg transition ${qual === 'hoje' ? 'subtab-active' : 'subtab-inactive'}`;
+      document.getElementById('subbtn-painel-amanha').className = `px-3 py-1.5 rounded-lg transition ${qual === 'amanha' ? 'subtab-active' : 'subtab-inactive'}`;
+    }
+
+    function alternarSubAbaPainelDir(qual) {
+      ['zero', 'reforco', 'materias'].forEach(k => {
+        document.getElementById(`subpainel-dir-${k}`).classList.toggle('hidden', k !== qual);
+        document.getElementById(`subbtn-dir-${k}`).className = `px-2.5 py-1.5 rounded-lg transition ${k === qual ? 'subtab-active' : 'subtab-inactive'}`;
+      });
+    }
+
+    function alternarSubAbaRevisoes(qual) {
+      ['hoje', 'completa', 'calendario', 'historico'].forEach(k => {
+        document.getElementById(`subaba-rev-${k}`).classList.toggle('hidden', k !== qual);
+        document.getElementById(`subbtn-rev-${k}`).className = `px-3.5 py-2 rounded-lg transition ${k === qual ? 'subtab-active' : 'subtab-inactive'}`;
+      });
+    }
+
+    function alternarSubAbaCadastros(qual) {
+      ['topicos', 'materias'].forEach(k => {
+        document.getElementById(`subaba-cad-${k}`).classList.toggle('hidden', k !== qual);
+        document.getElementById(`subbtn-cad-${k}`).className = `px-3.5 py-1.5 rounded-lg transition ${k === qual ? 'subtab-active' : 'subtab-inactive'}`;
+      });
+    }
+
+    function alternarSubAbaRegistrar(qual) {
+      ['form', 'historico'].forEach(k => {
+        document.getElementById(`subaba-reg-${k}`).classList.toggle('hidden', k !== qual);
+        document.getElementById(`subbtn-reg-${k}`).className = `px-3.5 py-1.5 rounded-lg transition ${k === qual ? 'subtab-active' : 'subtab-inactive'}`;
+      });
+    }
+
+    function alternarSubAbaEstatisticas(qual) {
+      ['graficos', 'relatorio'].forEach(k => {
+        document.getElementById(`subaba-est-${k}`).classList.toggle('hidden', k !== qual);
+        document.getElementById(`subbtn-est-${k}`).className = `px-3.5 py-1.5 rounded-lg transition ${k === qual ? 'subtab-active' : 'subtab-inactive'}`;
+      });
+    }
+
+    function alternarSubAbaConfig(qual) {
+      ['parametros', 'regras'].forEach(k => {
+        document.getElementById(`subaba-cfg-${k}`).classList.toggle('hidden', k !== qual);
+        document.getElementById(`subbtn-cfg-${k}`).className = `px-3.5 py-1.5 rounded-lg transition ${k === qual ? 'subtab-active' : 'subtab-inactive'}`;
+      });
+    }
+
+    function alternarSubmenuAcoes(ev) {
+      ev.stopPropagation();
+      const menu = document.getElementById('dropdownSubmenuAcoes');
+      if (menu) menu.classList.toggle('hidden');
+    }
+
+    function fecharSubmenuAcoes() {
+      const menu = document.getElementById('dropdownSubmenuAcoes');
+      if (menu) menu.classList.add('hidden');
+    }
+
+    function fecharSubmenuFora(ev) {
+      const container = document.getElementById('containerSubmenuAcoes');
+      if (container && !container.contains(ev.target)) {
+        fecharSubmenuAcoes();
+      }
+    }
+
+    function irParaAba(nomeAba) {
+      const abas = ['painel', 'registrar', 'cadastros', 'ciclo', 'revisoes', 'estatisticas', 'flashcards', 'config'];
+      abas.forEach(a => {
+        const elAba = document.getElementById(`aba-${a}`);
+        if (elAba) elAba.classList.toggle('hidden', a !== nomeAba);
+        const btn = document.getElementById(`nav-${a}`);
+        if (btn) {
+          btn.className = `px-3 py-1.5 rounded-lg whitespace-nowrap transition ${a === nomeAba ? 'tab-btn-active' : 'tab-btn-inactive'}`;
+        }
+      });
+      const btnSub = document.getElementById('btnSubmenuAcoes');
+      if (btnSub) {
+        if (nomeAba === 'registrar' || nomeAba === 'cadastros') {
+          btnSub.className = 'px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow flex items-center gap-1.5 transition ring-2 ring-indigo-400';
+        } else {
+          btnSub.className = 'px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-bold shadow flex items-center gap-1.5 transition';
+        }
+      }
+      if (nomeAba === 'estatisticas' && ESTADO) {
+        renderizarEstatisticas();
+      }
+    }
+
+    async function carregarSistema() {
+      const btn = document.getElementById('btnSync');
+      if (btn) {
+        btn.textContent = 'Sincronizando...';
+        btn.disabled = true;
+      }
+      try {
+        const dados = await recalcularERetornarEstado_();
+        aplicarEstado(dados);
+      } catch (err) {
+        notificar('Erro ao sincronizar com Supabase: ' + (err.message || err), true);
+      } finally {
+        if (btn) {
+          btn.textContent = 'Sincronizar';
+          btn.disabled = false;
+        }
+      }
+    }
+
+    function aplicarEstado(dados) {
+      if (!dados) return;
+      ESTADO = dados;
+
+      const dSessao = document.getElementById('sesData');
+      if (dSessao && !dSessao.value) dSessao.value = ESTADO.hojeYMD;
+
+      const dTeo = document.getElementById('teoData');
+      if (dTeo && !dTeo.value) dTeo.value = ESTADO.hojeYMD;
+
+      popularSelectsGlobais();
+      renderizarPainel();
+      renderizarAbaRegistrar();
+      renderizarAbaMaterias();
+      renderizarAbaTopicos();
+      renderizarAbaCiclo();
+      renderizarAbaRevisoes();
+      preencherAbaConfig();
+    }
+
+    function popularSelectsGlobais() {
+      if (!ESTADO || !ESTADO.materias) return;
+
+      const matAtivas = ESTADO.materias.filter(m => m.status === 'Ativo');
+      const optsMat = '<option value="">Selecione a matéria...</option>' +
+        matAtivas.map(m => `<option value="${m.id}">${m.ordem}. ${esc(m.nome)}</option>`).join('');
+
+      const sesMatEl = document.getElementById('sesMateria');
+      const topMatEl = document.getElementById('topMateria');
+      const teoMatEl = document.getElementById('teoMateria');
+
+      const valSesMat = sesMatEl ? sesMatEl.value : '';
+      const valTopMat = topMatEl ? topMatEl.value : '';
+      const valTeoMat = teoMatEl ? teoMatEl.value : '';
+
+      if (sesMatEl) { sesMatEl.innerHTML = optsMat; sesMatEl.value = valSesMat; }
+      if (topMatEl) { topMatEl.innerHTML = optsMat; topMatEl.value = valTopMat; }
+      if (teoMatEl) { teoMatEl.innerHTML = optsMat; teoMatEl.value = valTeoMat; }
+
+      const optsFiltroMat = '<option value="">Todas as Matérias</option>' +
+        ESTADO.materias.map(m => `<option value="${m.id}">${esc(m.nome)}</option>`).join('');
+
+      ['filtroTopicosMateria', 'estMateria', 'filtroMateriaCiclo', 'filtroProgMateria'].forEach(idEl => {
+        const el = document.getElementById(idEl);
+        if (el) {
+          const valAnterior = el.value;
+          el.innerHTML = optsFiltroMat;
+          el.value = valAnterior;
+        }
+      });
+
+      filtrarTopicosSelectSessao();
+      aoMudarMateriaEstatisticas();
+    }
+
+    /* ==========================================================================
+     * 6. AÇÕES E OPERAÇÕES CRUD NO SUPABASE
+     * ========================================================================== */
+    function abrirModalTeoriaHoje(idMateriaPre, idTopicoPre) {
+      document.getElementById('modalTeoriaHoje').classList.remove('hidden');
+      document.getElementById('teoData').value = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      document.getElementById('teoNovoTopico').value = '';
+      if (idMateriaPre) {
+        document.getElementById('teoMateria').value = idMateriaPre;
+        filtrarTopicosModalTeoria();
+        if (idTopicoPre) {
+          document.getElementById('teoTopicoSelect').value = idTopicoPre;
+          aoSelecionarTopicoExistenteTeoria();
+        }
+      }
+    }
+
+    function fecharModalTeoriaHoje() {
+      document.getElementById('modalTeoriaHoje').classList.add('hidden');
+    }
+
+    function filtrarTopicosModalTeoria() {
+      const idMat = document.getElementById('teoMateria').value;
+      const sel = document.getElementById('teoTopicoSelect');
+      if (!idMat || !ESTADO) {
+        sel.innerHTML = '<option value="">Selecione primeiro a matéria...</option>';
+        return;
+      }
+      const topicosMat = ESTADO.topicos.filter(t => t.idMateria === idMat && t.status === 'Ativo');
+      topicosMat.sort((a, b) => a.resolvidasTotal - b.resolvidasTotal || String(a.id).localeCompare(String(b.id)));
+
+      sel.innerHTML = '<option value="">-- Escolha um tópico cadastrado ou digite um novo abaixo --</option>' +
+        topicosMat.map(t => {
+          const tagZero = t.resolvidasTotal === 0 ? '[0 Questões Respondidas - Prioridade 1]' : `(Sessão: ${t.ultimoAproveitamentoSessao}% | Acumulado: ${t.aproveitamentoAcumulado}%)`;
+          return `<option value="${t.id}">${esc(t.topico)} ${tagZero}</option>`;
+        }).join('');
+    }
+
+    function aoSelecionarTopicoExistenteTeoria() {
+      const idTop = document.getElementById('teoTopicoSelect').value;
+      if (!idTop || !ESTADO) return;
+      const t = ESTADO.topicos.find(x => x.id === idTop);
+      if (t && t.totalBanco > 0) {
+        document.getElementById('teoTotalBanco').value = t.totalBanco;
+      }
+      document.getElementById('teoNovoTopico').value = '';
+    }
+
+    async function submeterTeoriaHoje(e) {
+      e.preventDefault();
+      const idMateria = document.getElementById('teoMateria').value;
+      let idTopico = document.getElementById('teoTopicoSelect').value;
+      const novoTopicoNome = document.getElementById('teoNovoTopico').value.trim();
+      const dataEstudo = formatarDataYMD_(document.getElementById('teoData').value) || ESTADO.hojeYMD;
+      const totalBanco = Math.max(0, Number(document.getElementById('teoTotalBanco').value || 50));
+
+      if (!idMateria) {
+        notificar('Selecione a matéria estudada.', true);
+        return;
+      }
+      if (!idTopico && !novoTopicoNome) {
+        notificar('Escolha um tópico na lista ou digite o nome do novo tópico.', true);
+        return;
+      }
+
+      const btn = document.getElementById('btnSalvarTeoriaHoje');
+      btn.disabled = true;
+      btn.textContent = 'Agendando...';
+
+      try {
+        const hojeYMD = ESTADO.hojeYMD;
+        const dataAgendada = somarDiasYMD_(dataEstudo, 1);
+        const matObj = ESTADO.materias.find(m => m.id === idMateria);
+        if (!matObj) throw new Error('Matéria não encontrada.');
+
+        let nomeTopicoFinal = '';
+        if (!idTopico && novoTopicoNome) {
+          const existenteMesmoNome = ESTADO.topicos.find(
+            t => t.idMateria === idMateria && t.topico.toLowerCase() === novoTopicoNome.toLowerCase()
+          );
+          if (existenteMesmoNome) {
+            idTopico = existenteMesmoNome.id;
+            nomeTopicoFinal = existenteMesmoNome.topico;
+          } else {
+            idTopico = gerarId_('TOP');
+            nomeTopicoFinal = novoTopicoNome;
+            await supabaseClient.from('topicos').insert({
+              id: idTopico,
+              id_materia: idMateria,
+              materia: matObj.nome,
+              topico: nomeTopicoFinal,
+              status: 'Ativo',
+              rodada_atual: 1,
+              total_banco: totalBanco,
+              resolvidas_rodada: 0,
+              restantes_rodada: totalBanco,
+              acertos_total: 0,
+              erros_total: 0,
+              aproveitamento: 0,
+              conclusao_banco: 0,
+              prioridade_calculada: 'Prioridade 1 (Maxima - 0 Questoes)',
+              situacao: 'Primeira Bateria Pendente',
+              motivo_prioridade: 'Teoria estudada -> Fazer 1a bateria amanha',
+              modo_banco: 'Agregado',
+              ultima_data: dataEstudo,
+              ultima_obs: '[Teoria estudada sem questoes]',
+              bloco: '1a Bateria Pos-Teoria'
+            });
+          }
+        } else if (idTopico) {
+          const tExist = ESTADO.topicos.find(t => t.id === idTopico);
+          nomeTopicoFinal = tExist ? tExist.topico : '';
+          await supabaseClient.from('topicos').update({
+            status: 'Ativo',
+            total_banco: (tExist && tExist.totalBanco > 0) ? tExist.totalBanco : totalBanco
+          }).eq('id', idTopico);
+        }
+
+        const revPend = ESTADO.revisoes.find(r => r.idTopico === idTopico && r.status !== 'Concluída');
+        if (revPend) {
+          await supabaseClient.from('revisoes').update({
+            data_origem: dataEstudo,
+            data_prevista_original: dataAgendada,
+            data_prevista_atual: dataAgendada,
+            etapa: 1,
+            total_etapas: 5,
+            status: 'Programada',
+            data_conclusao: '',
+            tipo_data_origem: 'Teoria_Estudada'
+          }).eq('id', revPend.id);
+        } else {
+          await supabaseClient.from('revisoes').insert({
+            id: gerarId_('REV'),
+            id_sessao_origem: 'TEORIA_' + hojeYMD,
+            id_materia: idMateria,
+            materia: matObj.nome,
+            id_topico: idTopico,
+            topico: nomeTopicoFinal,
+            data_origem: dataEstudo,
+            data_prevista_original: dataAgendada,
+            data_prevista_atual: dataAgendada,
+            etapa: 1,
+            total_etapas: 5,
+            status: 'Programada',
+            data_conclusao: '',
+            tipo_data_origem: 'Teoria_Estudada'
+          });
+        }
+
+        const novoEstado = await recalcularERetornarEstado_({ idTopicoRecemAtualizado: idTopico });
+        fecharModalTeoriaHoje();
+        aplicarEstado(novoEstado);
+        notificar('Tópico agendado com Prioridade 1 a partir do dia seguinte.');
+      } catch (err) {
+        notificar(err.message || 'Erro ao agendar teoria.', true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Agendar p/ Dia Seguinte';
+      }
+    }
+
+    async function acionarReorganizarFilaUnica() {
+      const botoes = [
+        document.getElementById('btnPainelColocarEmDia'),
+        document.getElementById('btnReorganizarHojePainel'),
+        document.getElementById('btnUnicoReorganizarCiclo'),
+        document.getElementById('btnColocarEmDia')
+      ];
+      botoes.forEach(b => {
+        if (b) {
+          b.disabled = true;
+          b.dataset.orig = b.textContent;
+          b.textContent = 'Reorganizando...';
+        }
+      });
+
+      try {
+        const hojeYMD = formatarDataYMD_(new Date());
+        await salvarValorConfigDB_('Data_Inicio_Ciclo', hojeYMD);
+        const est = await recalcularERetornarEstado_({
+          reorganizarFila: true,
+          iniciarAmanha: false,
+          corrigirDeficit: true
+        });
+        aplicarEstado(est);
+        notificar(`Fila reorganizada com sucesso: máximo de ${est.config.Max_Revisoes_Dia || 3} tópicos por dia respeitado.`);
+      } catch (err) {
+        notificar('Erro ao reorganizar: ' + (err.message || err), true);
+      } finally {
+        botoes.forEach(b => {
+          if (b) {
+            b.disabled = false;
+            b.textContent = b.dataset.orig || 'Reorganizar Fila Diária';
+          }
+        });
+      }
+    }
+
+    async function marcarRevisaoConcluida(idRevisao, btnEl) {
+      if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.textContent = 'Salvando...';
+      }
+      try {
+        const revAtual = ESTADO.revisoes.find(r => r.id === idRevisao);
+        if (!revAtual || revAtual.status === 'Concluída') return;
+
+        const tObj = ESTADO.topicos.find(t => t.id === revAtual.idTopico);
+        if (!tObj || tObj.resolvidasTotal === 0) {
+          throw new Error('Este tópico possui 0 questões respondidas. Registre a resolução da 1ª bateria de questões para iniciar o ciclo.');
+        }
+
+        const hojeYMD = ESTADO.hojeYMD;
+        const metaAprov = Number(ESTADO.config.Meta_Aproveitamento || 80);
+        const intervaloReforco = Math.max(1, Number(ESTADO.config.Intervalo_Reforco_Abaixo_Meta || 3));
+        const escala = obterEscalaIntervalos_(ESTADO.config.Intervalos_Revisao);
+        const regraAtraso = ESTADO.config.Regra_Atraso_Revisao || 'A_Partir_Conclusao';
+
+        await supabaseClient.from('revisoes').update({
+          status: 'Concluída',
+          data_conclusao: hojeYMD
+        }).eq('id', idRevisao);
+
+        const aprovUltimaSessao = tObj.ultimoAproveitamentoSessao;
+        let proximoIntervalo = intervaloReforco;
+        let novaEtapa = revAtual.etapa;
+        let novoBloco = 'Fluxo de Reforco (<80%)';
+        let novoTipoOrigem = 'Reforco_Curto';
+
+        if (aprovUltimaSessao >= metaAprov) {
+          if (revAtual.etapa >= 5 || revAtual.tipoDataOrigem === 'Consolidacao') {
+            novoBloco = 'Conteudos Consolidados';
+            proximoIntervalo = 15;
+            novaEtapa = 5;
+            novoTipoOrigem = 'Consolidacao';
+          } else {
+            novaEtapa = revAtual.etapa + 1;
+            proximoIntervalo = escala[novaEtapa - 1] || 30;
+            novoBloco = 'Fluxo Espacado (>=80%)';
+            novoTipoOrigem = 'Progressao_Espacada';
+          }
+        }
+
+        await supabaseClient.from('topicos').update({ bloco: novoBloco }).eq('id', revAtual.idTopico);
+
+        const dataBaseCalculo = (regraAtraso === 'Manter_Original' && revAtual.dataPrevistaAtual)
+          ? revAtual.dataPrevistaAtual
+          : hojeYMD;
+        let dataAlvo = somarDiasYMD_(dataBaseCalculo, proximoIntervalo);
+        if (dataAlvo <= hojeYMD) {
+          dataAlvo = somarDiasYMD_(hojeYMD, 1);
+        }
+
+        await supabaseClient.from('revisoes').insert({
+          id: gerarId_('REV'),
+          id_sessao_origem: revAtual.idSessaoOrigem,
+          id_materia: revAtual.idMateria,
+          materia: revAtual.materia,
+          id_topico: revAtual.idTopico,
+          topico: revAtual.topico,
+          data_origem: hojeYMD,
+          data_prevista_original: dataAlvo,
+          data_prevista_atual: dataAlvo,
+          etapa: novaEtapa,
+          total_etapas: 5,
+          status: 'Programada',
+          data_conclusao: '',
+          tipo_data_origem: novoTipoOrigem
+        });
+
+        try {
+          let antList = JSON.parse(ESTADO.config.Antecipados_Hoje || '[]');
+          if (Array.isArray(antList)) {
+            antList = antList.filter(a => a && a.idTopico !== revAtual.idTopico);
+            await salvarValorConfigDB_('Antecipados_Hoje', JSON.stringify(antList));
+          }
+        } catch (e) {}
+
+        const est = await recalcularERetornarEstado_({ idTopicoRecemAtualizado: revAtual.idTopico });
+        aplicarEstado(est);
+        notificar('Atividade marcada como concluída e próxima etapa agendada sem alterar a fila dos demais tópicos.');
+      } catch (err) {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = 'Concluir';
+        }
+        notificar(err.message || 'Erro ao concluir revisão.', true);
+      }
+    }
+
+    async function adiantarTopicoParaHoje(idMateria, idTopico, questoesPlanejadas) {
+      try {
+        const hojeYMD = ESTADO.hojeYMD;
+        let lista = [];
+        try {
+          lista = JSON.parse(ESTADO.config.Antecipados_Hoje || '[]');
+          if (!Array.isArray(lista)) lista = [];
+        } catch (e) { lista = []; }
+
+        lista = lista.filter(a => a && a.dataAlvo === hojeYMD);
+        if (!lista.some(a => a.idTopico === idTopico)) {
+          lista.push({
+            idMateria,
+            idTopico,
+            questoes: Math.max(1, Number(questoesPlanejadas || 15)),
+            dataAlvo: hojeYMD
+          });
+        }
+        await salvarValorConfigDB_('Antecipados_Hoje', JSON.stringify(lista));
+
+        const revPend = ESTADO.revisoes.find(r => r.idTopico === idTopico && r.status !== 'Concluída');
+        if (revPend) {
+          await supabaseClient.from('revisoes').update({ data_prevista_atual: hojeYMD }).eq('id', revPend.id);
+        }
+
+        const est = await recalcularERetornarEstado_();
+        aplicarEstado(est);
+        alternarSubAbaPainelEsq('hoje');
+        notificar('Tópico puxado para hoje.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function cancelarAntecipacaoHoje(idTopico) {
+      try {
+        const hojeYMD = ESTADO.hojeYMD;
+        const amanhaYMD = ESTADO.amanhaYMD;
+        let lista = [];
+        try {
+          lista = JSON.parse(ESTADO.config.Antecipados_Hoje || '[]');
+          if (!Array.isArray(lista)) lista = [];
+        } catch (e) { lista = []; }
+
+        lista = lista.filter(a => a && a.dataAlvo === hojeYMD && a.idTopico !== idTopico);
+        await salvarValorConfigDB_('Antecipados_Hoje', JSON.stringify(lista));
+
+        const revPend = ESTADO.revisoes.find(r => r.idTopico === idTopico && r.status !== 'Concluída');
+        if (revPend) {
+          await supabaseClient.from('revisoes').update({ data_prevista_atual: amanhaYMD }).eq('id', revPend.id);
+        }
+
+        const est = await recalcularERetornarEstado_({ idTopicoRecemAtualizado: idTopico });
+        aplicarEstado(est);
+        notificar('Antecipação removida. O tópico retornou para a programação normal.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function submeterSessao(e) {
+      e.preventDefault();
+      const res = Number(document.getElementById('sesResolvidas').value);
+      const ac = Number(document.getElementById('sesAcertos').value);
+      if (ac > res) {
+        notificar('A quantidade de acertos não pode superar as resolvidas.', true);
+        return;
+      }
+
+      const idSessao = document.getElementById('sesId').value.trim();
+      const dataSessao = formatarDataYMD_(document.getElementById('sesData').value) || ESTADO.hojeYMD;
+      const rodada = Number(document.getElementById('sesRodada').value || 1);
+      const idTopico = document.getElementById('sesTopico').value.trim();
+      const observacoes = document.getElementById('sesObs').value.trim();
+      const gerarRevisao = document.getElementById('sesGerarRevisao').checked;
+
+      const btn = document.getElementById('btnSalvarSessao');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      try {
+        const tObj = ESTADO.topicos.find(t => t.id === idTopico);
+        if (!tObj) throw new Error('Selecione matéria e tópico.');
+
+        const metaAprov = Number(ESTADO.config.Meta_Aproveitamento || 80);
+        const metaDiaria = Number(ESTADO.config.Meta_Diaria_Questoes || 30);
+        const intervaloReforco = Math.max(1, Number(ESTADO.config.Intervalo_Reforco_Abaixo_Meta || 3));
+        const escala = obterEscalaIntervalos_(ESTADO.config.Intervalos_Revisao);
+
+        const resolvidasAntes = ESTADO.sessoes
+          .filter(s => s.idTopico === idTopico && s.id !== idSessao)
+          .reduce((acc, s) => acc + s.resolvidas, 0);
+
+        const erros = res - ac;
+        const aprovSessao = Number(((ac / res) * 100).toFixed(1));
+        let idSessaoFinal = idSessao || gerarId_('SES');
+
+        const payloadSessao = {
+          id: idSessaoFinal,
+          data_sessao: dataSessao,
+          id_materia: tObj.idMateria,
+          materia: tObj.materia,
+          id_topico: idTopico,
+          topico: tObj.topico,
+          rodada,
+          questoes_resolvidas: res,
+          acertos: ac,
+          erros,
+          aproveitamento_sessao: aprovSessao,
+          meta_diaria_epoca: metaDiaria,
+          meta_aprov_epoca: metaAprov,
+          observacoes,
+          tipo_registro: 'Confirmado'
+        };
+
+        await supabaseClient.from('sessoes').upsert(payloadSessao, { onConflict: 'id' });
+
+        let gerouNovaRevisao = false;
+        if (!idSessao && gerarRevisao !== false) {
+          const revPendente = ESTADO.revisoes.find(r => r.idTopico === idTopico && r.status !== 'Concluída');
+          let etapaAnterior = 1;
+          let tipoAnterior = '';
+
+          if (revPendente) {
+            etapaAnterior = Math.max(1, Number(revPendente.etapa || 1));
+            tipoAnterior = revPendente.tipoDataOrigem || '';
+            await supabaseClient.from('revisoes').update({
+              status: 'Concluída',
+              data_conclusao: dataSessao
+            }).eq('id', revPendente.id);
+          }
+
+          const eraPrimeiraBateria = resolvidasAntes === 0 || tipoAnterior === 'Teoria_Estudada';
+          let novaEtapa = 1;
+          let proximoIntervalo = 1;
+          let novoBloco = 'Fluxo Espacado (>=80%)';
+          let novoTipoOrigem = 'Progressao_Espacada';
+
+          if (aprovSessao < metaAprov) {
+            novaEtapa = eraPrimeiraBateria ? 1 : Math.min(5, etapaAnterior);
+            proximoIntervalo = intervaloReforco;
+            novoBloco = 'Fluxo de Reforco (<80%)';
+            novoTipoOrigem = 'Reforco_Curto';
+          } else {
+            if (eraPrimeiraBateria) {
+              novaEtapa = 1;
+              proximoIntervalo = escala[0] || 1;
+              novoBloco = 'Fluxo Espacado (>=80%)';
+              novoTipoOrigem = 'Progressao_Espacada';
+            } else if (tipoAnterior === 'Reforco_Curto') {
+              novaEtapa = Math.min(5, etapaAnterior);
+              proximoIntervalo = escala[novaEtapa - 1] || 1;
+              novoBloco = 'Fluxo Espacado (>=80%)';
+              novoTipoOrigem = 'Progressao_Espacada';
+            } else if (etapaAnterior >= 5 || tipoAnterior === 'Consolidacao' || tObj.bloco === 'Conteudos Consolidados') {
+              novaEtapa = 5;
+              proximoIntervalo = 15;
+              novoBloco = 'Conteudos Consolidados';
+              novoTipoOrigem = 'Consolidacao';
+            } else {
+              novaEtapa = etapaAnterior + 1;
+              proximoIntervalo = escala[novaEtapa - 1] || 30;
+              novoBloco = 'Fluxo Espacado (>=80%)';
+              novoTipoOrigem = 'Progressao_Espacada';
+            }
+          }
+
+          await supabaseClient.from('topicos').update({ bloco: novoBloco }).eq('id', idTopico);
+
+          const dtProxima = somarDiasYMD_(dataSessao, proximoIntervalo);
+          await supabaseClient.from('revisoes').insert({
+            id: gerarId_('REV'),
+            id_sessao_origem: idSessaoFinal,
+            id_materia: tObj.idMateria,
+            materia: tObj.materia,
+            id_topico: idTopico,
+            topico: tObj.topico,
+            data_origem: dataSessao,
+            data_prevista_original: dtProxima,
+            data_prevista_atual: dtProxima,
+            etapa: novaEtapa,
+            total_etapas: 5,
+            status: 'Programada',
+            data_conclusao: '',
+            tipo_data_origem: novoTipoOrigem
+          });
+          gerouNovaRevisao = true;
+        }
+
+        try {
+          let antList = JSON.parse(ESTADO.config.Antecipados_Hoje || '[]');
+          if (Array.isArray(antList)) {
+            antList = antList.filter(a => a && a.idTopico !== idTopico);
+            await salvarValorConfigDB_('Antecipados_Hoje', JSON.stringify(antList));
+          }
+        } catch (e) {}
+
+        const novoEstado = await recalcularERetornarEstado_(gerouNovaRevisao ? { idTopicoRecemAtualizado: idTopico } : {});
+        resetarFormSessao();
+        aplicarEstado(novoEstado);
+        notificar('Questões registradas e próxima revisão agendada sem embaralhar a fila.');
+      } catch (err) {
+        notificar(err.message || 'Erro ao salvar sessão.', true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar Resolução e Agendar Próxima';
+      }
+    }
+
+    async function confirmarExclusaoSessao(idSessao, nomeTopico, dataBR) {
+      if (!confirm(`Deseja realmente EXCLUIR o registro de estudo de "${nomeTopico}" (${dataBR})?`)) {
+        return;
+      }
+      try {
+        await supabaseClient.from('sessoes').delete().eq('id', idSessao);
+        await supabaseClient.from('revisoes').delete().eq('id_sessao_origem', idSessao);
+        const novoEstado = await recalcularERetornarEstado_();
+        aplicarEstado(novoEstado);
+        notificar('Registro excluído e estado atualizado.');
+      } catch (err) {
+        notificar('Erro ao excluir: ' + err.message, true);
+      }
+    }
+
+    async function reverterConclusaoRevisao(idRevisao) {
+      if (!confirm('Deseja desfazer a conclusão desta revisão?')) return;
+      try {
+        const revAlvo = ESTADO.revisoes.find(r => r.id === idRevisao);
+        if (!revAlvo) throw new Error('Revisão não encontrada.');
+
+        await supabaseClient.from('revisoes').update({
+          status: 'Programada',
+          data_conclusao: ''
+        }).eq('id', idRevisao);
+
+        const outraPendente = ESTADO.revisoes.find(
+          r => r.id !== idRevisao && r.idTopico === revAlvo.idTopico && r.status !== 'Concluída'
+        );
+        if (outraPendente) {
+          await supabaseClient.from('revisoes').delete().eq('id', outraPendente.id);
+        }
+
+        const est = await recalcularERetornarEstado_();
+        aplicarEstado(est);
+        notificar('Conclusão desfeita.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function solicitarReprogramacao(idRevisao) {
+      const el = document.getElementById(`reprog-${idRevisao}`);
+      if (!el || !el.value) return;
+      try {
+        const novaData = formatarDataYMD_(el.value);
+        await supabaseClient.from('revisoes').update({
+          data_prevista_atual: novaData,
+          tipo_data_origem: 'Reprogramada_Manual'
+        }).eq('id', idRevisao);
+        const est = await recalcularERetornarEstado_();
+        aplicarEstado(est);
+        notificar('Data atualizada e fila sincronizada.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function submeterMateria(e) {
+      e.preventDefault();
+      const id = document.getElementById('matId').value.trim();
+      const nome = document.getElementById('matNome').value.trim();
+      const estudoDiario = document.getElementById('matDiario').value === 'Sim' ? 'Sim' : 'Nao';
+      const freqSemanal = Math.max(1, Math.min(7, Number(document.getElementById('matFreq').value || 3)));
+      const minQuestoes = Math.max(1, Number(document.getElementById('matMinQ').value || 15));
+
+      if (!nome) {
+        notificar('O nome da matéria é obrigatório.', true);
+        return;
+      }
+
+      const duplicada = ESTADO.materias.find(m => m.nome.toLowerCase() === nome.toLowerCase() && m.id !== id);
+      if (duplicada) {
+        notificar(`A matéria "${nome}" já está cadastrada.`, true);
+        return;
+      }
+
+      try {
+        if (id) {
+          await supabaseClient.from('materias').update({
+            nome,
+            estudo_diario: estudoDiario,
+            freq_semanal: freqSemanal,
+            min_questoes: minQuestoes
+          }).eq('id', id);
+        } else {
+          const novoId = gerarId_('MAT');
+          const novaOrdem = ESTADO.materias.length + 1;
+          await supabaseClient.from('materias').insert({
+            id: novoId,
+            ordem: novaOrdem,
+            nome,
+            estudo_diario: estudoDiario,
+            freq_semanal: freqSemanal,
+            min_questoes: minQuestoes,
+            status: 'Ativo',
+            data_cadastro: ESTADO.hojeYMD
+          });
+        }
+        resetarFormMateria();
+        const est = await recalcularERetornarEstado_();
+        aplicarEstado(est);
+        notificar('Matéria salva com sucesso.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function salvarNovaOrdemMaterias(idsOrdenados) {
+      try {
+        await Promise.all(
+          idsOrdenados.map((id, idx) =>
+            supabaseClient.from('materias').update({ ordem: idx + 1 }).eq('id', id)
+          )
+        );
+        const novoEstado = await recalcularERetornarEstado_();
+        aplicarEstado(novoEstado);
+        notificar('Prioridade das matérias atualizada.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function alternarAtivacaoMateria(id) {
+      try {
+        const m = ESTADO.materias.find(x => x.id === id);
+        if (!m) return;
+        const novoStatus = m.status === 'Ativo' ? 'Inativo' : 'Ativo';
+        await supabaseClient.from('materias').update({ status: novoStatus }).eq('id', id);
+        const est = await recalcularERetornarEstado_();
+        aplicarEstado(est);
+        notificar('Status da matéria atualizado.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function submeterTopico(e) {
+      e.preventDefault();
+      const id = document.getElementById('topId').value.trim();
+      const idMateria = document.getElementById('topMateria').value.trim();
+      const nomeTopico = document.getElementById('topNome').value.trim();
+      const totalBanco = Math.max(0, Number(document.getElementById('topTotalBanco').value || 0));
+
+      if (!idMateria || !nomeTopico) {
+        notificar('Preencha a matéria e o nome do tópico.', true);
+        return;
+      }
+
+      const duplicado = ESTADO.topicos.find(
+        t => t.idMateria === idMateria && t.topico.toLowerCase() === nomeTopico.toLowerCase() && t.id !== id
+      );
+      if (duplicado) {
+        notificar(`O tópico "${nomeTopico}" já existe nesta matéria.`, true);
+        return;
+      }
+
+      try {
+        const matObj = ESTADO.materias.find(m => m.id === idMateria);
+        const nomeMateria = matObj ? matObj.nome : '';
+        let idTopicoRecemCriado = '';
+
+        if (id) {
+          await supabaseClient.from('topicos').update({
+            id_materia: idMateria,
+            materia: nomeMateria,
+            topico: nomeTopico,
+            total_banco: totalBanco
+          }).eq('id', id);
+        } else {
+          const novoId = gerarId_('TOP');
+          idTopicoRecemCriado = novoId;
+          await supabaseClient.from('topicos').insert({
+            id: novoId,
+            id_materia: idMateria,
+            materia: nomeMateria,
+            topico: nomeTopico,
+            status: 'Ativo',
+            rodada_atual: 1,
+            total_banco: totalBanco,
+            resolvidas_rodada: 0,
+            restantes_rodada: totalBanco,
+            acertos_total: 0,
+            erros_total: 0,
+            aproveitamento: 0,
+            conclusao_banco: 0,
+            prioridade_calculada: 'Prioridade 1 (Maxima - 0 Questoes)',
+            situacao: 'Primeira Bateria Pendente',
+            motivo_prioridade: 'Topico recem-cadastrado (0 questoes)',
+            modo_banco: 'Agregado',
+            ultima_data: '',
+            ultima_obs: '',
+            bloco: '1a Bateria Pos-Teoria'
+          });
+
+          await supabaseClient.from('revisoes').insert({
+            id: gerarId_('REV'),
+            id_sessao_origem: 'CAD_' + ESTADO.hojeYMD,
+            id_materia: idMateria,
+            materia: nomeMateria,
+            id_topico: novoId,
+            topico: nomeTopico,
+            data_origem: ESTADO.hojeYMD,
+            data_prevista_original: ESTADO.amanhaYMD,
+            data_prevista_atual: ESTADO.amanhaYMD,
+            etapa: 1,
+            total_etapas: 5,
+            status: 'Programada',
+            data_conclusao: '',
+            tipo_data_origem: 'Teoria_Estudada'
+          });
+        }
+
+        resetarFormTopico();
+        const est = await recalcularERetornarEstado_(idTopicoRecemCriado ? { idTopicoRecemAtualizado: idTopicoRecemCriado } : {});
+        aplicarEstado(est);
+        notificar('Tópico salvo e programado na fila.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function alternarAtivacaoTopico(idTopico) {
+      try {
+        const t = ESTADO.topicos.find(x => x.id === idTopico);
+        if (!t) return;
+        const novoStatus = t.status === 'Ativo' ? 'Inativo' : 'Ativo';
+        await supabaseClient.from('topicos').update({ status: novoStatus }).eq('id', idTopico);
+        const est = await recalcularERetornarEstado_();
+        aplicarEstado(est);
+        notificar('Status do tópico alterado.');
+      } catch (err) {
+        notificar(err.message, true);
+      }
+    }
+
+    async function submeterConfiguracoes(e) {
+      e.preventDefault();
+      const diasSelecionados = [];
+      document.querySelectorAll('.chkDiaEstudo:checked').forEach(chk => diasSelecionados.push(chk.value));
+      if (diasSelecionados.length === 0) {
+        notificar('Selecione pelo menos 1 dia para estudo.', true);
+        return;
+      }
+
+      const cap = document.getElementById('cfgMaxRevisoes').value;
+      const novasConfigs = {
+        Meta_Diaria_Questoes: document.getElementById('cfgMetaDiaria').value,
+        Max_Revisoes_Dia: cap,
+        Max_Topicos_Dia: cap,
+        Min_Questoes_Materia: document.getElementById('cfgMinQuestoesMat').value,
+        Dias_Estudo: diasSelecionados.join(','),
+        Meta_Aproveitamento: document.getElementById('cfgMetaAprov').value,
+        Amostra_Minima: document.getElementById('cfgAmostraMin').value,
+        Intervalos_Revisao: document.getElementById('cfgIntervalosRev').value,
+        Regra_Atraso_Revisao: document.getElementById('cfgRegraAtrasoRev').value
+      };
+
+      const btn = document.getElementById('btnSalvarConfig');
+      btn.disabled = true;
+      btn.textContent = 'Salvando...';
+
+      try {
+        const rowsUpsert = Object.keys(novasConfigs).map(k => ({
+          chave: k,
+          valor: String(novasConfigs[k]),
+          descricao: 'Configuracao do sistema'
+        }));
+        await supabaseClient.from('configuracoes').upsert(rowsUpsert, { onConflict: 'chave' });
+        const est = await recalcularERetornarEstado_({ reorganizarFila: true, corrigirDeficit: true });
+        aplicarEstado(est);
+        notificar('Configurações salvas e fila recalculada.');
+      } catch (err) {
+        notificar(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Salvar Configurações e Recalcular Fila';
+      }
+    }
+
+    /* ==========================================================================
+     * 7. RENDERIZAÇÃO DE TELAS E COMPONENTES (TEMA ESCURO)
+     * ========================================================================== */
+    function limparCerquilha(str) {
+      return String(str || '').replace(/#/g, '');
+    }
+
+    function gerarBadgeFluxoHTML(item) {
+      const qResp = item.resolvidasTotal !== undefined ? item.resolvidasTotal : (item.questoesRespondidas || 0);
+      const aprovSessao = item.ultimoAproveitamentoSessao !== undefined ? item.ultimoAproveitamentoSessao : Number(item.aproveitamento || 0);
+      if (item.codigoFluxo === 'POS_TEORIA' || qResp === 0) {
+        return `<span class="px-2 py-0.5 rounded bg-indigo-600 text-white font-bold text-[10px]">PRIORIDADE 1: 1ª BATERIA PÓS-TEORIA (0 Q.)</span>`;
+      }
+      if (item.codigoFluxo === 'REFORCO_ABAIXO_80' || aprovSessao < 80) {
+        return `<span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">PRIORIDADE 2: REFORÇO CURTO (SESSÃO &lt; 80% | +3 DIAS)</span>`;
+      }
+      if (item.codigoFluxo === 'CONSOLIDACAO') {
+        return `<span class="px-2 py-0.5 rounded bg-teal-600 text-white font-bold text-[10px]">PRIORIDADE 4: CONSOLIDAÇÃO (SESSÃO &ge; 80% | +15 DIAS)</span>`;
+      }
+      return `<span class="px-2 py-0.5 rounded bg-emerald-600 text-white font-bold text-[10px]">PRIORIDADE 3: PROGRESSÃO ESPAÇADA (Etapa ${item.etapa || item.etapaNum || 1}/${item.totalEtapas || 5})</span>`;
+    }
+
+    function gerarCelulaFluxoComCirculoDireitaHTML(item) {
+      const qResp = item.questoesRespondidas || 0;
+      const aprovSessao = item.ultimoAproveitamentoSessao !== undefined ? item.ultimoAproveitamentoSessao : Number(item.aproveitamento || 0);
+      let titulo = 'Prioridade 3: Progressão Espaçada';
+      let corCirculo = 'bg-emerald-500';
+
+      if (item.codigoFluxo === 'POS_TEORIA' || qResp === 0) {
+        titulo = 'Prioridade 1: 1ª Bateria Pós-Teoria (0 Q.)';
+        corCirculo = 'bg-indigo-500';
+      } else if (item.codigoFluxo === 'REFORCO_ABAIXO_80' || aprovSessao < 80) {
+        titulo = 'Prioridade 2: Reforço Curto (+3 dias)';
+        corCirculo = 'bg-rose-500';
+      } else if (item.codigoFluxo === 'CONSOLIDACAO') {
+        titulo = 'Prioridade 4: Consolidação (+15 dias)';
+        corCirculo = 'bg-teal-500';
+      }
+
+      const subtexto = limparCerquilha(item.prioridadeExplicita || '');
+      return `
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <div class="font-bold text-slate-100">${esc(titulo)}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5 font-medium">${esc(subtexto)}</div>
+          </div>
+          <span class="w-3.5 h-3.5 rounded-full ${corCirculo} shrink-0 shadow" title="${esc(titulo)}"></span>
+        </div>
+      `;
+    }
+
+    function renderizarPainel() {
+      const p = ESTADO.painel;
+      const avisos = [];
+      if (p.revAtrasadas > 0) {
+        avisos.push(`Você possui ${p.revAtrasadas} tópico(s) em atraso. Clique em "Reorganizar Fila Diária" para encaixá-los hoje respeitando o limite de ${ESTADO.config.Max_Revisoes_Dia || 3} tópicos por dia.`);
+      }
+      const boxAlertas = document.getElementById('alertasPainel');
+
+      if (avisos.length > 0) {
+        boxAlertas.classList.remove('hidden');
+        boxAlertas.innerHTML = avisos.map(a => `<div class="font-semibold">• ${esc(limparCerquilha(a))}</div>`).join('');
+      } else {
+        boxAlertas.classList.add('hidden');
+      }
+
+      document.getElementById('pHojeResolvidas').textContent = `${p.resolvidasHoje} / ${p.metaDiaria}`;
+      document.getElementById('pHojePercMeta').textContent = `${p.percCumprimentoMetaHoje}%`;
+      document.getElementById('pBarraMetaHoje').style.width = `${p.percCumprimentoMetaHoje}%`;
+      document.getElementById('pHojeAcertos').textContent = `Acertos hoje (Micro): ${p.acertosHoje} (${p.aproveitamentoHoje}%)`;
+
+      document.getElementById('pSemanaResolvidas').textContent = `${p.resolvidasSemana} q.`;
+      document.getElementById('pSemanaAprov').textContent = `${p.aproveitamentoSemana}% na semana`;
+      document.getElementById('pMetaSemanalTxt').textContent = `Meta semanal: ${p.metaSemanal} q. | Dias batidos: ${p.diasMetaAtingida}`;
+      document.getElementById('pDiasMetaBatida').textContent = `Média Acumulada Global (Macro): ${p.aproveitamentoGlobal || 0}%`;
+
+      document.getElementById('pRevHoje').textContent = `${p.revPrevistasHoje} hoje`;
+      document.getElementById('pRevAtrasadasBadge').textContent = `${p.revAtrasadas} atrasada(s)`;
+      document.getElementById('pRevConcluidas').textContent = `Concluídas hoje: ${p.revConcluidasHoje} | Total histórico: ${p.revConcluidasTotal}`;
+
+      const contHoje = document.getElementById('listaHojePainel');
+      if (!p.atividadesHoje || p.atividadesHoje.length === 0) {
+        contHoje.innerHTML = `
+          <div class="text-xs text-slate-400 py-6 text-center space-y-2">
+            <p class="font-bold text-slate-200">Nenhum tópico pendente para hoje (${formatarDataBR(ESTADO.hojeYMD)}).</p>
+            <p class="text-[11px] text-slate-400">Alterne para a aba "Próximo Dia da Fila" acima se quiser antecipar estudos, ou clique em "Reorganizar Fila Diária".</p>
+          </div>
+        `;
+      } else {
+        contHoje.innerHTML = p.atividadesHoje.map(at => {
+          const isRealizada = at.situacao === 'Realizada';
+          const isAntecipada = at.situacao === 'Antecipada para Hoje';
+          const isAtrasada = at.situacao === 'Atrasada';
+          const aprovSessao = at.ultimoAproveitamentoSessao !== undefined ? at.ultimoAproveitamentoSessao : at.aproveitamento;
+          const aprovMacro = at.aproveitamentoAcumulado !== undefined ? at.aproveitamentoAcumulado : at.aproveitamento;
+          return `
+            <div class="p-3.5 rounded-xl border ${isRealizada ? 'bg-emerald-950/30 border-emerald-800/70' : isAtrasada ? 'bg-rose-950/40 border-rose-700' : 'bg-slate-950/80 border-slate-800'} space-y-2">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="space-y-1 flex-1">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700">${esc(at.materia)}</span>
+                    ${gerarBadgeFluxoHTML(at)}
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isRealizada ? 'bg-emerald-900 text-emerald-200' : isAtrasada ? 'bg-rose-600 text-white' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
+                      ${isAtrasada ? 'ATRASADA' : esc(at.situacao)} (${formatarDataBR(at.dataPlanejada)})
+                    </span>
+                  </div>
+                  <div class="text-xs font-bold text-white">${esc(at.topico)}</div>
+                  <div class="text-[11px] text-slate-300 font-medium">${esc(limparCerquilha(at.regraExplicita))}</div>
+                  <div class="text-[10px] text-slate-400 font-semibold">
+                    Última Sessão (Micro): <span class="text-indigo-400">${at.resolvidasTotal > 0 ? aprovSessao + '%' : '0 q.'}</span> |
+                    Média Acumulada (Macro): <span class="text-slate-200">${at.resolvidasTotal > 0 ? aprovMacro + '%' : '—'}</span>
+                    (${at.resolvidasTotal} resp. de ${at.totalBanco} cad.)
+                  </div>
+                </div>
+                <div class="text-right shrink-0 space-y-1.5">
+                  <span class="inline-block px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-800 text-xs font-extrabold">Meta: ${at.questoesPlanejadas} q.</span>
+                  <div class="flex items-center justify-end gap-1">
+                    ${!isRealizada ? `
+                      <button onclick="atalhoRegistrarEstudo('${at.idMateria}','${at.idTopico}',${at.questoesPlanejadas})" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold shadow">
+                        Resolver Questões
+                      </button>
+                      ${at.resolvidasTotal > 0 ? `
+                        <button onclick="marcarRevisaoConcluida('${at.idRevisao}', this)" class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow" title="Concluir mantendo o último aproveitamento">
+                          Concluir
+                        </button>
+                      ` : ''}
+                    ` : `
+                      <span class="text-[11px] font-bold text-emerald-400 mr-1">Concluído Hoje</span>
+                      <button onclick="reverterConclusaoRevisao('${at.idRevisao}')" class="px-2 py-1 rounded border border-rose-800 bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-[10px] font-semibold">Desfazer</button>
+                    `}
+                    ${isAntecipada && !isRealizada ? `<button onclick="cancelarAntecipacaoHoje('${at.idTopico}')" class="px-2 py-1 rounded border border-slate-700 hover:bg-slate-800 text-slate-300 text-[10px]" title="Devolver para amanhã">Devolver</button>` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const contSug = document.getElementById('listaSugestoesAdiantarPainel');
+      if (!p.proximasSugestoesAdiantar || p.proximasSugestoesAdiantar.length === 0) {
+        contSug.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">Nenhum tópico futuro na fila no momento.</p>`;
+      } else {
+        contSug.innerHTML = `
+          <div class="text-[11px] font-bold text-indigo-300 mb-1">Programados para ${formatarDataBR(p.proximaDataPlanejada)} (${p.proximasSugestoesAdiantar.length} tópico(s)):</div>
+          ${p.proximasSugestoesAdiantar.map(item => `
+            <div class="p-3 rounded-xl border border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="space-y-1 flex-1">
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="font-bold text-indigo-400">${esc(item.materia)}</span>
+                  ${gerarBadgeFluxoHTML(item)}
+                </div>
+                <div class="font-bold text-white">${esc(item.topico)}</div>
+                <div class="text-[10px] text-slate-400">
+                  Sessão (Micro): ${item.resolvidasTotal > 0 ? item.ultimoAproveitamentoSessao + '%' : '0 q.'} |
+                  Acumulado (Macro): ${item.resolvidasTotal > 0 ? item.aproveitamentoAcumulado + '%' : '—'}
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button onclick="adiantarTopicoParaHoje('${item.idMateria}', '${item.idTopico}', ${item.questoesPlanejadas})" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold transition">
+                  Puxar p/ Hoje
+                </button>
+                <button onclick="atalhoRegistrarEstudo('${item.idMateria}', '${item.idTopico}', ${item.questoesPlanejadas})" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold transition">
+                  Resolver Agora
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      const contZero = document.getElementById('listaTopicosZeroQuestoesPainel');
+      const topicosZero = ESTADO.topicos
+        .filter(t => t.status === 'Ativo' && t.materiaAtiva && t.resolvidasTotal === 0)
+        .sort((a, b) => (a.ordemMateria || 99) - (b.ordemMateria || 99) || String(a.id).localeCompare(String(b.id)));
+
+      if (topicosZero.length === 0) {
+        contZero.innerHTML = `<p class="text-slate-400 py-3 text-center">Todos os tópicos ativos já possuem questões respondidas.</p>`;
+      } else {
+        contZero.innerHTML = topicosZero.map(t => {
+          const revAgendada = ESTADO.revisoes.find(r => r.idTopico === t.id && r.status !== 'Concluída');
+          return `
+            <div class="flex items-center justify-between gap-2 py-2 border-b border-slate-800 last:border-0">
+              <div>
+                <div class="font-bold text-slate-100">${esc(t.topico)}</div>
+                <div class="text-[10px] text-slate-400">${esc(t.materia)} | Cadastradas: ${t.totalBanco} q. | <strong>Data: ${revAgendada ? formatarDataBR(revAgendada.dataPrevistaAtual) : 'Amanhã'}</strong></div>
+              </div>
+              <button onclick="atalhoRegistrarEstudo('${t.idMateria}', '${t.id}', 15)" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold shrink-0">
+                Fazer 1ª Bateria
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const contMat = document.getElementById('listaMatPrioritariasPainel');
+      contMat.innerHTML = p.materiasPrioritarias.length === 0
+        ? '<p class="text-slate-400">Nenhuma matéria ativa.</p>'
+        : p.materiasPrioritarias.map(m => `
+          <div class="flex items-center justify-between py-1.5 border-b border-slate-800 last:border-0">
+            <span class="font-semibold text-slate-200">${m.ordem}º. ${esc(m.nome)}</span>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">Mín. ${m.minQuestoes} q.</span>
+          </div>
+        `).join('');
+
+      const contPiores = document.getElementById('listaPioresTopicosPainel');
+      const abaixo80 = ESTADO.topicos
+        .filter(t => t.status === 'Ativo' && t.resolvidasTotal > 0 && t.ultimoAproveitamentoSessao < 80)
+        .sort((a, b) => a.ultimoAproveitamentoSessao - b.ultimoAproveitamentoSessao || (a.ordemMateria || 99) - (b.ordemMateria || 99) || String(a.id).localeCompare(String(b.id)));
+      contPiores.innerHTML = abaixo80.length === 0
+        ? '<p class="text-emerald-400 font-semibold py-3 text-center">Nenhum tópico com sessão recente abaixo de 80%.</p>'
+        : abaixo80.map(t => {
+          const rev = ESTADO.revisoes.find(r => r.idTopico === t.id && r.status !== 'Concluída');
+          return `
+            <div class="flex items-center justify-between py-1.5 border-b border-slate-800 last:border-0">
+              <div>
+                <span class="font-semibold text-slate-100">${esc(t.topico)}</span>
+                <span class="block text-[10px] text-rose-400 font-semibold">${esc(t.materia)} | Acumulado Macro: ${t.aproveitamentoAcumulado}% | Próx: ${rev ? formatarDataBR(rev.dataPrevistaAtual) : '-'}</span>
+              </div>
+              <span class="px-2 py-0.5 rounded font-bold bg-rose-950 text-rose-300 border border-rose-800">Sessão: ${t.ultimoAproveitamentoSessao}%</span>
+            </div>
+          `;
+        }).join('');
+    }
+
+    function atalhoRegistrarEstudo(idMateria, idTopico, qtdSugerida) {
+      irParaAba('registrar');
+      alternarSubAbaRegistrar('form');
+      document.getElementById('sesMateria').value = idMateria;
+      filtrarTopicosSelectSessao();
+      document.getElementById('sesTopico').value = idTopico;
+      mostrarResumoTopicoSessao();
+      document.getElementById('sesResolvidas').value = qtdSugerida || '';
+      document.getElementById('sesAcertos').focus();
+    }
+
+    function filtrarTopicosSelectSessao() {
+      const idMat = document.getElementById('sesMateria').value;
+      const selTop = document.getElementById('sesTopico');
+      const valTopAnterior = selTop ? selTop.value : '';
+      if (!idMat || !ESTADO) {
+        selTop.innerHTML = '<option value="">Selecione primeiro a matéria...</option>';
+        document.getElementById('boxResumoTopicoSessao').classList.add('hidden');
+        return;
+      }
+      const topicosMat = ESTADO.topicos.filter(t => t.idMateria === idMat && t.status === 'Ativo');
+      selTop.innerHTML = '<option value="">Selecione o tópico...</option>' +
+        topicosMat.map(t => `<option value="${t.id}">${esc(t.topico)} (${t.resolvidasTotal === 0 ? '0 q. - 1ª Bateria' : 'Sessão: ' + t.ultimoAproveitamentoSessao + '% | Acum: ' + t.aproveitamentoAcumulado + '%'})</option>`).join('');
+      if (valTopAnterior && topicosMat.some(t => t.id === valTopAnterior)) {
+        selTop.value = valTopAnterior;
+      }
+      mostrarResumoTopicoSessao();
+    }
+
+    function mostrarResumoTopicoSessao() {
+      const idTop = document.getElementById('sesTopico').value;
+      const box = document.getElementById('boxResumoTopicoSessao');
+      if (!idTop || !ESTADO) {
+        box.classList.add('hidden');
+        return;
+      }
+      const t = ESTADO.topicos.find(x => x.id === idTop);
+      if (!t) return;
+      document.getElementById('sesRodada').value = t.rodadaAtual || 1;
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <div><strong>Fluxo Atual:</strong> ${esc(t.bloco)} | <strong>Situação:</strong> ${esc(t.situacao)}</div>
+        <div><strong>Banco (${t.rodadaAtual}ª Rodada):</strong> ${t.resolvidasRodada} respondidas de ${t.totalBanco} cadastradas (Restam: ${t.restantesRodada})</div>
+        <div><strong>Última Sessão (Micro):</strong> ${t.resolvidasTotal > 0 ? t.ultimoAproveitamentoSessao + '%' : 'Nenhuma'} | <strong>Acumulado Histórico (Macro):</strong> ${t.acertosTotal}C / ${t.errosTotal}E (${t.aproveitamentoAcumulado}%)</div>
+      `;
+      atualizarPreviaSessao();
+    }
+
+    function atualizarPreviaSessao() {
+      const res = Number(document.getElementById('sesResolvidas').value || 0);
+      const ac = Number(document.getElementById('sesAcertos').value || 0);
+      const badge = document.getElementById('badgeCalcSessao');
+      const boxRegra = document.getElementById('boxPreviaRegraFluxo');
+      const idTop = document.getElementById('sesTopico').value;
+      const topObj = ESTADO && idTop ? ESTADO.topicos.find(x => x.id === idTop) : null;
+
+      if (res <= 0) {
+        document.getElementById('sesErros').value = 0;
+        badge.textContent = '0.0%';
+        if (boxRegra) boxRegra.classList.add('hidden');
+        return;
+      }
+      if (ac > res) {
+        document.getElementById('sesErros').value = 0;
+        badge.textContent = 'Acertos > Resolvidas';
+        badge.className = 'px-2.5 py-1 rounded-lg bg-rose-950 text-rose-300 border border-rose-800 text-xs font-bold';
+        return;
+      }
+      document.getElementById('sesErros').value = res - ac;
+      const pctSessao = Number(((ac / res) * 100).toFixed(1));
+      badge.textContent = `${pctSessao.toFixed(1)}% na sessão`;
+      badge.className = 'px-2.5 py-1 rounded-lg text-xs font-bold ' + (pctSessao >= 80 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800');
+
+      if (boxRegra && topObj) {
+        const novoTotalRes = (topObj.resolvidasTotal || 0) + res;
+        const novoTotalAc = (topObj.acertosTotal || 0) + ac;
+        const novoAprovAcum = ((novoTotalAc / novoTotalRes) * 100).toFixed(1);
+        boxRegra.classList.remove('hidden');
+        if (pctSessao >= 80) {
+          boxRegra.className = 'p-3 rounded-lg border bg-emerald-950/50 border-emerald-800 text-emerald-200 text-[11px]';
+          boxRegra.innerHTML = `<strong>Aproveitamento desta Sessão (Micro): ${pctSessao.toFixed(1)}% (&ge; 80%):</strong> O tópico avançará no <strong>Fluxo de Progressão Espaçada</strong>.<br><span class="text-[10px] opacity-80">Média Acumulada Histórica (Macro) ficará em: ${novoAprovAcum}%</span>`;
+        } else {
+          boxRegra.className = 'p-3 rounded-lg border bg-rose-950/50 border-rose-800 text-rose-200 text-[11px]';
+          boxRegra.innerHTML = `<strong>Aproveitamento desta Sessão (Micro): ${pctSessao.toFixed(1)}% (&lt; 80%):</strong> O tópico entrará no <strong>Fluxo de Reforço Curto (+3 dias)</strong> mantendo a etapa atual retida.<br><span class="text-[10px] opacity-80">Média Acumulada Histórica (Macro) ficará em: ${novoAprovAcum}%</span>`;
+        }
+      }
+    }
+
+    function editarSessaoExistente(idSessao) {
+      const s = ESTADO.sessoes.find(x => x.id === idSessao);
+      if (!s) return;
+      alternarSubAbaRegistrar('form');
+      document.getElementById('tituloFormSessao').textContent = 'Corrigir / Editar Sessão Registrada';
+      document.getElementById('sesId').value = s.id;
+      document.getElementById('sesData').value = s.dataSessao;
+      document.getElementById('sesRodada').value = s.rodada;
+      document.getElementById('sesMateria').value = s.idMateria;
+      filtrarTopicosSelectSessao();
+      document.getElementById('sesTopico').value = s.idTopico;
+      document.getElementById('sesResolvidas').value = s.resolvidas;
+      document.getElementById('sesAcertos').value = s.acertos;
+      document.getElementById('sesObs').value = s.observacoes;
+      atualizarPreviaSessao();
+    }
+
+    function resetarFormSessao() {
+      document.getElementById('formSessao').reset();
+      document.getElementById('sesId').value = '';
+      document.getElementById('sesData').value = ESTADO ? ESTADO.hojeYMD : '';
+      document.getElementById('tituloFormSessao').textContent = 'Registrar Resolução de Questões';
+      document.getElementById('boxResumoTopicoSessao').classList.add('hidden');
+      document.getElementById('boxPreviaRegraFluxo').classList.add('hidden');
+      atualizarPreviaSessao();
+    }
+
+    function renderizarAbaRegistrar() {
+      const tbody = document.getElementById('tbodySessoes');
+      if (ESTADO.sessoes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Nenhuma sessão registrada.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = ESTADO.sessoes.map(s => `
+        <tr class="hover:bg-slate-800/50">
+          <td class="py-2.5 px-3 whitespace-nowrap text-slate-200">
+            ${formatarDataBR(s.dataSessao)}
+            <span class="block text-[10px] text-slate-400">${s.rodada}ª Rodada</span>
+          </td>
+          <td class="py-2.5 px-3">
+            <div class="font-bold text-white">${esc(s.materia)}</div>
+            <div class="text-slate-400">${esc(s.topico)}</div>
+          </td>
+          <td class="py-2.5 px-3 text-center whitespace-nowrap">
+            <span class="font-extrabold ${s.aproveitamento >= 80 ? 'text-emerald-400' : 'text-rose-400'}">${s.aproveitamento}%</span>
+            <span class="block text-[10px] text-slate-400">${s.acertos}C / ${s.erros}E (${s.resolvidas} q.)</span>
+          </td>
+          <td class="py-2.5 px-3 text-center whitespace-nowrap">
+            <span class="font-bold text-slate-200">Tópico: ${s.aproveitamentoTopicoMacro !== undefined ? s.aproveitamentoTopicoMacro : s.aproveitamento}%</span>
+            <span class="block text-[10px] text-slate-400">Matéria: ${s.aproveitamentoMateriaMacro || 0}% | Global: ${s.aproveitamentoGlobalMacro || 0}%</span>
+          </td>
+          <td class="py-2.5 px-3 text-slate-300 max-w-xs">${esc(s.observacoes || '—')}</td>
+          <td class="py-2.5 px-3 text-right whitespace-nowrap space-x-2">
+            <button onclick="editarSessaoExistente('${s.id}')" class="text-indigo-400 hover:underline font-semibold">Corrigir</button>
+            <button onclick="confirmarExclusaoSessao('${s.id}', '${esc(s.topico)}', '${formatarDataBR(s.dataSessao)}')" class="text-rose-400 hover:underline font-semibold">Excluir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderizarAbaMaterias() {
+      const cont = document.getElementById('listaMateriasOrdenavel');
+      if (ESTADO.materias.length === 0) {
+        cont.innerHTML = `<p class="p-8 text-center text-slate-400">Cadastre matérias ao lado.</p>`;
+        return;
+      }
+
+      cont.innerHTML = ESTADO.materias.map((m, idx) => `
+        <div draggable="true"
+             ondragstart="iniciarDragMateria(event, '${m.id}')"
+             ondragover="permitirDropMateria(event)"
+             ondrop="soltarMateria(event, '${m.id}')"
+             class="p-3.5 flex flex-wrap items-center justify-between gap-3 hover:bg-slate-800/50 transition cursor-move ${m.status === 'Inativo' ? 'opacity-50 bg-slate-950' : ''}">
+          <div class="flex items-center gap-3">
+            <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white font-bold flex items-center justify-center text-xs">${m.ordem}º</span>
+            <div>
+              <div class="font-bold text-white text-sm flex items-center gap-2">
+                <span>${esc(m.nome)}</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Mínimo por bateria: ${m.minQuestoes} questões</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button onclick="moverMateria(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 px-2 py-1 border border-slate-700 rounded"' : 'class="px-2 py-1 border border-slate-700 rounded hover:bg-slate-800 font-bold text-slate-200"'}>Subir</button>
+            <button onclick="moverMateria(${idx}, 1)" ${idx === ESTADO.materias.length - 1 ? 'disabled class="opacity-30 px-2 py-1 border border-slate-700 rounded"' : 'class="px-2 py-1 border border-slate-700 rounded hover:bg-slate-800 font-bold text-slate-200"'}>Descer</button>
+            <button onclick="preencherFormMateria('${m.id}')" class="px-2.5 py-1 rounded border border-slate-700 hover:bg-slate-800 font-semibold text-slate-200">Editar</button>
+            <button onclick="alternarAtivacaoMateria('${m.id}')" class="px-2.5 py-1 rounded border border-slate-700 hover:bg-slate-800 text-slate-400">
+              ${m.status === 'Ativo' ? 'Desativar' : 'Reativar'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function moverMateria(indexAtual, direcao) {
+      const lista = ESTADO.materias.map(m => m.id);
+      const novoIndex = indexAtual + direcao;
+      if (novoIndex < 0 || novoIndex >= lista.length) return;
+      const temp = lista[indexAtual];
+      lista[indexAtual] = lista[novoIndex];
+      lista[novoIndex] = temp;
+      salvarNovaOrdemMaterias(lista);
+    }
+
+    function iniciarDragMateria(ev, id) { idArrastandoMateria = id; }
+    function permitirDropMateria(ev) { ev.preventDefault(); }
+    function soltarMateria(ev, idAlvo) {
+      ev.preventDefault();
+      if (!idArrastandoMateria || idArrastandoMateria === idAlvo) return;
+      const lista = ESTADO.materias.map(m => m.id);
+      const idxOrigem = lista.indexOf(idArrastandoMateria);
+      const idxAlvo = lista.indexOf(idAlvo);
+      if (idxOrigem === -1 || idxAlvo === -1) return;
+      lista.splice(idxOrigem, 1);
+      lista.splice(idxAlvo, 0, idArrastandoMateria);
+      idArrastandoMateria = null;
+      salvarNovaOrdemMaterias(lista);
+    }
+
+    function preencherFormMateria(id) {
+      const m = ESTADO.materias.find(x => x.id === id);
+      if (!m) return;
+      document.getElementById('matId').value = m.id;
+      document.getElementById('matNome').value = m.nome;
+      document.getElementById('matDiario').value = m.estudoDiario;
+      document.getElementById('matFreq').value = m.freqSemanal;
+      document.getElementById('matMinQ').value = m.minQuestoes;
+      document.getElementById('tituloFormMateria').textContent = 'Editar Matéria';
+    }
+
+    function resetarFormMateria() {
+      document.getElementById('formMateria').reset();
+      document.getElementById('matId').value = '';
+      document.getElementById('tituloFormMateria').textContent = 'Cadastrar / Editar Matéria';
+    }
+
+    function renderizarAbaTopicos() {
+      const filtroMat = document.getElementById('filtroTopicosMateria').value;
+      const tbody = document.getElementById('tbodyTopicos');
+      const lista = ESTADO.topicos
+        .filter(t => !filtroMat || t.idMateria === filtroMat)
+        .slice()
+        .sort((a, b) => (a.ordemMateria || 99) - (b.ordemMateria || 99) || String(a.id).localeCompare(String(b.id)));
+
+      if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-slate-400">Nenhum tópico encontrado.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lista.map(t => {
+        const isZero = t.resolvidasTotal === 0;
+        const aprovSessao = t.ultimoAproveitamentoSessao !== undefined ? t.ultimoAproveitamentoSessao : t.aproveitamento;
+        const badgePrio = isZero
+          ? 'bg-indigo-600 text-white'
+          : (aprovSessao >= 80 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800');
+
+        return `
+          <tr class="hover:bg-slate-800/50 ${t.status === 'Inativo' ? 'opacity-50' : ''}">
+            <td class="py-2.5 px-3">
+              <div class="font-bold text-white">${esc(t.topico)}</div>
+              <div class="text-[11px] text-slate-400">${esc(t.materia)} | ${t.rodadaAtual}ª Rodada</div>
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              <span class="font-bold text-slate-200">${t.totalBanco}</span> cad /
+              <span class="text-emerald-400 font-semibold">${t.resolvidasTotal}</span> resp /
+              <span class="text-amber-400 font-bold">${t.restantesRodada}</span> rest
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              ${isZero ? '<span class="text-indigo-400 font-bold">0 respondidas (1ª Bateria Pendente)</span>' : `
+                <div class="font-extrabold ${aprovSessao >= 80 ? 'text-emerald-400' : 'text-rose-400'}">Sessão (Micro): ${aprovSessao}%</div>
+                <div class="text-[10px] text-slate-400 font-semibold">Acumulado (Macro): ${t.aproveitamentoAcumulado}% (${t.acertosTotal}C/${t.errosTotal}E)</div>
+              `}
+            </td>
+            <td class="py-2.5 px-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgePrio}">${esc(limparCerquilha(t.prioridadeLabel))}</span>
+              <div class="text-[10px] text-slate-400 mt-0.5">${esc(limparCerquilha(t.motivoPrioridade))}</div>
+            </td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap space-x-1">
+              <button onclick="preencherFormTopico('${t.id}')" class="px-2 py-1 rounded border border-slate-700 hover:bg-slate-800 text-slate-200">Editar</button>
+              <button onclick="alternarAtivacaoTopico('${t.id}')" class="px-2 py-1 rounded border border-slate-800 text-slate-400 hover:bg-slate-800">${t.status === 'Ativo' ? 'Desativar' : 'Ativar'}</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function preencherFormTopico(id) {
+      const t = ESTADO.topicos.find(x => x.id === id);
+      if (!t) return;
+      document.getElementById('topId').value = t.id;
+      document.getElementById('topMateria').value = t.idMateria;
+      document.getElementById('topNome').value = t.topico;
+      document.getElementById('topTotalBanco').value = t.totalBanco;
+      document.getElementById('tituloFormTopico').textContent = 'Editar Tópico';
+    }
+
+    function resetarFormTopico() {
+      document.getElementById('formTopico').reset();
+      document.getElementById('topId').value = '';
+      document.getElementById('tituloFormTopico').textContent = 'Cadastrar / Editar Tópico';
+    }
+
+    function setFiltroPeriodoCiclo(p) {
+      filtroPeriodoCiclo = p;
+      ['hoje', 'amanha', '7d', '15d', 'tudo'].forEach(k => {
+        const el = document.getElementById(`btnCiclo-${k}`);
+        if (el) {
+          el.className = `px-3 py-1.5 rounded-lg font-semibold ${k === p ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300'}`;
+        }
+      });
+      renderizarAbaCiclo();
+    }
+
+    function renderizarAbaCiclo() {
+      const prev = ESTADO.ciclo.previsaoConclusao;
+      const metaAprov = Number(ESTADO.config.Meta_Aproveitamento || 80);
+
+      document.getElementById('txtPrevisaoData').textContent =
+        prev.questoesRestantes > 0
+          ? `Conclusão Estimada do Banco: ${prev.dataEstimadaFormatada} (~${prev.sessoesDiariasEstimadas} dias úteis)`
+          : 'Banco 100% concluído na rodada.';
+      document.getElementById('txtPrevisaoDetalhes').textContent =
+        `Restam ${prev.questoesRestantes} questões | Meta: ${prev.metaDiaria} q./dia | Limite fixo: ${ESTADO.config.Max_Revisoes_Dia || 3} tópicos/dia | Atrasadas: ${ESTADO.ciclo.qtdAtrasadasCiclo || 0}.`;
+
+      const badgeCiclo = document.getElementById('badgeMenuCiclo');
+      if (ESTADO.ciclo.qtdAtrasadasCiclo > 0) {
+        badgeCiclo.textContent = ESTADO.ciclo.qtdAtrasadasCiclo;
+        badgeCiclo.classList.remove('hidden');
+      } else {
+        badgeCiclo.classList.add('hidden');
+      }
+
+      const hoje = ESTADO.hojeYMD;
+      const amanha = ESTADO.amanhaYMD || somarDiasLocal(hoje, 1);
+      const limite7d = somarDiasLocal(hoje, 7);
+      const limite15d = somarDiasLocal(hoje, 15);
+      const filtroMat = document.getElementById('filtroMateriaCiclo') ? document.getElementById('filtroMateriaCiclo').value : '';
+      const filtroFluxo = document.getElementById('filtroFluxoCiclo') ? document.getElementById('filtroFluxoCiclo').value : '';
+
+      const datasMap = {};
+      ESTADO.ciclo.itensQuestoes.forEach(item => {
+        if (filtroMat && item.idMateria !== filtroMat) return;
+        if (filtroFluxo && item.codigoFluxo !== filtroFluxo) return;
+        if (filtroPeriodoCiclo === 'hoje' && item.dataPlanejada !== hoje && item.situacao !== 'Atrasada') return;
+        if (filtroPeriodoCiclo === 'amanha' && item.dataPlanejada !== amanha) return;
+        if (filtroPeriodoCiclo === '7d' && item.dataPlanejada > limite7d) return;
+        if (filtroPeriodoCiclo === '15d' && item.dataPlanejada > limite15d) return;
+
+        if (!datasMap[item.dataPlanejada]) {
+          datasMap[item.dataPlanejada] = { diaSemana: item.diaSemana, questoes: [] };
+        }
+        datasMap[item.dataPlanejada].questoes.push(item);
+      });
+
+      const datasOrdenadas = Object.keys(datasMap).sort();
+      const cont = document.getElementById('containerCicloPlanejado');
+
+      if (datasOrdenadas.length === 0) {
+        cont.innerHTML = `
+          <div class="bg-slate-900 rounded-xl border border-slate-800 p-8 text-center text-xs text-slate-400">
+            <div class="font-bold text-slate-200 text-sm">Nenhuma atividade programada para este filtro.</div>
+          </div>
+        `;
+        return;
+      }
+
+      const capMax = Number(ESTADO.config.Max_Revisoes_Dia || 3);
+
+      cont.innerHTML = datasOrdenadas.map(dt => {
+        const grupo = datasMap[dt];
+        const totalQDia = grupo.questoes.reduce((acc, x) => acc + x.questoesPlanejadas, 0);
+        const isHoje = dt === hoje;
+        const isAmanha = dt === amanha;
+        const isPassado = dt < hoje;
+        const temDeficit = dt >= hoje && grupo.questoes.length < capMax;
+
+        return `
+          <div class="bg-slate-900 rounded-xl border ${isPassado ? 'border-rose-700' : isHoje ? 'border-indigo-500' : 'border-slate-800'} shadow-lg overflow-hidden">
+            <div class="px-5 py-3 ${isPassado ? 'bg-rose-950' : 'bg-slate-950'} border-b border-slate-800 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div class="font-bold flex items-center gap-2">
+                <span>Data: ${formatarDataBR(dt)} — ${esc(grupo.diaSemana)}</span>
+                ${isHoje ? '<span class="px-2 py-0.5 rounded bg-indigo-600 text-[10px]">HOJE</span>' : ''}
+                ${isAmanha ? '<span class="px-2 py-0.5 rounded bg-emerald-600 text-[10px]">AMANHÃ</span>' : ''}
+                ${isPassado ? '<span class="px-2 py-0.5 rounded bg-rose-600 text-[10px]">EM ATRASO</span>' : ''}
+                ${temDeficit ? `<span class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-extrabold">${grupo.questoes.length}/${capMax} tópicos</span>` : ''}
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-slate-300 font-semibold">
+                  ${grupo.questoes.length} tópico(s) | ${totalQDia} questões sugeridas
+                </span>
+              </div>
+            </div>
+
+            <div class="p-4 space-y-3 text-xs">
+              ${grupo.questoes.map(q => {
+                const jaIniciado = (q.resolvidasTotal || 0) > 0;
+                const aprovSessao = Number(q.ultimoAproveitamentoSessao !== undefined ? q.ultimoAproveitamentoSessao : (q.aproveitamento || 0));
+                const aprovMacro = Number(q.aproveitamentoAcumulado !== undefined ? q.aproveitamentoAcumulado : (q.aproveitamento || 0));
+                const isPositivo = jaIniciado && aprovSessao >= metaAprov;
+                const isNegativo = jaIniciado && aprovSessao < metaAprov;
+
+                const classeCardDesempenho = isPositivo
+                  ? 'bg-emerald-950/50 border-emerald-800 text-emerald-200'
+                  : isNegativo
+                    ? 'bg-rose-950/50 border-rose-800 text-rose-200'
+                    : 'bg-indigo-950/50 border-indigo-800 text-indigo-200';
+
+                const isRealizada = q.situacao === 'Realizada';
+                const isAntecipada = q.situacao === 'Antecipada para Hoje';
+                const isAtrasada = q.situacao === 'Atrasada';
+                const podeAdiantar = dt > hoje;
+
+                return `
+                  <div class="p-4 rounded-xl border ${isRealizada ? 'border-emerald-800 bg-emerald-950/20' : isAtrasada ? 'border-rose-700 bg-rose-950/30' : 'border-slate-800 bg-slate-950/60'} space-y-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div class="space-y-1.5 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 font-bold text-[10px] uppercase">
+                            Matéria ${q.ordemMateria} | ${esc(q.materia)}
+                          </span>
+                          ${gerarBadgeFluxoHTML(q)}
+                          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-semibold text-[10px]">
+                            ${esc(q.etapaLabel || ('Etapa ' + q.etapa + '/' + q.totalEtapas))}
+                          </span>
+                          <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-semibold text-[10px]">
+                            Intervalo: ${esc(q.intervaloCalculo || '-')}
+                          </span>
+                        </div>
+                        <div class="text-sm font-bold text-white">${esc(q.topico)}</div>
+                        <div class="text-[11px] text-slate-300 bg-slate-900 px-3 py-2 rounded-lg border border-slate-800 space-y-1">
+                          <div><strong>Critério da Sessão:</strong> ${esc(limparCerquilha(q.regraExplicita))}</div>
+                          <div><strong>Agendamento (${formatarDataBR(dt)}):</strong> ${esc(limparCerquilha(q.motivoAgendamentoData))}</div>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-wrap items-center gap-2">
+                        <div class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-sm">
+                          Sugestão: ${q.questoesPlanejadas} questões
+                        </div>
+
+                        ${podeAdiantar ? `
+                          <button onclick="adiantarTopicoParaHoje('${q.idMateria}','${q.idTopico}',${q.questoesPlanejadas})" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[11px] shadow-sm transition">
+                            Puxar p/ Hoje
+                          </button>
+                        ` : ''}
+
+                        ${isAntecipada && !isRealizada ? `
+                          <button onclick="cancelarAntecipacaoHoje('${q.idTopico}')" class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px]">
+                            Devolver p/ Amanhã
+                          </button>
+                        ` : ''}
+
+                        ${!isRealizada ? `
+                          <button onclick="atalhoRegistrarEstudo('${q.idMateria}','${q.idTopico}',${q.questoesPlanejadas})" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-sm transition">
+                            Resolver Questões
+                          </button>
+                          ${jaIniciado ? `
+                            <button onclick="marcarRevisaoConcluida('${q.idRevisao}', this)" class="px-2.5 py-1.5 rounded-lg border border-emerald-600 text-emerald-400 hover:bg-emerald-950 font-bold text-[11px] transition">
+                              Concluir
+                            </button>
+                          ` : ''}
+                        ` : `
+                          <span class="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[11px]">Concluída</span>
+                        `}
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 border-t border-slate-800 text-[11px]">
+                      <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Banco de Questões</span>
+                        <span class="font-bold text-white text-xs">${q.totalBanco || 0} na banca</span>
+                        <span class="block text-[10px] text-slate-400">Restam ${q.restantesRodadaAtual !== undefined ? q.restantesRodadaAtual : q.ineditasRestantes} inéditas</span>
+                      </div>
+
+                      <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-semibold">Volume Respondido</span>
+                        <span class="font-bold text-indigo-400 text-xs">${q.resolvidasTotal || 0} respondidas</span>
+                        <span class="block text-[10px] text-slate-400">Última sessão: ${q.ultimaSessaoResolvidas || 0} q.</span>
+                      </div>
+
+                      <div class="p-2.5 rounded-lg border ${classeCardDesempenho}">
+                        <span class="block text-[10px] uppercase font-bold opacity-80">Sessão Atual (Micro)</span>
+                        <span class="font-extrabold text-sm">${jaIniciado ? aprovSessao.toFixed(1) + '%' : '0 Respondidas'}</span>
+                        <span class="block text-[10px] font-semibold mt-0.5">${jaIniciado ? `${q.ultimaSessaoAcertos || 0}C / ${q.ultimaSessaoErros || 0}E na sessão` : '1ª Bateria Pendente'}</span>
+                      </div>
+
+                      <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Média Acumulada (Macro)</span>
+                        <span class="font-extrabold text-white text-sm">${jaIniciado ? aprovMacro.toFixed(1) + '%' : '—'}</span>
+                        <span class="block text-[10px] text-slate-400">Total: ${q.acertosTotal || 0}C / ${q.errosTotal || 0}E</span>
+                      </div>
+
+                      <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Macro Matéria / Global</span>
+                        <span class="font-bold text-slate-200 text-xs">Matéria: ${q.aproveitamentoMateriaMacro || 0}%</span>
+                        <span class="block text-[10px] text-slate-400">Global: ${q.aproveitamentoGlobalMacro || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderizarAbaRevisoes() {
+      const hoje = ESTADO.hojeYMD;
+      const prog = ESTADO.programacaoCompleta || [];
+
+      const countZero = prog.filter(x => x.questoesRespondidas === 0).length;
+      const countReforco = prog.filter(x => x.codigoFluxo === 'REFORCO_ABAIXO_80').length;
+      const countProgCons = prog.filter(x => x.codigoFluxo === 'PROGRESSAO_ACIMA_80' || x.codigoFluxo === 'CONSOLIDACAO').length;
+
+      const listaDia = ESTADO.revisoes
+        .filter(r => {
+          if (r.status === 'Concluída') return r.dataConclusao === hoje;
+          return r.status === 'Atrasada' || r.dataPrevistaAtual <= hoje;
+        })
+        .slice()
+        .sort((a, b) => {
+          const aConc = a.status === 'Concluída' ? 1 : 0;
+          const bConc = b.status === 'Concluída' ? 1 : 0;
+          if (aConc !== bConc) return aConc - bConc;
+          if (a.dataPrevistaAtual !== b.dataPrevistaAtual) return String(a.dataPrevistaAtual).localeCompare(String(b.dataPrevistaAtual));
+          if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
+          if ((a.ordemMateria || 99) !== (b.ordemMateria || 99)) return (a.ordemMateria || 99) - (b.ordemMateria || 99);
+          return String(a.idTopico).localeCompare(String(b.idTopico));
+        });
+
+      const concluidasDia = listaDia.filter(r => r.status === 'Concluída').length;
+      const restantesDia = listaDia.length - concluidasDia;
+      const limiteDiario = ESTADO.config.Max_Revisoes_Dia || 3;
+
+      document.getElementById('revKpiZeroQuestoes').textContent = countZero;
+      document.getElementById('revKpiReforco').textContent = countReforco;
+      document.getElementById('revKpiProgressao').textContent = countProgCons;
+      document.getElementById('revKpiRestantes').textContent = restantesDia;
+      document.getElementById('revKpiCapacidade').textContent = `${limiteDiario} / dia`;
+
+      const badgeMenu = document.getElementById('badgeMenuRevisoes');
+      if (restantesDia > 0) {
+        badgeMenu.textContent = restantesDia;
+        badgeMenu.classList.remove('hidden');
+      } else {
+        badgeMenu.classList.add('hidden');
+      }
+
+      const contDia = document.getElementById('listaRevisoesDia');
+      if (listaDia.length === 0) {
+        contDia.innerHTML = `<p class="text-center text-slate-400 py-5">Nenhum tópico pendente para hoje (${formatarDataBR(hoje)}). Clique na aba "2. Lista Completa de Revisões Programadas" acima para ver toda a fila.</p>`;
+      } else {
+        contDia.innerHTML = listaDia.map(r => {
+          const isConcluida = r.status === 'Concluída';
+          const isAtrasada = !isConcluida && (r.status === 'Atrasada' || r.dataPrevistaAtual < hoje);
+          const aprovSessao = r.ultimoAproveitamentoSessao !== undefined ? r.ultimoAproveitamentoSessao : Number(r.aproveitamento || 0);
+          const aprovMacro = r.aproveitamentoAcumulado !== undefined ? r.aproveitamentoAcumulado : Number(r.aproveitamento || 0);
+
+          return `
+            <div class="p-4 rounded-xl border ${isConcluida ? 'bg-emerald-950/30 border-emerald-800' : isAtrasada ? 'bg-rose-950/40 border-rose-700' : 'bg-slate-950/80 border-slate-800'} space-y-3">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="space-y-1 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold uppercase">${esc(r.materia)}</span>
+                    ${gerarBadgeFluxoHTML(r)}
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isConcluida ? 'bg-emerald-900 text-emerald-200' : isAtrasada ? 'bg-rose-600 text-white' : 'bg-indigo-950 text-indigo-300 border border-indigo-800'}">
+                      ${isAtrasada ? 'ATRASADA' : esc(r.status)} (${formatarDataBR(r.dataPrevistaAtual)})
+                    </span>
+                  </div>
+                  <div class="font-bold text-sm text-white">${esc(r.topico)}</div>
+                  <div class="text-[11px] text-slate-300 font-medium">${esc(limparCerquilha(r.regraExplicita))}</div>
+                  <div class="text-[10px] text-slate-400 font-semibold">
+                    Sessão Atual (Micro): ${r.resolvidasTotal > 0 ? aprovSessao + '%' : '0 q.'} |
+                    Média Acumulada (Macro): ${r.resolvidasTotal > 0 ? aprovMacro + '%' : '—'}
+                  </div>
+                  <div class="text-[10px] text-slate-400">${esc(limparCerquilha(r.motivoAgendamentoData || ''))}</div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                  ${!isConcluida ? `
+                    <button onclick="atalhoRegistrarEstudo('${r.idMateria}','${r.idTopico}',15)" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow">
+                      Resolver Questões
+                    </button>
+                    ${r.resolvidasTotal > 0 ? `
+                      <button onclick="marcarRevisaoConcluida('${r.id}', this)" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow">
+                        Concluir
+                      </button>
+                    ` : ''}
+                  ` : `
+                    <button onclick="reverterConclusaoRevisao('${r.id}')" class="px-2.5 py-1 rounded border border-rose-800 bg-rose-950/60 hover:bg-rose-900 text-rose-300 text-[11px] font-semibold">
+                      Desfazer Conclusão
+                    </button>
+                  `}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      renderizarTabelaProgramacaoCompleta();
+      renderizarDistribuicaoPorDataRevisoes();
+      renderizarHistoricoRevisoesConcluidas();
+    }
+
+    function renderizarTabelaProgramacaoCompleta() {
+      const tbody = document.getElementById('tbodyProgramacaoCompleta');
+      if (!tbody || !ESTADO) return;
+
+      const fSit = document.getElementById('filtroProgSituacao') ? document.getElementById('filtroProgSituacao').value : '';
+      const fFluxo = document.getElementById('filtroProgFluxo') ? document.getElementById('filtroProgFluxo').value : '';
+      const fMat = document.getElementById('filtroProgMateria') ? document.getElementById('filtroProgMateria').value : '';
+
+      const lista = (ESTADO.programacaoCompleta || []).filter(item => {
+        if (fSit && item.situacaoAtual !== fSit) return false;
+        if (fFluxo && item.codigoFluxo !== fFluxo) return false;
+        if (fMat && item.idMateria !== fMat) return false;
+        return true;
+      });
+
+      if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="py-8 text-center text-slate-400">Nenhuma atividade programada encontrada para os filtros selecionados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lista.map(item => {
+        const isZero = item.questoesRespondidas === 0;
+        const isAtrasada = item.situacaoAtual === 'Atrasada' || item.statusAgendamento === 'Atrasada';
+        const aprovSessao = item.ultimoAproveitamentoSessao !== undefined ? item.ultimoAproveitamentoSessao : item.aproveitamento;
+        const aprovMacro = item.aproveitamentoAcumulado !== undefined ? item.aproveitamentoAcumulado : item.aproveitamento;
+
+        const badgeSit = isAtrasada
+          ? 'bg-rose-600 text-white'
+          : item.situacaoAtual === 'Primeira Bateria Pendente'
+            ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+            : item.situacaoAtual === 'Consolidacao'
+              ? 'bg-teal-950 text-teal-300 border border-teal-800'
+              : 'bg-slate-800 text-slate-200 border border-slate-700';
+
+        return `
+          <tr class="hover:bg-slate-800/40 align-top ${isAtrasada ? 'bg-rose-950/20' : ''}">
+            <td class="py-3 px-3 font-bold text-slate-300">${item.posicaoFila}º</td>
+            <td class="py-3 px-3">
+              <div class="font-bold text-white">${esc(limparCerquilha(item.topico))}</div>
+              <div class="text-[11px] text-slate-400">Matéria ${item.ordemMateria}: ${esc(limparCerquilha(item.materia))}</div>
+              <div class="text-[10px] text-slate-400 mt-1">${esc(limparCerquilha(item.explicacaoCalculo))}</div>
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <span class="font-semibold text-slate-200">${isZero ? 'Sem estudo prático' : formatarDataBR(item.dataEstudoInicial)}</span>
+              ${!isZero ? `<span class="block text-[10px] text-slate-400">Último: ${formatarDataBR(item.dataUltimoEstudo)}</span>` : ''}
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <span class="font-bold ${isZero ? 'text-indigo-400' : 'text-white'}">${item.questoesRespondidas} respondidas</span>
+              <span class="block text-[10px] text-slate-400">Banco: ${item.totalBanco} cad.</span>
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              ${isZero ? '<span class="text-slate-500 font-semibold">— (0 q.)</span>' : `
+                <div class="font-extrabold ${aprovSessao >= 80 ? 'text-emerald-400' : 'text-rose-400'}">Sessão: ${aprovSessao}%</div>
+                <div class="text-[10px] text-slate-400 font-semibold">Acumulado: ${aprovMacro}% (${item.acertosTotal}C/${item.errosTotal}E)</div>
+              `}
+            </td>
+            <td class="py-3 px-3 min-w-[230px]">
+              ${gerarCelulaFluxoComCirculoDireitaHTML(item)}
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap font-semibold text-slate-200">
+              ${esc(limparCerquilha(item.etapaAtual))}
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-[11px]">${esc(limparCerquilha(item.intervaloUtilizado))}</span>
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <div class="font-extrabold ${isAtrasada ? 'text-rose-400' : 'text-indigo-300'}">${formatarDataBR(item.dataProximaAtividade)}</div>
+              <div class="text-[10px] text-slate-400">${esc(item.diaSemanaProxima)}</div>
+            </td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${badgeSit}">${esc(limparCerquilha(item.situacaoAtual))}</span>
+            </td>
+            <td class="py-3 px-3 text-right whitespace-nowrap space-y-1">
+              <div class="flex items-center justify-end gap-1">
+                <button onclick="atalhoRegistrarEstudo('${item.idMateria}','${item.idTopico}',15)" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px]">
+                  Resolver Questões
+                </button>
+                ${!isZero ? `
+                  <button onclick="marcarRevisaoConcluida('${item.idRevisao}', this)" class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px]">
+                    Concluir
+                  </button>
+                ` : ''}
+              </div>
+              <div class="flex items-center justify-end gap-1 pt-1">
+                <input type="date" id="reprog-${item.idRevisao}" value="${item.dataProximaAtividade}" class="border rounded px-1.5 py-0.5 text-[10px]">
+                <button onclick="solicitarReprogramacao('${item.idRevisao}')" class="px-2 py-0.5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-semibold">Mover</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderizarDistribuicaoPorDataRevisoes() {
+      const cont = document.getElementById('containerDistribuicaoDatasRevisoes');
+      if (!cont || !ESTADO) return;
+
+      const prog = ESTADO.programacaoCompleta || [];
+      if (prog.length === 0) {
+        cont.innerHTML = `<div class="col-span-full text-center text-slate-400 py-4">Nenhuma atividade programada.</div>`;
+        return;
+      }
+
+      const porData = {};
+      prog.forEach(item => {
+        if (!porData[item.dataProximaAtividade]) {
+          porData[item.dataProximaAtividade] = {
+            diaSemana: item.diaSemanaProxima,
+            itens: []
+          };
+        }
+        porData[item.dataProximaAtividade].itens.push(item);
+      });
+
+      const datasOrd = Object.keys(porData).sort();
+      cont.innerHTML = datasOrd.map(dt => {
+        const g = porData[dt];
+        const isAmanha = dt === ESTADO.amanhaYMD;
+        const isHoje = dt === ESTADO.hojeYMD;
+        const isPassado = dt < ESTADO.hojeYMD;
+        return `
+          <div class="p-3 rounded-xl border ${isPassado ? 'border-rose-700 bg-rose-950/30' : isHoje ? 'border-indigo-500 bg-indigo-950/30' : isAmanha ? 'border-emerald-700 bg-emerald-950/20' : 'border-slate-800 bg-slate-950/70'} space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span class="font-bold ${isPassado ? 'text-rose-400' : 'text-white'}">${formatarDataBR(dt)} (${esc(g.diaSemana)}) ${isPassado ? '— ATRASO' : ''}</span>
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold">${g.itens.length} tópico(s)</span>
+            </div>
+            <div class="space-y-1.5">
+              ${g.itens.map(it => `
+                <div class="p-2 rounded bg-slate-900 border border-slate-800">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="font-bold text-slate-100 text-[11px]">${esc(it.topico)}</span>
+                    <span class="text-[10px] font-bold ${it.questoesRespondidas === 0 ? 'text-indigo-400' : (it.ultimoAproveitamentoSessao < 80 ? 'text-rose-400' : 'text-emerald-400')}">
+                      ${it.questoesRespondidas === 0 ? '1ª Bateria (0 q.)' : `Sessão: ${it.ultimoAproveitamentoSessao}% | Acum: ${it.aproveitamentoAcumulado}%`}
+                    </span>
+                  </div>
+                  <div class="text-[10px] text-slate-400">${esc(it.materia)} | ${esc(it.etapaAtual)}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderizarHistoricoRevisoesConcluidas() {
+      const tbody = document.getElementById('tbodyHistoricoRevisoesConcluidas');
+      if (!tbody || !ESTADO) return;
+
+      const concluidas = ESTADO.revisoes
+        .filter(r => r.status === 'Concluída')
+        .slice()
+        .sort((a, b) => String(b.dataConclusao || '').localeCompare(String(a.dataConclusao || '')) || String(a.idTopico).localeCompare(String(b.idTopico)));
+
+      if (concluidas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Nenhuma revisão concluída registrada até o momento.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = concluidas.map(r => `
+        <tr class="hover:bg-slate-800/40 text-slate-300">
+          <td class="py-2 px-3 font-semibold text-white">${esc(r.materia)} — ${esc(r.topico)}</td>
+          <td class="py-2 px-3">${esc(limparCerquilha(r.fluxoNomeCurto || r.tituloFluxo))}</td>
+          <td class="py-2 px-3 text-center">Etapa ${r.etapa}/${r.totalEtapas}</td>
+          <td class="py-2 px-3 text-center">${formatarDataBR(r.dataPrevistaAtual)}</td>
+          <td class="py-2 px-3 text-center font-bold text-emerald-400">${formatarDataBR(r.dataConclusao)}</td>
+          <td class="py-2 px-3 text-right">
+            <button onclick="reverterConclusaoRevisao('${r.id}')" class="text-rose-400 hover:underline font-semibold text-[11px]">Desfazer</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function aoMudarPeriodoEstatisticas() {
+      const p = document.getElementById('estPeriodo').value;
+      document.getElementById('boxDataInicioEst').classList.toggle('hidden', p !== 'custom');
+      document.getElementById('boxDataFimEst').classList.toggle('hidden', p !== 'custom');
+      renderizarEstatisticas();
+    }
+
+    function aoMudarMateriaEstatisticas() {
+      const idMat = document.getElementById('estMateria').value;
+      const selTop = document.getElementById('estTopico');
+      const valTopAnt = selTop ? selTop.value : '';
+      const lista = ESTADO.topicos.filter(t => !idMat || t.idMateria === idMat);
+      selTop.innerHTML = '<option value="">Todos os Tópicos</option>' +
+        lista.map(t => `<option value="${t.id}">${esc(t.topico)}</option>`).join('');
+      if (valTopAnt && lista.some(t => t.id === valTopAnt)) {
+        selTop.value = valTopAnt;
+      }
+      renderizarEstatisticas();
+    }
+
+    function renderizarEstatisticas() {
+      if (!ESTADO) return;
+      const periodo = document.getElementById('estPeriodo').value;
+      const idMat = document.getElementById('estMateria').value;
+      const idTop = document.getElementById('estTopico').value;
+      const rodada = document.getElementById('estRodada').value;
+
+      const hoje = ESTADO.hojeYMD;
+      let dtIni = '0000-01-01';
+      let dtFim = '9999-12-31';
+
+      if (periodo === 'hoje') { dtIni = hoje; dtFim = hoje; }
+      else if (periodo === '7d') { dtIni = somarDiasLocal(hoje, -6); dtFim = hoje; }
+      else if (periodo === '30d') { dtIni = somarDiasLocal(hoje, -29); dtFim = hoje; }
+      else if (periodo === 'custom') {
+        dtIni = document.getElementById('estDataIni').value || '0000-01-01';
+        dtFim = document.getElementById('estDataFim').value || '9999-12-31';
+      }
+
+      const sessoesFiltradas = ESTADO.sessoes.filter(s => {
+        if (s.dataSessao < dtIni || s.dataSessao > dtFim) return false;
+        if (idMat && s.idMateria !== idMat) return false;
+        if (idTop && s.idTopico !== idTop) return false;
+        if (rodada && String(s.rodada) !== String(rodada)) return false;
+        return true;
+      });
+
+      let somaResolvidas = 0;
+      let somaAcertos = 0;
+      const mapaPorDia = {};
+
+      sessoesFiltradas.forEach(s => {
+        somaResolvidas += s.resolvidas;
+        somaAcertos += s.acertos;
+        if (!mapaPorDia[s.dataSessao]) mapaPorDia[s.dataSessao] = { res: 0, ac: 0, sessoesCount: 0 };
+        mapaPorDia[s.dataSessao].res += s.resolvidas;
+        mapaPorDia[s.dataSessao].ac += s.acertos;
+        mapaPorDia[s.dataSessao].sessoesCount += 1;
+      });
+
+      const somaErros = Math.max(0, somaResolvidas - somaAcertos);
+      const aprovPonderado = somaResolvidas > 0 ? ((somaAcertos / somaResolvidas) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('estKpiResolvidas').textContent = somaResolvidas;
+      document.getElementById('estKpiAcertos').textContent = somaAcertos;
+      document.getElementById('estKpiErros').textContent = somaErros;
+      document.getElementById('estKpiAprov').textContent = `${aprovPonderado}%`;
+
+      if (chartRoscaInstance) chartRoscaInstance.destroy();
+      const ctxRosca = document.getElementById('chartRoscaAcertosErros').getContext('2d');
+      chartRoscaInstance = new Chart(ctxRosca, {
+        type: 'doughnut',
+        data: {
+          labels: ['Acertos', 'Erros'],
+          datasets: [{
+            data: somaResolvidas > 0 ? [somaAcertos, somaErros] : [1, 0],
+            backgroundColor: somaResolvidas > 0 ? ['#10b981', '#f43f5e'] : ['#1e293b', '#1e293b'],
+            borderWidth: 2,
+            borderColor: '#0f172a'
+          }]
+        },
+        options: {
+          responsive: true,
+          cutout: '66%',
+          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+
+      const percErros = somaResolvidas > 0 ? (100 - Number(aprovPonderado)).toFixed(1) : '0.0';
+      document.getElementById('legendaRoscaResumo').innerHTML =
+        `<strong>Acertos:</strong> ${somaAcertos} (${aprovPonderado}%) | <strong>Erros:</strong> ${somaErros} (${percErros}%)`;
+
+      const datasOrd = Object.keys(mapaPorDia).sort();
+      const labelsDia = datasOrd.map(d => `${formatarDataBR(d)} (${mapaPorDia[d].sessoesCount} ses.)`);
+      const dadosVolDia = datasOrd.map(d => mapaPorDia[d].res);
+      const dadosAprovDia = datasOrd.map(d => Number(((mapaPorDia[d].ac / mapaPorDia[d].res) * 100).toFixed(1)));
+
+      if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
+      const ctx1 = document.getElementById('chartEvolucao').getContext('2d');
+      chartEvolucaoInstance = new Chart(ctx1, {
+        type: 'bar',
+        data: {
+          labels: labelsDia,
+          datasets: [
+            { label: 'Frequência / Volume no Dia (Questões)', data: dadosVolDia, backgroundColor: '#6366f1', yAxisID: 'y' },
+            { label: 'Taxa de Acerto do Dia (%)', data: dadosAprovDia, type: 'line', borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.25, yAxisID: 'y1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, position: 'left', title: { display: true, text: 'Questões / Dia' } },
+            y1: { beginAtZero: true, max: 100, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Taxa de Acerto (%)' } }
+          }
+        }
+      });
+
+      const mapaMat = {};
+      ESTADO.materias.filter(m => m.status === 'Ativo').forEach(m => {
+        mapaMat[m.id] = { nome: m.nome, res: 0, ac: 0 };
+      });
+      sessoesFiltradas.forEach(s => {
+        if (mapaMat[s.idMateria]) {
+          mapaMat[s.idMateria].res += s.resolvidas;
+          mapaMat[s.idMateria].ac += s.acertos;
+        }
+      });
+      const matsComDados = Object.values(mapaMat);
+      if (chartMateriasInstance) chartMateriasInstance.destroy();
+      const ctx2 = document.getElementById('chartMaterias').getContext('2d');
+      chartMateriasInstance = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: matsComDados.map(m => m.nome),
+          datasets: [
+            {
+              label: 'Aproveitamento Acumulado da Matéria (Macro %)',
+              data: matsComDados.map(m => m.res > 0 ? Number(((m.ac / m.res) * 100).toFixed(1)) : 0),
+              backgroundColor: '#0ea5e9'
+            }
+          ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+      });
+
+      const tbodyRel = document.getElementById('tbodyRelatorioMacroMicro');
+      if (sessoesFiltradas.length === 0) {
+        tbodyRel.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">Nenhuma sessão encontrada para os filtros selecionados.</td></tr>`;
+      } else {
+        tbodyRel.innerHTML = sessoesFiltradas.map(s => `
+          <tr class="hover:bg-slate-800/40">
+            <td class="py-2.5 px-3 whitespace-nowrap font-semibold text-slate-200">${formatarDataBR(s.dataSessao)}</td>
+            <td class="py-2.5 px-3">
+              <div class="font-bold text-white">${esc(s.topico)}</div>
+              <div class="text-[10px] text-slate-400">${esc(s.materia)} (${s.rodada}ª Rodada)</div>
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              <span class="font-bold text-slate-200">${s.resolvidas} q.</span>
+              <span class="block text-[10px] text-slate-400">${s.acertos}C / ${s.erros}E</span>
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded font-extrabold ${s.aproveitamento >= 80 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}">
+                ${s.aproveitamento}%
+              </span>
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap font-bold text-slate-200">
+              ${s.aproveitamentoTopicoMacro !== undefined ? s.aproveitamentoTopicoMacro : s.aproveitamento}%
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap font-semibold text-slate-300">
+              ${s.aproveitamentoMateriaMacro || 0}%
+            </td>
+            <td class="py-2.5 px-3 text-center whitespace-nowrap font-semibold text-indigo-400">
+              ${s.aproveitamentoGlobalMacro || 0}%
+            </td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function preencherAbaConfig() {
+      const c = ESTADO.config;
+      document.getElementById('cfgMetaDiaria').value = c.Meta_Diaria_Questoes || 30;
+      document.getElementById('cfgMaxRevisoes').value = c.Max_Revisoes_Dia || 3;
+      document.getElementById('cfgMaxTopicos').value = c.Max_Revisoes_Dia || 3;
+      document.getElementById('cfgMinQuestoesMat').value = c.Min_Questoes_Materia || 10;
+      document.getElementById('cfgMetaAprov').value = c.Meta_Aproveitamento || 80;
+      document.getElementById('cfgAmostraMin').value = c.Amostra_Minima || 10;
+      document.getElementById('cfgIntervalosRev').value = c.Intervalos_Revisao || '1,3,7,15,30';
+      document.getElementById('cfgRegraAtrasoRev').value = c.Regra_Atraso_Revisao || 'A_Partir_Conclusao';
+
+      const diasAtivos = String(c.Dias_Estudo || '1,2,3,4,5,0').split(',').map(x => x.trim());
+      document.querySelectorAll('.chkDiaEstudo').forEach(chk => {
+        chk.checked = diasAtivos.includes(chk.value);
+      });
+    }
+
+    function esc(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    let timerToast = null;
+    function notificar(msg, erro = false) {
+      const el = document.getElementById('toast');
+      const txt = document.getElementById('toastTexto');
+      txt.textContent = msg;
+      el.className = `fixed bottom-5 right-5 z-50 max-w-md px-4 py-3 rounded-xl shadow-2xl border flex items-center justify-between gap-3 ${
+        erro ? 'bg-rose-950 text-rose-100 border-rose-700' : 'bg-slate-900 text-white border-slate-700'
+      }`;
+      el.classList.remove('hidden');
+      if (timerToast) clearTimeout(timerToast);
+      timerToast = setTimeout(() => el.classList.add('hidden'), 4500);
+    }
   </script>
 </body>
 </html>
