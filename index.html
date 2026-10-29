@@ -1,65 +1,147 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8">
-  <title>Gestão de Revisão por Questões & Anki</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestão de Revisão por Questões | Supabase Cloud</title>
+
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Supabase JS v2 CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- SheetJS (xlsx) CDN para Exportação Formatada -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
-    .tab-btn-active { background-color: #4f46e5; color: #ffffff; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
-    .tab-btn-inactive { color: #cbd5e1; }
-    .tab-btn-inactive:hover { background-color: #1e293b; color: #ffffff; }
-    .subtab-active { background-color: #0f172a; color: #ffffff; font-weight: 700; }
-    .subtab-inactive { background-color: #f1f5f9; color: #475569; font-weight: 600; }
-    .subtab-inactive:hover { background-color: #e2e8f0; color: #0f172a; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #020617; /* slate-950 */
+      color: #f1f5f9; /* slate-100 */
+    }
+    .tab-btn-active {
+      background-color: #4f46e5;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .tab-btn-inactive {
+      color: #94a3b8;
+    }
+    .tab-btn-inactive:hover {
+      background-color: #1e293b;
+      color: #ffffff;
+    }
+    .subtab-active {
+      background-color: #4f46e5;
+      color: #ffffff;
+      font-weight: 700;
+    }
+    .subtab-inactive {
+      background-color: #1e293b;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .subtab-inactive:hover {
+      background-color: #334155;
+      color: #f8fafc;
+    }
+    .dragging {
+      opacity: 0.45;
+      border: 2px dashed #6366f1;
+    }
+    /* Inputs e Selects nativos no Tema Escuro */
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="url"],
+    input[type="password"],
+    select,
+    textarea {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none !important;
+      border-color: #6366f1 !important;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col" onclick="fecharSubmenuFora(event)">
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100" onclick="fecharSubmenuFora(event)">
 
   <!-- HEADER E NAVEGACAO PRINCIPAL -->
-  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-lg">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
+  <header class="bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white sticky top-0 z-40 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-sm shadow">GR</div>
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-extrabold text-sm shadow-lg shadow-indigo-600/30">GR</div>
         <div>
-          <h1 class="text-base font-bold leading-tight">Gestão de Revisão por Questões & Anki</h1>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-bold leading-tight text-white">Gestão de Revisão por Questões</h1>
+            <span id="statusConexaoBadge" onclick="abrirModalConexaoSupabase()" class="cursor-pointer px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-700/60" title="Clique para configurar URL/Key do Supabase">
+              ● Supabase sa-east-1
+            </span>
+          </div>
           <p class="text-[11px] text-slate-400">Fila Única Sincronizada | Critério por Sessão (&ge; 80%) vs Acumulado Macro | 1ª Bateria Pós-Teoria</p>
         </div>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <button onclick="exportarParaExcel()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-emerald-400 text-xs font-semibold transition">
-          Baixar Planilha (Excel/CSV)
+        <!-- BOTAO EXPORTAR RELATORIO EXCEL (.XLSX) -->
+        <button onclick="exportarRelatorioExcel()" id="btnExportarExcel" class="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/40 text-white text-xs font-bold shadow flex items-center gap-1.5 transition">
+          <span>📊 Exportar Relatório Excel</span>
         </button>
+
         <button onclick="abrirModalTeoriaHoje()" class="px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition">
           Estudei Teoria Hoje (Agendar p/ Amanhã)
         </button>
 
+        <!-- SUBMENU AGRUPADO NO CANTO SUPERIOR DIREITO -->
         <div class="relative" id="containerSubmenuAcoes">
-          <button type="button" onclick="alternarSubmenuAcoes(event)" id="btnSubmenuAcoes" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow flex items-center gap-1.5 transition">
+          <button type="button" onclick="alternarSubmenuAcoes(event)" id="btnSubmenuAcoes" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white text-xs font-bold shadow flex items-center gap-1.5 transition">
             <span>Questões e Cadastros</span>
             <span class="text-[10px]">▼</span>
           </button>
-          <div id="dropdownSubmenuAcoes" class="hidden absolute right-0 mt-2 w-60 rounded-xl bg-white text-slate-800 shadow-2xl border border-slate-200 py-1.5 z-50 text-xs">
-            <button type="button" onclick="irParaAba('registrar'); fecharSubmenuAcoes();" class="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center justify-between font-semibold text-slate-800">
+          <div id="dropdownSubmenuAcoes" class="hidden absolute right-0 mt-2 w-64 rounded-xl bg-slate-900 text-slate-100 shadow-2xl border border-slate-700 py-1.5 z-50 text-xs">
+            <button type="button" onclick="irParaAba('registrar'); fecharSubmenuAcoes();" class="w-full text-left px-4 py-2.5 hover:bg-slate-800 flex items-center justify-between font-semibold text-slate-200">
               <span>Registrar Questões</span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">Sessão</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">Sessão</span>
             </button>
-            <div class="border-t border-slate-100 my-1"></div>
-            <button type="button" onclick="irParaAba('cadastros'); fecharSubmenuAcoes();" class="w-full text-left px-4 py-2.5 hover:bg-indigo-50 flex items-center justify-between font-semibold text-slate-800">
+            <div class="border-t border-slate-800 my-1"></div>
+            <button type="button" onclick="irParaAba('cadastros'); fecharSubmenuAcoes();" class="w-full text-left px-4 py-2.5 hover:bg-slate-800 flex items-center justify-between font-semibold text-slate-200">
               <span>Cadastrar Matéria/Tópico</span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">Base</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold">Base</span>
+            </button>
+            <div class="border-t border-slate-800 my-1"></div>
+            <button type="button" onclick="abrirModalConexaoSupabase(); fecharSubmenuAcoes();" class="w-full text-left px-4 py-2.5 hover:bg-slate-800 flex items-center justify-between font-semibold text-indigo-400">
+              <span>Credenciais Supabase</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">DB</span>
             </button>
           </div>
         </div>
 
-        <button onclick="salvarEstadoNoSupabase()" id="btnSync" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium transition">
-          Salvar Nuvem
+        <button onclick="carregarSistema()" id="btnSync" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition">
+          Sincronizar
         </button>
       </div>
     </div>
@@ -67,70 +149,100 @@
     <!-- MENU DE NAVEGACAO PRINCIPAL -->
     <nav class="max-w-7xl mx-auto px-4 py-2 flex items-center gap-1.5 overflow-x-auto text-xs">
       <button onclick="irParaAba('painel')" id="nav-painel" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-active">Painel Principal</button>
-      <button onclick="irParaAba('anki')" id="nav-anki" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">
-        Anki (Flashcards) <span id="badgeMenuAnki" class="ml-1 px-1.5 py-0.2 rounded-full bg-indigo-500 text-white text-[10px] hidden">0</span>
-      </button>
       <button onclick="irParaAba('ciclo')" id="nav-ciclo" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">
-        Ciclo de Estudos <span id="badgeMenuCiclo" class="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] hidden">0</span>
+        Ciclo de Estudos <span id="badgeMenuCiclo" class="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px] hidden">0</span>
       </button>
       <button onclick="irParaAba('revisoes')" id="nav-revisoes" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">
-        Revisões <span id="badgeMenuRevisoes" class="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] hidden">0</span>
+        Revisões <span id="badgeMenuRevisoes" class="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold text-[10px] hidden">0</span>
       </button>
       <button onclick="irParaAba('estatisticas')" id="nav-estatisticas" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Estatísticas e Gráficos</button>
+      <button onclick="irParaAba('flashcards')" id="nav-flashcards" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive flex items-center gap-1.5">
+        <span>⚡ Flashcards</span>
+        <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold uppercase">Modular</span>
+      </button>
       <button onclick="irParaAba('config')" id="nav-config" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Configurações</button>
     </nav>
   </header>
 
   <!-- MODAL: ESTUDEI A TEORIA HOJE -->
-  <div id="modalTeoriaHoje" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
-      <div class="px-5 py-4 bg-indigo-950 text-white flex items-center justify-between">
+  <div id="modalTeoriaHoje" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-700 overflow-hidden">
+      <div class="px-5 py-4 bg-indigo-950/90 border-b border-indigo-800/60 text-white flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold">Estudei a Teoria Hoje (Sem Questões Respondidas)</h3>
-          <p class="text-[11px] text-indigo-200 mt-0.5">O tópico entrará na Prioridade 1 a partir de AMANHÃ na primeira vaga disponível</p>
+          <p class="text-[11px] text-indigo-300 mt-0.5">O tópico entrará na Prioridade 1 a partir de AMANHÃ na primeira vaga disponível</p>
         </div>
-        <button onclick="fecharModalTeoriaHoje()" class="text-indigo-200 hover:text-white text-sm font-bold">Fechar</button>
+        <button onclick="fecharModalTeoriaHoje()" class="text-indigo-300 hover:text-white text-sm font-bold">Fechar</button>
       </div>
 
       <form id="formTeoriaHoje" onsubmit="submeterTeoriaHoje(event)" class="p-5 space-y-4 text-xs">
-        <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-950 text-[11px] leading-relaxed">
+        <div class="p-3 rounded-xl bg-indigo-950/50 border border-indigo-800/70 text-indigo-200 text-[11px] leading-relaxed">
           <strong>Como funciona:</strong> Tópicos com <strong>0 questões respondidas</strong> têm prioridade máxima sobre todas as revisões. Ao confirmar, o sistema agenda a <strong>1ª Bateria de Questões a partir do dia seguinte</strong> sem embaralhar os demais tópicos já organizados.
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Data do estudo teórico *</label>
-            <input type="date" id="teoData" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+            <label class="block font-semibold text-slate-300 mb-1">Data do estudo teórico *</label>
+            <input type="date" id="teoData" required class="w-full rounded-lg border px-3 py-2">
           </div>
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Total de Questões na Banca</label>
-            <input type="number" id="teoTotalBanco" min="1" value="50" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+            <label class="block font-semibold text-slate-300 mb-1">Total de Questões na Banca</label>
+            <input type="number" id="teoTotalBanco" min="1" value="50" class="w-full rounded-lg border px-3 py-2">
           </div>
         </div>
 
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">Matéria *</label>
-          <select id="teoMateria" required onchange="filtrarTopicosModalTeoria()" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+          <label class="block font-semibold text-slate-300 mb-1">Matéria *</label>
+          <select id="teoMateria" required onchange="filtrarTopicosModalTeoria()" class="w-full rounded-lg border px-3 py-2">
             <option value="">Selecione a matéria...</option>
           </select>
         </div>
 
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">Escolher Tópico já Cadastrado (0 questões respondidas)</label>
-          <select id="teoTopicoSelect" onchange="aoSelecionarTopicoExistenteTeoria()" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white">
+          <label class="block font-semibold text-slate-300 mb-1">Escolher Tópico já Cadastrado (0 questões respondidas)</label>
+          <select id="teoTopicoSelect" onchange="aoSelecionarTopicoExistenteTeoria()" class="w-full rounded-lg border px-3 py-2">
             <option value="">Selecione um tópico ou digite um novo abaixo...</option>
           </select>
         </div>
 
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">Ou digite o nome de um Novo Tópico estudado hoje</label>
-          <input type="text" id="teoNovoTopico" placeholder="Ex: Controle de Constitucionalidade" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+          <label class="block font-semibold text-slate-300 mb-1">Ou digite o nome de um Novo Tópico estudado hoje</label>
+          <input type="text" id="teoNovoTopico" placeholder="Ex: Controle de Constitucionalidade" class="w-full rounded-lg border px-3 py-2">
         </div>
 
-        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
-          <button type="button" onclick="fecharModalTeoriaHoje()" class="px-3.5 py-2 rounded-lg border border-slate-300 text-slate-600 font-semibold">Cancelar</button>
-          <button type="submit" id="btnSalvarTeoriaHoje" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow">
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+          <button type="button" onclick="fecharModalTeoriaHoje()" class="px-3.5 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold">Cancelar</button>
+          <button type="submit" id="btnSalvarTeoriaHoje" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow">
             Agendar p/ Dia Seguinte
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CREDENCIAIS SUPABASE (AMBIENTE PESSOAL) -->
+  <div id="modalConexaoSupabase" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-700 overflow-hidden">
+      <div class="px-5 py-4 bg-slate-800 border-b border-slate-700 text-white flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold">Configuração de Conexão Supabase (sa-east-1)</h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">As credenciais ficam salvas no código ou localmente no seu navegador (localStorage)</p>
+        </div>
+        <button onclick="fecharModalConexaoSupabase()" class="text-slate-400 hover:text-white text-sm font-bold">Fechar</button>
+      </div>
+      <form onsubmit="salvarCredenciaisSupabaseModal(event)" class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Project URL (Supabase) *</label>
+          <input type="url" id="inputSbUrl" required placeholder="https://xxxxxxxxxxxx.supabase.co" class="w-full rounded-lg border px-3 py-2">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">API Key (anon / public) *</label>
+          <input type="text" id="inputSbKey" required placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full rounded-lg border px-3 py-2 font-mono text-[11px]">
+        </div>
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+          <button type="button" onclick="fecharModalConexaoSupabase()" class="px-3.5 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold">Cancelar</button>
+          <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow">
+            Salvar e Conectar
           </button>
         </div>
       </form>
@@ -148,48 +260,51 @@
 
     <!-- ABA 1: PAINEL PRINCIPAL -->
     <section id="aba-painel" class="space-y-5">
-      <div id="alertasPainel" class="hidden rounded-xl bg-amber-50 border border-amber-300 p-3.5 text-xs text-amber-900 space-y-1"></div>
 
+      <div id="alertasPainel" class="hidden rounded-xl bg-amber-950/60 border border-amber-700/80 p-3.5 text-xs text-amber-200 space-y-1"></div>
+
+      <!-- 3 CARDS SUPERIORES DO PAINEL -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800 shadow-lg">
           <span class="text-[11px] font-semibold uppercase text-slate-400">Meta Diária de Hoje (Micro)</span>
           <div class="mt-1 flex items-baseline justify-between">
-            <span id="pHojeResolvidas" class="text-2xl font-bold text-slate-900">0 / 100</span>
-            <span id="pHojePercMeta" class="text-xs font-bold text-indigo-600">0%</span>
+            <span id="pHojeResolvidas" class="text-2xl font-bold text-white">0 / 30</span>
+            <span id="pHojePercMeta" class="text-xs font-bold text-indigo-400">0%</span>
           </div>
-          <div class="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
-            <div id="pBarraMetaHoje" class="h-full bg-indigo-600 transition-all" style="width:0%"></div>
+          <div class="w-full h-2 bg-slate-800 rounded-full mt-2 overflow-hidden">
+            <div id="pBarraMetaHoje" class="h-full bg-indigo-500 transition-all" style="width:0%"></div>
           </div>
-          <p id="pHojeAcertos" class="text-[11px] text-slate-500 mt-2">Sessões de hoje: 0 acertos (0%)</p>
+          <p id="pHojeAcertos" class="text-[11px] text-slate-400 mt-2">Sessões de hoje: 0 acertos (0%)</p>
         </div>
 
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800 shadow-lg">
           <span class="text-[11px] font-semibold uppercase text-slate-400">Desempenho Semanal &amp; Global (Macro)</span>
           <div class="mt-1 flex items-baseline justify-between">
-            <span id="pSemanaResolvidas" class="text-2xl font-bold text-slate-900">0</span>
-            <span id="pSemanaAprov" class="text-xs font-bold text-emerald-600">0% na semana</span>
+            <span id="pSemanaResolvidas" class="text-2xl font-bold text-white">0</span>
+            <span id="pSemanaAprov" class="text-xs font-bold text-emerald-400">0% na semana</span>
           </div>
-          <p id="pMetaSemanalTxt" class="text-[11px] text-slate-500 mt-2">Meta semanal: 600 questões</p>
-          <p id="pDiasMetaBatida" class="text-[11px] font-semibold text-slate-700 mt-1">Acumulado Global Macro: 0%</p>
+          <p id="pMetaSemanalTxt" class="text-[11px] text-slate-400 mt-2">Meta semanal: 180 questões</p>
+          <p id="pDiasMetaBatida" class="text-[11px] font-semibold text-slate-300 mt-1">Acumulado Global Macro: 0%</p>
         </div>
 
-        <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800 shadow-lg">
           <span class="text-[11px] font-semibold uppercase text-slate-400">Fila de Hoje &amp; Controle Diário</span>
           <div class="mt-1 flex items-baseline justify-between">
-            <span id="pRevHoje" class="text-2xl font-bold text-slate-900">0</span>
-            <span id="pRevAtrasadasBadge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-700">0 atrasadas</span>
+            <span id="pRevHoje" class="text-2xl font-bold text-white">0</span>
+            <span id="pRevAtrasadasBadge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-950 text-rose-300 border border-rose-800">0 atrasadas</span>
           </div>
-          <p id="pRevConcluidas" class="text-[11px] text-slate-500 mt-2">Concluídas hoje: 0 | Total: 0</p>
+          <p id="pRevConcluidas" class="text-[11px] text-slate-400 mt-2">Concluídas hoje: 0 | Total: 0</p>
           <div class="mt-1 flex items-center justify-between gap-2">
-            <button onclick="irParaAba('revisoes'); alternarSubAbaRevisoes('completa');" class="text-[11px] font-semibold text-indigo-600 hover:underline">Ver lista completa</button>
-            <button id="btnPainelColocarEmDia" onclick="acionarReorganizarFilaUnica()" class="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold transition">Reorganizar Fila Diária</button>
+            <button onclick="irParaAba('revisoes'); alternarSubAbaRevisoes('completa');" class="text-[11px] font-semibold text-indigo-400 hover:underline">Ver lista completa</button>
+            <button id="btnPainelColocarEmDia" onclick="acionarReorganizarFilaUnica()" class="px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-bold transition">Reorganizar Fila Diária</button>
           </div>
         </div>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+        <!-- COLUNA ESQUERDA COM SUB-ABAS -->
+        <div class="lg:col-span-7 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-1.5 text-xs">
               <button type="button" onclick="alternarSubAbaPainelEsq('hoje')" id="subbtn-painel-hoje" class="px-3 py-1.5 rounded-lg transition subtab-active">
                 Tópicos Programados para Hoje
@@ -199,24 +314,30 @@
               </button>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="acionarReorganizarFilaUnica()" id="btnReorganizarHojePainel" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold shadow-xs transition">
+              <button onclick="acionarReorganizarFilaUnica()" id="btnReorganizarHojePainel" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold shadow-xs transition" title="Encaixa atrasadas hoje respeitando o limite máximo de tópicos por dia">
                 Reorganizar Fila Diária
               </button>
-              <button onclick="abrirModalTeoriaHoje()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold">+ Teoria Hoje</button>
+              <button onclick="abrirModalTeoriaHoje()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold">+ Teoria Hoje</button>
             </div>
           </div>
 
+          <!-- CONTEUDO SUB-ABA 1: HOJE -->
           <div id="subpainel-esq-hoje" class="p-4 space-y-3">
             <div id="listaHojePainel" class="space-y-3"></div>
           </div>
 
+          <!-- CONTEUDO SUB-ABA 2: PROXIMO DIA -->
           <div id="subpainel-esq-amanha" class="hidden p-4 space-y-3">
+            <p class="text-[11px] text-indigo-200 bg-indigo-950/50 border border-indigo-800/60 rounded-lg px-3 py-2">
+              Tópicos programados para o próximo dia de estudo. Caso queira antecipar algum para hoje, clique em <strong>Puxar p/ Hoje</strong>.
+            </p>
             <div id="listaSugestoesAdiantarPainel" class="space-y-2.5"></div>
           </div>
         </div>
 
-        <div class="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-fit">
-          <div class="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-1.5 text-xs">
+        <!-- COLUNA DIREITA COM SUB-ABAS -->
+        <div class="lg:col-span-5 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden h-fit">
+          <div class="px-4 py-3 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-1.5 text-xs">
             <div class="flex flex-wrap items-center gap-1">
               <button type="button" onclick="alternarSubAbaPainelDir('zero')" id="subbtn-dir-zero" class="px-2.5 py-1.5 rounded-lg transition subtab-active">
                 0 Questões (Prioridade 1)
@@ -231,58 +352,34 @@
           </div>
 
           <div id="subpainel-dir-zero" class="p-4 space-y-2 text-xs">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800">
+              <span>Tópicos pendentes da 1ª bateria pós-teoria</span>
+              <button onclick="abrirModalTeoriaHoje()" class="font-bold text-indigo-400 hover:underline">+ Novo</button>
+            </div>
             <div id="listaTopicosZeroQuestoesPainel" class="space-y-2 max-h-[380px] overflow-y-auto"></div>
           </div>
 
           <div id="subpainel-dir-reforco" class="hidden p-4 space-y-2 text-xs">
+            <div class="text-[11px] text-slate-400 pb-1 border-b border-slate-800">
+              Tópicos cuja última sessão ficou abaixo de 80% (+3 dias)
+            </div>
             <div id="listaPioresTopicosPainel" class="space-y-2 max-h-[380px] overflow-y-auto"></div>
           </div>
 
           <div id="subpainel-dir-materias" class="hidden p-4 space-y-2 text-xs">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800">
+              <span>Ordem de desempate entre tópicos</span>
+              <button onclick="irParaAba('cadastros'); alternarSubAbaCadastros('materias');" class="font-bold text-indigo-400 hover:underline">Reordenar</button>
+            </div>
             <div id="listaMatPrioritariasPainel" class="space-y-2"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ABA 2: ANKI (SEGUNDO SISTEMA NO MESMO SITE) -->
-    <section id="aba-anki" class="hidden space-y-5">
-      <div class="max-w-2xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
-        <div class="flex items-center justify-between border-b pb-3">
-          <div>
-            <h2 class="text-sm font-bold text-slate-900">Anki Integrado: Repetição Espaçada de Cartões</h2>
-            <p id="ankiSubtitulo" class="text-xs text-indigo-600 font-semibold mt-0.5">Selecione o filtro para iniciar a revisão</p>
-          </div>
-          <span id="ankiContador" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold">0 / 0</span>
-        </div>
-
-        <div class="flex gap-2">
-          <select id="filtroMateriaAnki" onchange="carregarCardsDoBanco()" class="w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs bg-white">
-            <option value="">Todas as Matérias</option>
-          </select>
-          <button onclick="abrirModalNovoAnki()" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs shrink-0">+ Novo Cartão</button>
-        </div>
-
-        <div id="boxAnkiVisual" onclick="virarCardAnki()" class="min-h-[180px] p-6 rounded-xl bg-slate-50 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-center cursor-pointer select-none transition hover:bg-slate-100">
-          <span id="ankiLadoLabel" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Frente (Pergunta)</span>
-          <div id="ankiTextoCard" class="text-sm font-semibold text-slate-800">Clique para carregar os cartões pendentes de hoje.</div>
-          <span class="text-[11px] text-slate-400 mt-4">(Clique para ver o verso)</span>
-        </div>
-
-        <div id="botoesRespostaAnki" class="hidden grid grid-cols-2 gap-3 pt-2">
-          <button onclick="responderCardAnki(false)" class="py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition">
-            Errei (Amanhã / Reforço)
-          </button>
-          <button onclick="responderCardAnki(true)" class="py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition">
-            Acertei (+Intervalo Dobrado)
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- ABA 3: REGISTRAR ESTUDO -->
+    <!-- ABA 2: REGISTRAR ESTUDO -->
     <section id="aba-registrar" class="hidden space-y-4">
-      <div class="bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-2">
           <button type="button" onclick="alternarSubAbaRegistrar('form')" id="subbtn-reg-form" class="px-3.5 py-1.5 rounded-lg transition subtab-active">
             1. Lançar Resolução de Questões
@@ -291,94 +388,112 @@
             2. Histórico de Baterias Resolvidas
           </button>
         </div>
+        <span class="text-[11px] text-slate-400">A progressão de etapa considera exclusivamente o aproveitamento da sessão atual (&ge; 80%)</span>
       </div>
 
-      <div id="subaba-reg-form" class="max-w-2xl mx-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-          <h2 id="tituloFormSessao" class="text-sm font-bold text-slate-800">Registrar Resolução de Questões</h2>
-          <span id="badgeCalcSessao" class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">0.0%</span>
+      <!-- SUB-ABA 1: FORMULARIO -->
+      <div id="subaba-reg-form" class="max-w-2xl mx-auto bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+          <div>
+            <h2 id="tituloFormSessao" class="text-sm font-bold text-white">Registrar Resolução de Questões</h2>
+            <p class="text-[11px] text-slate-400">Ao salvar, o sistema conclui a atividade atual e agenda a próxima revisão sem alterar a fila dos demais tópicos</p>
+          </div>
+          <span id="badgeCalcSessao" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold">0.0%</span>
         </div>
 
         <form id="formSessao" onsubmit="submeterSessao(event)" class="p-5 space-y-4 text-xs">
           <input type="hidden" id="sesId" value="">
+
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Data da Resolução *</label>
-              <input type="date" id="sesData" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+              <label class="block font-semibold text-slate-300 mb-1">Data da Resolução *</label>
+              <input type="date" id="sesData" required class="w-full rounded-lg border px-3 py-2">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Rodada do Banco</label>
-              <input type="number" id="sesRodada" min="1" value="1" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+              <label class="block font-semibold text-slate-300 mb-1">Rodada do Banco</label>
+              <input type="number" id="sesRodada" min="1" value="1" class="w-full rounded-lg border px-3 py-2">
             </div>
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Matéria *</label>
-            <select id="sesMateria" required onchange="filtrarTopicosSelectSessao()" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white"></select>
+            <label class="block font-semibold text-slate-300 mb-1">Matéria *</label>
+            <select id="sesMateria" required onchange="filtrarTopicosSelectSessao()" class="w-full rounded-lg border px-3 py-2">
+              <option value="">Selecione a matéria...</option>
+            </select>
           </div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Tópico *</label>
-            <select id="sesTopico" required onchange="mostrarResumoTopicoSessao()" class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white"></select>
+            <label class="block font-semibold text-slate-300 mb-1">Tópico *</label>
+            <select id="sesTopico" required onchange="mostrarResumoTopicoSessao()" class="w-full rounded-lg border px-3 py-2">
+              <option value="">Selecione primeiro a matéria...</option>
+            </select>
           </div>
 
-          <div id="boxResumoTopicoSessao" class="hidden rounded-lg bg-indigo-50 border border-indigo-200 p-3 text-[11px] text-indigo-950 space-y-1"></div>
+          <div id="boxResumoTopicoSessao" class="hidden rounded-lg bg-indigo-950/60 border border-indigo-800/80 p-3 text-[11px] text-indigo-200 space-y-1"></div>
 
           <div class="grid grid-cols-3 gap-3">
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Resolvidas *</label>
-              <input type="number" id="sesResolvidas" min="1" required oninput="atualizarPreviaSessao()" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+              <label class="block font-semibold text-slate-300 mb-1">Resolvidas *</label>
+              <input type="number" id="sesResolvidas" min="1" required oninput="atualizarPreviaSessao()" class="w-full rounded-lg border px-3 py-2">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Acertos *</label>
-              <input type="number" id="sesAcertos" min="0" required oninput="atualizarPreviaSessao()" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+              <label class="block font-semibold text-slate-300 mb-1">Acertos *</label>
+              <input type="number" id="sesAcertos" min="0" required oninput="atualizarPreviaSessao()" class="w-full rounded-lg border px-3 py-2">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Erros (Auto)</label>
-              <input type="number" id="sesErros" readonly class="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-slate-600">
+              <label class="block font-semibold text-slate-300 mb-1">Erros (Auto)</label>
+              <input type="number" id="sesErros" readonly class="w-full rounded-lg border px-3 py-2 opacity-75">
             </div>
           </div>
 
           <div id="boxPreviaRegraFluxo" class="hidden p-3 rounded-lg border text-[11px] font-semibold"></div>
 
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">Observações / Caderno de Erros</label>
-            <textarea id="sesObs" rows="2" class="w-full rounded-lg border border-slate-300 px-3 py-2"></textarea>
+            <label class="block font-semibold text-slate-300 mb-1">Observações / Caderno de Erros</label>
+            <textarea id="sesObs" rows="2" placeholder="Artigos errados, pontos de revisão..." class="w-full rounded-lg border px-3 py-2"></textarea>
           </div>
 
           <label class="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" id="sesGerarRevisao" checked class="rounded text-indigo-600">
-            <span class="text-slate-700 font-medium">Programar próxima revisão automaticamente (&lt;80% vs &ge;80%)</span>
+            <span class="text-slate-300 font-medium">Programar próxima revisão automaticamente pelo resultado desta sessão (&lt;80% vs &ge;80%)</span>
           </label>
 
           <div class="pt-2 flex items-center justify-end gap-2">
-            <button type="button" onclick="resetarFormSessao()" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600 font-semibold">Limpar</button>
-            <button type="submit" id="btnSalvarSessao" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow">Salvar Resolução e Agendar Próxima</button>
+            <button type="button" onclick="resetarFormSessao()" class="px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold">Cancelar / Limpar</button>
+            <button type="submit" id="btnSalvarSessao" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shadow">Salvar Resolução e Agendar Próxima</button>
           </div>
         </form>
       </div>
 
-      <div id="subaba-reg-historico" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <!-- SUB-ABA 2: HISTORICO -->
+      <div id="subaba-reg-historico" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-white">Histórico de Baterias Resolvidas (Micro vs. Macro)</h2>
+            <p class="text-[11px] text-slate-400">Exibe concomitantemente o resultado específico da sessão na data (Micro) e a média acumulada (Macro)</p>
+          </div>
+        </div>
         <div class="overflow-x-auto max-h-[520px]">
           <table class="w-full text-left text-xs">
-            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 sticky top-0">
+            <thead class="bg-slate-950 border-b border-slate-800 text-[11px] uppercase text-slate-400 sticky top-0">
               <tr>
                 <th class="py-2.5 px-3">Data</th>
                 <th class="py-2.5 px-3">Matéria / Tópico</th>
                 <th class="py-2.5 px-3 text-center">Sessão (Micro)</th>
                 <th class="py-2.5 px-3 text-center">Média Acumulada (Macro)</th>
                 <th class="py-2.5 px-3">Observações</th>
+                <th class="py-2.5 px-3 text-right">Ações</th>
               </tr>
             </thead>
-            <tbody id="tbodySessoes" class="divide-y divide-slate-100"></tbody>
+            <tbody id="tbodySessoes" class="divide-y divide-slate-800"></tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- ABA 4: CADASTRAR MATERIA / TOPICO -->
+    <!-- ABA 3: CADASTRAR MATERIA / TOPICO -->
     <section id="aba-cadastros" class="hidden space-y-4">
-      <div class="bg-white rounded-xl border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-2">
           <button type="button" onclick="alternarSubAbaCadastros('topicos')" id="subbtn-cad-topicos" class="px-3.5 py-1.5 rounded-lg transition subtab-active">
             1. Gerenciar Tópicos
@@ -387,688 +502,626 @@
             2. Gerenciar e Ordenar Matérias
           </button>
         </div>
+        <span class="text-[11px] text-slate-400">Enquanto um tópico tiver 0 questões respondidas, permanece na Prioridade 1</span>
       </div>
 
+      <!-- SUB-ABA CADASTROS 1: TOPICOS -->
       <div id="subaba-cad-topicos" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 text-xs h-fit">
-          <h2 id="tituloFormTopico" class="text-sm font-bold text-slate-800">Cadastrar / Editar Tópico</h2>
+        <div class="lg:col-span-4 bg-slate-900 rounded-xl border border-slate-800 shadow-lg p-5 space-y-4 text-xs h-fit">
+          <h2 id="tituloFormTopico" class="text-sm font-bold text-white">Cadastrar / Editar Tópico</h2>
           <form id="formTopico" onsubmit="submeterTopico(event)" class="space-y-3">
             <input type="hidden" id="topId" value="">
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Matéria *</label>
-              <select id="topMateria" required class="w-full rounded-lg border border-slate-300 px-3 py-2 bg-white"></select>
+              <label class="block font-semibold text-slate-300 mb-1">Matéria *</label>
+              <select id="topMateria" required class="w-full rounded-lg border px-3 py-2"></select>
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Nome do Tópico *</label>
-              <input type="text" id="topNome" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+              <label class="block font-semibold text-slate-300 mb-1">Nome do Tópico *</label>
+              <input type="text" id="topNome" required placeholder="Ex: Inquérito Policial" class="w-full rounded-lg border px-3 py-2">
             </div>
             <div>
-              <label class="block font-semibold text-slate-700 mb-1">Total de Questões Cadastradas na Banca</label>
-              <input type="number" id="topTotalBanco" min="0" value="50" class="w-full rounded-lg border border-slate-300 px-3 py-2">
+              <label class="block font-semibold text-slate-300 mb-1">Total de Questões Cadastradas na Banca</label>
+              <input type="number" id="topTotalBanco" min="0" value="50" class="w-full rounded-lg border px-3 py-2">
             </div>
             <div class="pt-2 flex justify-end gap-2">
-              <button type="button" onclick="resetarFormTopico()" class="px-3 py-2 rounded-lg border border-slate-300 text-slate-600">Limpar</button>
-              <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold">Salvar Tópico</button>
+              <button type="button" onclick="resetarFormTopico()" class="px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800">Limpar</button>
+              <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold">Salvar Tópico</button>
             </div>
           </form>
         </div>
 
-        <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="lg:col-span-8 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold text-white">Controle de Tópicos (Sessão Micro vs. Acumulado Macro)</h2>
+              <p class="text-[11px] text-slate-400">Confira questões cadastradas, resultado da última sessão, média acumulada e o fluxo atribuído</p>
+            </div>
+            <select id="filtroTopicosMateria" onchange="renderizarAbaTopicos()" class="rounded-lg border px-3 py-1.5 text-xs">
+              <option value="">Todas as Matérias</option>
+            </select>
+          </div>
           <div class="overflow-x-auto max-h-[500px]">
             <table class="w-full text-left text-xs">
-              <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 sticky top-0">
+              <thead class="bg-slate-950 border-b border-slate-800 text-[10px] uppercase text-slate-400 sticky top-0">
                 <tr>
                   <th class="py-2.5 px-3">Matéria / Tópico</th>
-                  <th class="py-2.5 px-3 text-center">Banco</th>
-                  <th class="py-2.5 px-3 text-center">Micro vs Macro</th>
-                  <th class="py-2.5 px-3">Prioridade</th>
+                  <th class="py-2.5 px-3 text-center">Banco (Cad / Resp / Rest)</th>
+                  <th class="py-2.5 px-3 text-center">Sessão (Micro) &amp; Acumulado (Macro)</th>
+                  <th class="py-2.5 px-3">Prioridade &amp; Regra do Fluxo</th>
+                  <th class="py-2.5 px-3 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody id="tbodyTopicos" class="divide-y divide-slate-100"></tbody>
+              <tbody id="tbodyTopicos" class="divide-y divide-slate-800"></tbody>
             </table>
           </div>
         </div>
       </div>
 
+      <!-- SUB-ABA CADASTROS 2: MATERIAS -->
       <div id="subaba-cad-materias" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div id="listaMateriasOrdenavel" class="divide-y divide-slate-200 text-xs"></div>
+        <div class="lg:col-span-4 bg-slate-900 rounded-xl border border-slate-800 shadow-lg p-5 space-y-4 text-xs h-fit">
+          <h2 id="tituloFormMateria" class="text-sm font-bold text-white">Cadastrar / Editar Matéria</h2>
+          <form id="formMateria" onsubmit="submeterMateria(event)" class="space-y-3">
+            <input type="hidden" id="matId" value="">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Nome da Matéria *</label>
+              <input type="text" id="matNome" required placeholder="Ex: Direito Penal" class="w-full rounded-lg border px-3 py-2">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Estudo Diário Obrigatório?</label>
+              <select id="matDiario" class="w-full rounded-lg border px-3 py-2">
+                <option value="Nao">Não (Seguir fila espaçada)</option>
+                <option value="Sim">Sim (Prioridade máxima de desempate)</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Freq. Semanal (dias)</label>
+                <input type="number" id="matFreq" min="1" max="7" value="3" class="w-full rounded-lg border px-3 py-2">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Mín. Questões/Tópico</label>
+                <input type="number" id="matMinQ" min="1" value="15" class="w-full rounded-lg border px-3 py-2">
+              </div>
+            </div>
+            <div class="pt-2 flex justify-end gap-2">
+              <button type="button" onclick="resetarFormMateria()" class="px-3 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800">Limpar</button>
+              <button type="submit" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold">Salvar Matéria</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="lg:col-span-8 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 class="text-sm font-bold text-white">Ordem de Prioridade das Matérias</h2>
+              <p class="text-[11px] text-slate-400">Utilizada como critério de desempate entre tópicos de mesma prioridade no algoritmo</p>
+            </div>
+          </div>
+          <div id="listaMateriasOrdenavel" class="divide-y divide-slate-800 text-xs"></div>
         </div>
       </div>
     </section>
 
-    <!-- ABA 5: CICLO DE ESTUDOS -->
+    <!-- ABA 4: CICLO DE ESTUDOS -->
     <section id="aba-ciclo" class="hidden space-y-5">
-      <div class="bg-slate-900 text-white rounded-xl p-5 shadow flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="bg-slate-900 border border-slate-800 text-white rounded-xl p-5 shadow-lg flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-400">Cronograma Diário de Estudos</span>
           <h2 id="txtPrevisaoData" class="text-lg font-bold mt-0.5">Estimativa: —</h2>
           <p id="txtPrevisaoDetalhes" class="text-xs text-slate-300 mt-1"></p>
         </div>
-        <button onclick="acionarReorganizarFilaUnica()" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow">
-          Reorganizar Fila Diária (Alinhar Meta)
-        </button>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="acionarReorganizarFilaUnica()" id="btnUnicoReorganizarCiclo" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow transition" title="Encaixa atrasadas hoje até o limite diário e preenche dias com menos matérias">
+            Reorganizar Fila Diária (Alinhar Meta)
+          </button>
+          <button onclick="abrirModalTeoriaHoje()" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition">
+            + Teoria Estudada Hoje
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTROLES DE FILTRO -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <span class="font-semibold text-slate-400 mr-1">Período:</span>
+          <button onclick="setFiltroPeriodoCiclo('hoje')" id="btnCiclo-hoje" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Hoje</button>
+          <button onclick="setFiltroPeriodoCiclo('amanha')" id="btnCiclo-amanha" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Amanhã</button>
+          <button onclick="setFiltroPeriodoCiclo('7d')" id="btnCiclo-7d" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Próximos 7 dias</button>
+          <button onclick="setFiltroPeriodoCiclo('15d')" id="btnCiclo-15d" class="px-3 py-1.5 rounded-lg font-semibold bg-slate-800 text-slate-300">Próximos 15 dias</button>
+          <button onclick="setFiltroPeriodoCiclo('tudo')" id="btnCiclo-tudo" class="px-3 py-1.5 rounded-lg font-semibold bg-indigo-600 text-white">Todos os Dias</button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="filtroFluxoCiclo" onchange="renderizarAbaCiclo()" class="rounded-lg border px-2.5 py-1.5 text-xs font-semibold">
+            <option value="">Todos os Fluxos / Prioridades</option>
+            <option value="POS_TEORIA">Prioridade 1: 1ª Bateria Pós-Teoria (0 Questões)</option>
+            <option value="REFORCO_ABAIXO_80">Prioridade 2: Fluxo de Reforço Curto (Sessão &lt; 80%)</option>
+            <option value="PROGRESSAO_ACIMA_80">Prioridade 3: Fluxo de Progressão Espaçada (Sessão &ge; 80%)</option>
+            <option value="CONSOLIDACAO">Prioridade 4: Consolidação (A cada 15 dias)</option>
+          </select>
+          <select id="filtroMateriaCiclo" onchange="renderizarAbaCiclo()" class="rounded-lg border px-2.5 py-1.5 text-xs">
+            <option value="">Todas as Matérias</option>
+          </select>
+        </div>
       </div>
 
       <div id="containerCicloPlanejado" class="space-y-4"></div>
     </section>
 
-    <!-- ABA 6: REVISOES -->
+    <!-- ABA 5: REVISOES -->
     <section id="aba-revisoes" class="hidden space-y-4">
-      <div id="subaba-rev-hoje" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden p-4 space-y-3">
-        <div id="listaRevisoesDia" class="space-y-3 text-xs"></div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div class="bg-slate-900 rounded-xl p-3.5 border border-slate-800">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">1ª Bateria Pendente (0 Q.)</span>
+          <div id="revKpiZeroQuestoes" class="text-2xl font-bold text-indigo-400 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-3.5 border border-rose-900/70">
+          <span class="text-[11px] font-semibold uppercase text-rose-400">Reforço Curto (Sessão &lt; 80%)</span>
+          <div id="revKpiReforco" class="text-2xl font-bold text-rose-400 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-3.5 border border-emerald-900/70">
+          <span class="text-[11px] font-semibold uppercase text-emerald-400">Progressão / Consolidação</span>
+          <div id="revKpiProgressao" class="text-2xl font-bold text-emerald-400 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-3.5 border border-slate-800">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Pendentes Hoje</span>
+          <div id="revKpiRestantes" class="text-2xl font-bold text-amber-400 mt-0.5">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-3.5 border border-slate-800">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Capacidade Diária</span>
+          <div id="revKpiCapacidade" class="text-2xl font-bold text-white mt-0.5">3 / dia</div>
+        </div>
+      </div>
+
+      <!-- BARRA DE SUB-ABAS INTERNAS DA ABA REVISOES -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs shadow-lg">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" onclick="alternarSubAbaRevisoes('hoje')" id="subbtn-rev-hoje" class="px-3.5 py-2 rounded-lg transition subtab-active">
+            1. Tópicos Programados para Hoje
+          </button>
+          <button type="button" onclick="alternarSubAbaRevisoes('completa')" id="subbtn-rev-completa" class="px-3.5 py-2 rounded-lg transition subtab-inactive">
+            2. Lista Completa de Revisões Programadas
+          </button>
+          <button type="button" onclick="alternarSubAbaRevisoes('calendario')" id="subbtn-rev-calendario" class="px-3.5 py-2 rounded-lg transition subtab-inactive">
+            3. Distribuição por Data
+          </button>
+          <button type="button" onclick="alternarSubAbaRevisoes('historico')" id="subbtn-rev-historico" class="px-3.5 py-2 rounded-lg transition subtab-inactive">
+            4. Histórico Concluído
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="acionarReorganizarFilaUnica()" id="btnColocarEmDia" class="px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow transition">
+            Reorganizar Fila Diária
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-ABA REVISOES 1: TOPICOS PROGRAMADOS PARA HOJE -->
+      <div id="subaba-rev-hoje" class="bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold text-white">Tópicos Programados para Hoje</h2>
+            <p class="text-[11px] text-slate-400">Ao concluir um tópico, a fila dos demais permanece intacta e a nova revisão é alocada no próximo dia disponível</p>
+          </div>
+        </div>
+        <div id="listaRevisoesDia" class="p-4 space-y-3 text-xs"></div>
+      </div>
+
+      <!-- SUB-ABA REVISOES 2: LISTA COMPLETA DE REVISOES PROGRAMADAS -->
+      <div id="subaba-rev-completa" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-800 bg-slate-950 text-white flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold">Lista Completa de Revisões Programadas</h2>
+            <p class="text-[11px] text-slate-400">Auditoria de todos os tópicos ativos: Sessão Atual (Micro), Média Acumulada (Macro) e círculo indicador à direita</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <select id="filtroProgSituacao" onchange="renderizarTabelaProgramacaoCompleta()" class="rounded-lg border px-2.5 py-1.5">
+              <option value="">Todas as Situações</option>
+              <option value="Atrasada">Em Atraso</option>
+              <option value="Primeira Bateria Pendente">Primeira Bateria Pendente (0 Questões)</option>
+              <option value="Revisao Programada">Revisão Programada</option>
+              <option value="Consolidacao">Consolidação</option>
+            </select>
+            <select id="filtroProgFluxo" onchange="renderizarTabelaProgramacaoCompleta()" class="rounded-lg border px-2.5 py-1.5">
+              <option value="">Todos os Fluxos</option>
+              <option value="POS_TEORIA">Prioridade 1: 1ª Bateria Pós-Teoria</option>
+              <option value="REFORCO_ABAIXO_80">Prioridade 2: Reforço Curto (Sessão &lt; 80%)</option>
+              <option value="PROGRESSAO_ACIMA_80">Prioridade 3: Progressão Espaçada (Sessão &ge; 80%)</option>
+              <option value="CONSOLIDACAO">Prioridade 4: Consolidação (15 dias)</option>
+            </select>
+            <select id="filtroProgMateria" onchange="renderizarTabelaProgramacaoCompleta()" class="rounded-lg border px-2.5 py-1.5">
+              <option value="">Todas as Matérias</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 border-b border-slate-800 text-[10px] uppercase text-slate-400">
+              <tr>
+                <th class="py-3 px-3">Pos.</th>
+                <th class="py-3 px-3">Matéria e Tópico</th>
+                <th class="py-3 px-3 text-center">Estudo Inicial</th>
+                <th class="py-3 px-3 text-center">Questões Respondidas</th>
+                <th class="py-3 px-3 text-center">Sessão (Micro) &amp; Acumulado (Macro)</th>
+                <th class="py-3 px-3">Fluxo de Revisão &amp; Prioridade</th>
+                <th class="py-3 px-3 text-center">Etapa Atual</th>
+                <th class="py-3 px-3 text-center">Intervalo Aplicado</th>
+                <th class="py-3 px-3 text-center">Próxima Atividade</th>
+                <th class="py-3 px-3 text-center">Situação Atual</th>
+                <th class="py-3 px-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyProgramacaoCompleta" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUB-ABA REVISOES 3: RESUMO DA DISTRIBUICAO POR DATA -->
+      <div id="subaba-rev-calendario" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-white">Distribuição das Atividades por Data (Calendário de Execução)</h2>
+            <p class="text-[11px] text-slate-400">Visualize quais tópicos serão estudados ou revisados em cada dia</p>
+          </div>
+        </div>
+        <div id="containerDistribuicaoDatasRevisoes" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs"></div>
+      </div>
+
+      <!-- SUB-ABA REVISOES 4: HISTORICO DE REVISOES CONCLUIDAS -->
+      <div id="subaba-rev-historico" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60">
+          <h2 class="text-sm font-bold text-white">Histórico de Revisões Concluídas (Preservado)</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 border-b border-slate-800 text-[10px] uppercase text-slate-400">
+              <tr>
+                <th class="py-2.5 px-3">Matéria / Tópico</th>
+                <th class="py-2.5 px-3">Fluxo Registrado</th>
+                <th class="py-2.5 px-3 text-center">Etapa</th>
+                <th class="py-2.5 px-3 text-center">Data Prevista</th>
+                <th class="py-2.5 px-3 text-center">Data Conclusão</th>
+                <th class="py-2.5 px-3 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyHistoricoRevisoesConcluidas" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
-    <!-- ABA 7: ESTATISTICAS E GRAFICOS -->
+    <!-- ABA 6: ESTATISTICAS E GRAFICOS -->
     <section id="aba-estatisticas" class="hidden space-y-4">
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div class="lg:col-span-4 bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col justify-between">
-          <h3 class="text-xs font-bold uppercase text-slate-600">Proporção Geral: Acertos vs. Erros</h3>
-          <div class="max-w-[230px] mx-auto w-full my-auto">
-            <canvas id="chartRoscaAcertosErros" height="210"></canvas>
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Período</label>
+          <select id="estPeriodo" onchange="aoMudarPeriodoEstatisticas()" class="w-full rounded-lg border px-2.5 py-1.5">
+            <option value="tudo">Todo o Histórico</option>
+            <option value="hoje">Hoje</option>
+            <option value="7d">Últimos 7 dias</option>
+            <option value="30d">Últimos 30 dias (Mês)</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div id="boxDataInicioEst" class="hidden">
+          <label class="block font-semibold text-slate-300 mb-1">Data Inicial</label>
+          <input type="date" id="estDataIni" onchange="renderizarEstatisticas()" class="w-full rounded-lg border px-2.5 py-1.5">
+        </div>
+        <div id="boxDataFimEst" class="hidden">
+          <label class="block font-semibold text-slate-300 mb-1">Data Final</label>
+          <input type="date" id="estDataFim" onchange="renderizarEstatisticas()" class="w-full rounded-lg border px-2.5 py-1.5">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Matéria</label>
+          <select id="estMateria" onchange="aoMudarMateriaEstatisticas()" class="w-full rounded-lg border px-2.5 py-1.5">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Tópico</label>
+          <select id="estTopico" onchange="renderizarEstatisticas()" class="w-full rounded-lg border px-2.5 py-1.5">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Rodada</label>
+          <select id="estRodada" onchange="renderizarEstatisticas()" class="w-full rounded-lg border px-2.5 py-1.5">
+            <option value="">Todas</option>
+            <option value="1">1ª Rodada</option>
+            <option value="2">2ª Rodada</option>
+            <option value="3">3ª Rodada</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Volume Respondido</span>
+          <div id="estKpiResolvidas" class="text-2xl font-bold text-white mt-1">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Total de Acertos</span>
+          <div id="estKpiAcertos" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-4 border border-slate-800">
+          <span class="text-[11px] font-semibold uppercase text-slate-400">Total de Erros</span>
+          <div id="estKpiErros" class="text-2xl font-bold text-rose-400 mt-1">0</div>
+        </div>
+        <div class="bg-slate-900 rounded-xl p-4 border border-indigo-800/80">
+          <span class="text-[11px] font-semibold uppercase text-indigo-300">Aproveitamento Acumulado (Macro)</span>
+          <div id="estKpiAprov" class="text-2xl font-bold text-indigo-400 mt-1">0%</div>
+        </div>
+      </div>
+
+      <!-- BARRA DE SUB-ABAS DA ABA ESTATISTICAS -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="alternarSubAbaEstatisticas('graficos')" id="subbtn-est-graficos" class="px-3.5 py-1.5 rounded-lg transition subtab-active">
+            1. Gráficos de Desempenho
+          </button>
+          <button type="button" onclick="alternarSubAbaEstatisticas('relatorio')" id="subbtn-est-relatorio" class="px-3.5 py-1.5 rounded-lg transition subtab-inactive">
+            2. Relatório Comparativo de Sessões (Micro por Data vs. Macro)
+          </button>
+        </div>
+        <button onclick="exportarRelatorioExcel()" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px]">
+          📊 Exportar Excel (.xlsx)
+        </button>
+      </div>
+
+      <!-- SUB-ABA ESTATISTICAS 1: GRAFICOS -->
+      <div id="subaba-est-graficos" class="space-y-5">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-4 bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg flex flex-col justify-between">
+            <div>
+              <h3 class="text-xs font-bold uppercase text-slate-300">Proporção Geral: Acertos vs. Erros</h3>
+              <p class="text-[11px] text-slate-400 mb-3">Distribuição acumulada no período selecionado</p>
+            </div>
+            <div class="max-w-[230px] mx-auto w-full my-auto">
+              <canvas id="chartRoscaAcertosErros" height="210"></canvas>
+            </div>
+            <div id="legendaRoscaResumo" class="text-center text-[11px] text-slate-300 pt-3 border-t border-slate-800 mt-3"></div>
           </div>
-          <div id="legendaRoscaResumo" class="text-center text-[11px] text-slate-600 pt-3 border-t border-slate-100 mt-3"></div>
+
+          <div class="lg:col-span-8 bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg">
+            <h3 class="text-xs font-bold uppercase text-slate-300">Gráfico de Frequência Combinado (Estudo Diário vs. Taxa de Acerto %)</h3>
+            <p class="text-[11px] text-slate-400 mb-3">Barras: volume de questões respondidas no dia | Linha: taxa de acerto (%) do dia</p>
+            <canvas id="chartEvolucao" height="170"></canvas>
+          </div>
         </div>
 
-        <div class="lg:col-span-8 bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-          <h3 class="text-xs font-bold uppercase text-slate-600">Gráfico de Frequência Combinado</h3>
-          <canvas id="chartEvolucao" height="170"></canvas>
+        <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg">
+          <h3 class="text-xs font-bold uppercase text-slate-300 mb-1">Aproveitamento Ponderado por Matéria (Macro)</h3>
+          <p class="text-[11px] text-slate-400 mb-3">Desempenho acumulado por disciplina no filtro selecionado</p>
+          <canvas id="chartMaterias" height="100"></canvas>
+        </div>
+      </div>
+
+      <!-- SUB-ABA ESTATISTICAS 2: RELATORIO COMPARATIVO DE SESSOES -->
+      <div id="subaba-est-relatorio" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white">Relatório Comparativo de Sessões (Desempenho Individual por Data)</h3>
+            <p class="text-[11px] text-slate-400">Quando um tópico se repete em datas diferentes, cada linha preserva o percentual Micro exato daquele dia ao lado da média Macro</p>
+          </div>
+        </div>
+        <div class="overflow-x-auto max-h-[500px]">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-950 border-b border-slate-800 text-[10px] uppercase text-slate-400 sticky top-0">
+              <tr>
+                <th class="py-2.5 px-3">Data do Estudo</th>
+                <th class="py-2.5 px-3">Matéria / Tópico</th>
+                <th class="py-2.5 px-3 text-center">Questões no Dia</th>
+                <th class="py-2.5 px-3 text-center">Aproveitamento do Dia (Micro)</th>
+                <th class="py-2.5 px-3 text-center">Acumulado do Tópico (Macro)</th>
+                <th class="py-2.5 px-3 text-center">Acumulado da Matéria (Macro)</th>
+                <th class="py-2.5 px-3 text-center">Média Global (Macro)</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRelatorioMacroMicro" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABA 7: MODULO FUTURO DE FLASHCARDS (ESTRUTURA MODULAR PRONTA) -->
+    <section id="aba-flashcards" class="hidden space-y-5">
+      <div class="bg-slate-900 border border-indigo-800/60 rounded-xl p-6 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <span class="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-700 text-[10px] font-bold uppercase">Módulo Preparado no Supabase</span>
+            <h2 class="text-lg font-bold text-white mt-2">Sistema de Repetição Espaçada por Flashcards (Integração Futura)</h2>
+            <p class="text-xs text-slate-400 mt-1">
+              A tabela <code class="text-indigo-400 font-mono">public.flashcards</code> já está criada no banco PostgreSQL e vinculada às suas Matérias e Tópicos.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 font-semibold">
+              Tabela: <strong class="text-emerald-400">flashcards (Ativa)</strong>
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 text-xs">
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+            <div class="font-bold text-indigo-400">1. Integração com Caderno de Erros</div>
+            <p class="text-slate-400 leading-relaxed">
+              Permite converter observações das baterias de questões e artigos errados diretamente em cartões de frente/verso vinculados ao <code class="text-slate-200">id_topico</code>.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+            <div class="font-bold text-emerald-400">2. Algoritmo SM-2 / FSRS Nativo</div>
+            <p class="text-slate-400 leading-relaxed">
+              Colunas <code class="text-slate-200">etapa</code>, <code class="text-slate-200">intervalo_dias</code>, <code class="text-slate-200">fator_facilidade</code> e <code class="text-slate-200">data_proxima_revisao</code> já estruturadas no banco para revisão ativa.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5">
+            <div class="font-bold text-amber-400">3. Pronto para Expansão</div>
+            <p class="text-slate-400 leading-relaxed">
+              Quando desejar ativar o motor visual de revisão de flashcards nesta aba, basta conectar os componentes ao container <code class="text-slate-200">#containerDeckFlashcards</code> abaixo.
+            </p>
+          </div>
+        </div>
+
+        <div id="containerDeckFlashcards" class="mt-5 p-8 rounded-xl border border-dashed border-slate-700 text-center text-xs text-slate-400">
+          Slot modular reservado para o Player de Flashcards e Criador Rápido de Cartões.
         </div>
       </div>
     </section>
 
     <!-- ABA 8: CONFIGURACOES -->
     <section id="aba-config" class="hidden space-y-4">
-      <form id="formConfig" onsubmit="submeterConfiguracoes(event)" class="bg-white rounded-xl border border-slate-200 p-5 space-y-4 text-xs max-w-xl mx-auto">
-        <h2 class="text-sm font-bold text-slate-800 border-b pb-2">Parâmetros e Metas Diárias</h2>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Meta Diária de Questões</label>
-            <input type="number" id="cfgMetaDiaria" min="1" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-1.5">
+          <button type="button" onclick="alternarSubAbaConfig('parametros')" id="subbtn-cfg-parametros" class="px-3.5 py-1.5 rounded-lg transition subtab-active">
+            1. Parâmetros e Metas Diárias
+          </button>
+          <button type="button" onclick="alternarSubAbaConfig('regras')" id="subbtn-cfg-regras" class="px-3.5 py-1.5 rounded-lg transition subtab-inactive">
+            2. Explicação das Regras de Fluxo e Prioridades
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-ABA CONFIG 1: FORMULARIO DE PARAMETROS -->
+      <div id="subaba-cfg-parametros">
+        <form id="formConfig" onsubmit="submeterConfiguracoes(event)" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
+          <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4 shadow-lg">
+            <h2 class="text-sm font-bold text-white border-b border-slate-800 pb-2">1. Metas e Capacidade Diária</h2>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Meta Diária de Questões</label>
+                <input type="number" id="cfgMetaDiaria" min="1" required class="w-full rounded-lg border px-3 py-2">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Máx. Tópicos/Revisões por Dia</label>
+                <input type="number" id="cfgMaxRevisoes" min="1" max="15" value="3" required class="w-full rounded-lg border px-3 py-2 font-bold">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Mín. Questões por Tópico/Dia</label>
+                <input type="number" id="cfgMinQuestoesMat" min="1" required class="w-full rounded-lg border px-3 py-2">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Meta de Aproveitamento na Sessão (%)</label>
+                <input type="number" id="cfgMetaAprov" min="1" max="100" required class="w-full rounded-lg border px-3 py-2">
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-300 mb-2">Dias da Semana em que Estuda</label>
+              <div class="flex flex-wrap gap-2">
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="1"> Seg</label>
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="2"> Ter</label>
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="3"> Qua</label>
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="4"> Qui</label>
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="5"> Sex</label>
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="6"> Sáb</label>
+                <label class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer"><input type="checkbox" class="chkDiaEstudo" value="0"> Dom</label>
+              </div>
+            </div>
           </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">Máx. Tópicos/Revisões por Dia</label>
-            <input type="number" id="cfgMaxRevisoes" min="1" max="15" value="3" required class="w-full rounded-lg border border-slate-300 px-3 py-2">
+
+          <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4 shadow-lg">
+            <h2 class="text-sm font-bold text-white border-b border-slate-800 pb-2">2. Parâmetros do Algoritmo de Repetição</h2>
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Escala Progressiva para Sessão &ge; 80% (em dias)</label>
+              <input type="text" id="cfgIntervalosRev" required placeholder="Ex: 1,3,7,15,30" class="w-full rounded-lg border px-3 py-2">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Amostra Mínima (Questões)</label>
+                <input type="number" id="cfgAmostraMin" min="1" required class="w-full rounded-lg border px-3 py-2">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-300 mb-1">Cálculo após Atraso</label>
+                <select id="cfgRegraAtrasoRev" class="w-full rounded-lg border px-3 py-2">
+                  <option value="A_Partir_Conclusao">Somar a partir da resolução</option>
+                  <option value="Manter_Original">Somar sobre a data prevista</option>
+                </select>
+              </div>
+            </div>
+
+            <input type="hidden" id="cfgMaxTopicos" value="3">
+            <input type="hidden" id="cfgRecomendarAcima" value="Sim">
+            <input type="hidden" id="cfgRegraSemIneditas" value="Revisao_ou_Nova_Rodada">
+            <input type="hidden" id="cfgGerarRevAuto" value="Sim">
+
+            <div class="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+              <button type="button" onclick="abrirModalConexaoSupabase()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 font-semibold">
+                Configurar Credenciais Supabase
+              </button>
+              <button type="submit" id="btnSalvarConfig" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow">
+                Salvar Configurações e Recalcular Fila
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- SUB-ABA CONFIG 2: EXPLICACOES DAS REGRAS DE FLUXO E PRIORIDADES -->
+      <div id="subaba-cfg-regras" class="hidden bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-lg space-y-4">
+        <div class="border-b border-slate-800 pb-3">
+          <h2 class="text-sm font-bold text-white">Regras de Fluxo, Critério de Progressão por Sessão e Hierarquia de Prioridades</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Entenda como o motor unificado organiza sua fila diária e agenda as próximas revisões</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/70 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-indigo-300">Prioridade 1 — Primeira Bateria Pós-Teoria (0 Questões)</span>
+              <span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              Tópicos recém-cadastrados ou com teoria estudada que ainda possuem 0 questões respondidas têm prioridade máxima sobre as revisões recorrentes e são alocados nos primeiros slots disponíveis a partir de amanhã.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-rose-950/40 border border-rose-800/70 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-rose-300">Prioridade 2 — Fluxo de Reforço Curto (Sessão abaixo de 80%)</span>
+              <span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              Quando o aproveitamento obtido na sessão de estudo atual fica abaixo de 80%, o tópico entra no Fluxo de Reforço Curto (+3 dias) e mantém a etapa atual retida até que uma nova sessão atinja pelo menos 80%.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/70 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-300">Prioridade 3 — Progressão Espaçada (Sessão igual ou superior a 80%)</span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              A decisão de avançar nas etapas considera exclusivamente o aproveitamento da sessão de estudo atual (maior ou igual a 80%), avançando progressivamente pelos intervalos configurados (ex: 1, 3, 7, 15 e 30 dias).
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-teal-950/40 border border-teal-800/70 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-teal-300">Prioridade 4 — Consolidação e Estabilidade da Fila Diária</span>
+              <span class="w-3 h-3 rounded-full bg-teal-500 inline-block"></span>
+            </div>
+            <p class="text-slate-300 leading-relaxed">
+              Após concluir a 5ª etapa com aproveitamento na sessão maior ou igual a 80%, o tópico entra em Consolidação com revisões a cada 15 dias. Ao concluir tarefas no dia a dia, os demais tópicos mantêm suas datas fixas sem se embaralhar. Quando desejar reagrupar atrasados ou preencher vagas, basta clicar em Reorganizar Fila Diária.
+            </p>
           </div>
         </div>
-        <button type="submit" class="px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow w-full">
-          Salvar Configurações
-        </button>
-      </form>
+      </div>
     </section>
 
   </main>
 
+  <!-- ==========================================================================
+       BLOCO DE SCRIPT: COLE AQUI O CONTEÚDO INTEGRAL DA ETAPA 3
+       ========================================================================== -->
   <script>
-    /* ==========================================================================
-     * SUPABASE - ARMAZENAMENTO PERMANENTE NA NUVEM
-     * ========================================================================== */
-    const SUPABASE_URL = "COLE_AQUI_A_SUA_PROJECT_URL";
-    const SUPABASE_KEY = "COLE_AQUI_A_SUA_PUBLISHABLE_KEY";
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    /* BASE DE DADOS IDÊNTICA AO SEU APPS SCRIPT (TODAS AS MATÉRIAS E 23 TÓPICOS) */
-    const DADOS_INICIAIS = {
-      materias: [
-        { id: 'MAT_01', ordem: 1, nome: 'Direito Constitucional', estudoDiario: 'Sim', freqSemanal: 5, minQuestoes: 20, status: 'Ativo' },
-        { id: 'MAT_02', ordem: 2, nome: 'Direito Administrativo', estudoDiario: 'Nao', freqSemanal: 4, minQuestoes: 15, status: 'Ativo' },
-        { id: 'MAT_03', ordem: 3, nome: 'Direito Penal', estudoDiario: 'Nao', freqSemanal: 4, minQuestoes: 15, status: 'Ativo' },
-        { id: 'MAT_04', ordem: 4, nome: 'Direito Processual Penal', estudoDiario: 'Nao', freqSemanal: 3, minQuestoes: 15, status: 'Ativo' },
-        { id: 'MAT_05', ordem: 5, nome: 'Leis Extravagantes', estudoDiario: 'Nao', freqSemanal: 5, minQuestoes: 10, status: 'Ativo' }
-      ],
-      topicosBrutos: [
-        { id: 'TOP_01', matId: 'MAT_01', matNome: 'Direito Constitucional', nome: 'Direitos e Garantias Fundamentais', total: 324, feito: 62, acertos: 49, diasAtras: 18, etapa: 2 },
-        { id: 'TOP_02', matId: 'MAT_01', matNome: 'Direito Constitucional', nome: 'Teoria Constitucional', total: 217, feito: 25, acertos: 18, diasAtras: 14, etapa: 1 },
-        { id: 'TOP_03', matId: 'MAT_01', matNome: 'Direito Constitucional', nome: 'Remedios Constitucionais', total: 133, feito: 40, acertos: 33, diasAtras: 10, etapa: 3 },
-        { id: 'TOP_04', matId: 'MAT_01', matNome: 'Direito Constitucional', nome: 'Direitos da Nacionalidade', total: 60, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_05', matId: 'MAT_01', matNome: 'Direito Constitucional', nome: 'Direitos Politicos', total: 75, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_06', matId: 'MAT_02', matNome: 'Direito Administrativo', nome: 'Nocoes Iniciais e Principios Administrativos', total: 438, feito: 34, acertos: 29, diasAtras: 16, etapa: 3 },
-        { id: 'TOP_07', matId: 'MAT_02', matNome: 'Direito Administrativo', nome: 'Entes da Administracao', total: 149, feito: 35, acertos: 25, diasAtras: 11, etapa: 1 },
-        { id: 'TOP_08', matId: 'MAT_03', matNome: 'Direito Penal', nome: 'Nocoes Iniciais e Principios', total: 148, feito: 30, acertos: 20, diasAtras: 15, etapa: 1 },
-        { id: 'TOP_09', matId: 'MAT_03', matNome: 'Direito Penal', nome: 'Lei Penal e sua Aplicacao', total: 121, feito: 27, acertos: 22, diasAtras: 9, etapa: 2 },
-        { id: 'TOP_10', matId: 'MAT_03', matNome: 'Direito Penal', nome: 'Teoria do Crime', total: 180, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_11', matId: 'MAT_04', matNome: 'Direito Processual Penal', nome: 'Nocoes Iniciais e Principios', total: 156, feito: 45, acertos: 34, diasAtras: 17, etapa: 2 },
-        { id: 'TOP_12', matId: 'MAT_04', matNome: 'Direito Processual Penal', nome: 'Inquerito Policial', total: 121, feito: 20, acertos: 16, diasAtras: 8, etapa: 2 },
-        { id: 'TOP_13', matId: 'MAT_04', matNome: 'Direito Processual Penal', nome: 'Acao Penal', total: 141, feito: 5, acertos: 2, diasAtras: 4, etapa: 1 },
-        { id: 'TOP_14', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Maria da Penha | Lei no 11.340/06', total: 141, feito: 41, acertos: 37, diasAtras: 13, etapa: 4 },
-        { id: 'TOP_15', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 12.016/2009 - Mandado de Seguranca', total: 202, feito: 1, acertos: 0, diasAtras: 5, etapa: 1 },
-        { id: 'TOP_16', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 4.717/1965 - Acao Popular', total: 50, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_17', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 7.347/1985 - Acao Civil Publica', total: 60, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_18', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 13.300/2016 - Mandado de Injuncao', total: 40, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_19', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 13.848/2019 - Lei das Agencias Reguladoras', total: 45, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_20', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 13.934/2019 - Lei do Contrato de Desempenho', total: 30, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_21', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 10.741/2003 - Estatuto da Pessoa Idosa', total: 80, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 },
-        { id: 'TOP_22', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 8.072/1990 - Crimes Hediondos', total: 71, feito: 34, acertos: 30, diasAtras: 7, etapa: 3 },
-        { id: 'TOP_23', matId: 'MAT_05', matNome: 'Leis Extravagantes', nome: 'Lei no 10.826/2003 - Estatuto do Desarmamento', total: 95, feito: 0, acertos: 0, diasAtras: 0, etapa: 1 }
-      ]
-    };
-
-    let ESTADO = null;
-    let cardAnkiAtual = 0;
-    let cardsAnkiFiltrados = [];
-    let ladoVersoAnki = false;
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      await carregarSistema();
-    });
-
-    async function carregarSistema() {
-      const btn = document.getElementById('btnSync');
-      if (btn) btn.textContent = 'Carregando...';
-
-      try {
-        const { data, error } = await _supabase.from('app_estado').select('dados').eq('id', 'ESTADO_GERAL').single();
-        if (data && data.dados) {
-          ESTADO = data.dados;
-        } else {
-          ESTADO = inicializarEstadoLocal();
-          await salvarEstadoNoSupabase();
-        }
-      } catch (err) {
-        ESTADO = inicializarEstadoLocal();
-      }
-
-      popularSelectsGlobais();
-      renderizarPainel();
-      renderizarAbaRegistrar();
-      renderizarAbaMaterias();
-      renderizarAbaTopicos();
-      renderizarAbaCiclo();
-      renderizarAbaRevisoes();
-      preencherAbaConfig();
-      await carregarCardsDoBanco();
-      if (btn) btn.textContent = 'Salvar Nuvem';
-    }
-
-    async function salvarEstadoNoSupabase() {
-      const btn = document.getElementById('btnSync');
-      if (btn) btn.textContent = 'Salvando...';
-      await _supabase.from('app_estado').upsert({ id: 'ESTADO_GERAL', dados: ESTADO });
-      if (btn) btn.textContent = 'Salvar Nuvem';
-      notificar('Dados sincronizados com sucesso.');
-    }
-
-    function inicializarEstadoLocal() {
-      const hoje = new Date().toISOString().split('T')[0];
-      const sessoes = [];
-      const revisoes = [];
-      const escala = [1, 3, 6, 13, 30];
-
-      DADOS_INICIAIS.topicosBrutos.forEach(t => {
-        if (t.feito > 0) {
-          const erros = t.feito - t.acertos;
-          const aprov = Number(((t.acertos / t.feito) * 100).toFixed(1));
-          const dtEstimada = somarDias(hoje, -t.diasAtras);
-          const idSes = 'SES_' + t.id;
-
-          sessoes.push({
-            id: idSes,
-            dataSessao: dtEstimada,
-            idMateria: t.matId,
-            materia: t.matNome,
-            idTopico: t.id,
-            topico: t.nome,
-            rodada: 1,
-            resolvidas: t.feito,
-            acertos: t.acertos,
-            erros: erros,
-            aproveitamento: aprov,
-            observacoes: '[Carga Histórica Inicial]'
-          });
-
-          const intervalo = aprov < 80 ? 3 : (escala[(t.etapa || 1) - 1] || 1);
-          const dtPrev = somarDias(dtEstimada, intervalo);
-
-          revisoes.push({
-            id: 'REV_' + t.id,
-            idSessaoOrigem: idSes,
-            idMateria: t.matId,
-            materia: t.matNome,
-            idTopico: t.id,
-            topico: t.nome,
-            dataOrigem: dtEstimada,
-            dataPrevistaOriginal: dtPrev,
-            dataPrevistaAtual: dtPrev,
-            etapa: t.etapa || 1,
-            totalEtapas: 5,
-            status: dtPrev < hoje ? 'Atrasada' : (dtPrev === hoje ? 'Para Hoje' : 'Programada'),
-            tipoDataOrigem: aprov < 80 ? 'Reforco_Curto' : 'Progressao_Espacada'
-          });
-        } else {
-          revisoes.push({
-            id: 'REV_' + t.id,
-            idSessaoOrigem: 'ZERO_' + hoje,
-            idMateria: t.matId,
-            materia: t.matNome,
-            idTopico: t.id,
-            topico: t.nome,
-            dataOrigem: hoje,
-            dataPrevistaOriginal: somarDias(hoje, 1),
-            dataPrevistaAtual: somarDias(hoje, 1),
-            etapa: 1,
-            totalEtapas: 5,
-            status: 'Programada',
-            tipoDataOrigem: 'Teoria_Estudada'
-          });
-        }
-      });
-
-      return {
-        hojeYMD: hoje,
-        amanhaYMD: somarDias(hoje, 1),
-        config: {
-          Meta_Diaria_Questoes: '100',
-          Max_Revisoes_Dia: '3',
-          Max_Topicos_Dia: '3',
-          Meta_Aproveitamento: '80',
-          Amostra_Minima: '15',
-          Intervalos_Revisao: '1,3,6,13,30',
-          Intervalo_Reforco_Abaixo_Meta: '3'
-        },
-        materias: DADOS_INICIAIS.materias,
-        topicos: DADOS_INICIAIS.topicosBrutos.map(t => ({
-          id: t.id,
-          idMateria: t.matId,
-          materia: t.matNome,
-          topico: t.nome,
-          status: 'Ativo',
-          rodadaAtual: 1,
-          totalBanco: t.total,
-          resolvidasTotal: t.feito,
-          resolvidasRodada: t.feito,
-          restantesRodada: Math.max(0, t.total - t.feito),
-          acertosTotal: t.acertos,
-          errosTotal: Math.max(0, t.feito - t.acertos),
-          aproveitamentoAcumulado: t.feito > 0 ? Number(((t.acertos / t.feito) * 100).toFixed(1)) : 0,
-          ultimoAproveitamentoSessao: t.feito > 0 ? Number(((t.acertos / t.feito) * 100).toFixed(1)) : 0,
-          bloco: t.feito === 0 ? '1a Bateria Pos-Teoria' : (t.acertos / t.feito < 0.8 ? 'Fluxo de Reforco (<80%)' : 'Fluxo Espacado (>=80%)'),
-          prioridadeLabel: t.feito === 0 ? 'Prioridade 1 (0 Questoes)' : (t.acertos / t.feito < 0.8 ? 'Prioridade 2 (Reforco Curto)' : 'Prioridade 3 (Progressao)')
-        })),
-        sessoes: sessoes,
-        revisoes: revisoes
-      };
-    }
-
-    /* ==========================================================================
-     * EXPORTAR COMPLETO PARA EXCEL (CSV COMPATÍVEL COM PONTO E VÍRGULA)
-     * ========================================================================== */
-    function exportarParaExcel() {
-      let csv = '--- SESSOES DE ESTUDO ---\n';
-      csv += 'Data;Materia;Topico;Resolvidas;Acertos;Erros;Aproveitamento (%)\n';
-      ESTADO.sessoes.forEach(s => {
-        csv += `${s.dataSessao};${s.materia};${s.topico};${s.resolvidas};${s.acertos};${s.erros};${s.aproveitamento}%\n`;
-      });
-
-      csv += '\n--- CONTROLE DE REVISOES PROGRAMADAS ---\n';
-      csv += 'Materia;Topico;Etapa;Data Prevista;Status;Tipo\n';
-      ESTADO.revisoes.forEach(r => {
-        csv += `${r.materia};${r.topico};${r.etapa};${r.dataPrevistaAtual};${r.status};${r.tipoDataOrigem}\n`;
-      });
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `gestor_estudos_completo_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-    }
-
-    /* ==========================================================================
-     * SISTEMA ANKI (SEGUNDO SISTEMA NO MESMO SITE)
-     * ========================================================================== */
-    async function carregarCardsDoBanco() {
-      const mat = document.getElementById('filtroMateriaAnki') ? document.getElementById('filtroMateriaAnki').value : '';
-      let q = _supabase.from('cartoes').select('*');
-      if (mat) q = q.eq('materia', mat);
-      const { data } = await q;
-      cardsAnkiFiltrados = data || [];
-      cardAnkiAtual = 0;
-      exibirCardAnki();
-    }
-
-    function exibirCardAnki() {
-      const boxTexto = document.getElementById('ankiTextoCard');
-      const boxLado = document.getElementById('ankiLadoLabel');
-      const boxBotoes = document.getElementById('botoesRespostaAnki');
-      const contador = document.getElementById('ankiContador');
-
-      if (cardsAnkiFiltrados.length === 0) {
-        boxTexto.textContent = "Nenhum cartão cadastrado para este filtro.";
-        boxLado.textContent = "Vazio";
-        boxBotoes.classList.add('hidden');
-        contador.textContent = "0 / 0";
-        return;
-      }
-
-      if (cardAnkiAtual >= cardsAnkiFiltrados.length) {
-        boxTexto.textContent = "Parabéns! Todos os flashcards foram revisados.";
-        boxLado.textContent = "Concluído";
-        boxBotoes.classList.add('hidden');
-        contador.textContent = `${cardsAnkiFiltrados.length} / ${cardsAnkiFiltrados.length}`;
-        return;
-      }
-
-      ladoVersoAnki = false;
-      boxLado.textContent = "Frente (Pergunta)";
-      boxTexto.textContent = cardsAnkiFiltrados[cardAnkiAtual].frente;
-      boxBotoes.classList.add('hidden');
-      contador.textContent = `${cardAnkiAtual + 1} / ${cardsAnkiFiltrados.length}`;
-    }
-
-    function virarCardAnki() {
-      if (cardsAnkiFiltrados.length === 0 || cardAnkiAtual >= cardsAnkiFiltrados.length) return;
-      ladoVersoAnki = !ladoVersoAnki;
-      document.getElementById('ankiLadoLabel').textContent = ladoVersoAnki ? "Verso (Resposta)" : "Frente (Pergunta)";
-      document.getElementById('ankiTextoCard').textContent = ladoVersoAnki ? cardsAnkiFiltrados[cardAnkiAtual].verso : cardsAnkiFiltrados[cardAnkiAtual].frente;
-      document.getElementById('botoesRespostaAnki').classList.toggle('hidden', !ladoVersoAnki);
-    }
-
-    async function responderCardAnki(acertou) {
-      const c = cardsAnkiFiltrados[cardAnkiAtual];
-      let novoInt = acertou ? Math.max((c.intervalo || 1) * 2, 2) : 1;
-      let prox = new Date();
-      prox.setDate(prox.getDate() + novoInt);
-
-      await _supabase.from('cartoes').update({
-        intervalo: novoInt,
-        proxima_revisao: prox.toISOString().split('T')[0]
-      }).eq('id', c.id);
-
-      cardAnkiAtual++;
-      exibirCardAnki();
-    }
-
-    async function abrirModalNovoAnki() {
-      const frente = prompt("Digite a FRENTE (Pergunta do Flashcard):");
-      if (!frente) return;
-      const verso = prompt("Digite o VERSO (Resposta):");
-      if (!verso) return;
-      const mat = prompt("Qual a matéria? (ex: Direito Constitucional)", "Direito Constitucional");
-
-      await _supabase.from('cartoes').insert([{
-        id: 'CARD_' + Date.now(),
-        materia: mat || 'Geral',
-        topico: 'Geral',
-        frente: frente,
-        verso: verso,
-        intervalo: 1,
-        proxima_revisao: new Date().toISOString().split('T')[0]
-      }]);
-
-      notificar("Cartão salvo com sucesso no Anki!");
-      await carregarCardsDoBanco();
-    }
-
-    /* ==========================================================================
-     * FUNÇÕES NATIVAS DO SEU GESTOR DE QUESTÕES
-     * ========================================================================== */
-    function irParaAba(aba) {
-      ['painel', 'anki', 'registrar', 'cadastros', 'ciclo', 'revisoes', 'estatisticas', 'config'].forEach(a => {
-        const el = document.getElementById(`aba-${a}`);
-        const nav = document.getElementById(`nav-${a}`);
-        if (el) el.classList.toggle('hidden', a !== aba);
-        if (nav) nav.className = `px-3 py-1.5 rounded-lg whitespace-nowrap transition ${a === aba ? 'tab-btn-active' : 'tab-btn-inactive'}`;
-      });
-      if (aba === 'estatisticas') renderizarEstatisticas();
-    }
-
-    function popularSelectsGlobais() {
-      const opts = '<option value="">Selecione...</option>' + ESTADO.materias.map(m => `<option value="${m.id}">${m.ordem}. ${m.nome}</option>`).join('');
-      ['sesMateria', 'topMateria', 'teoMateria'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = opts;
-      });
-      const optsAnki = '<option value="">Todas as Matérias</option>' + ESTADO.materias.map(m => `<option value="${m.nome}">${m.nome}</option>`).join('');
-      const elAnki = document.getElementById('filtroMateriaAnki');
-      if (elAnki) elAnki.innerHTML = optsAnki;
-      filtrarTopicosSelectSessao();
-    }
-
-    function filtrarTopicosSelectSessao() {
-      const idMat = document.getElementById('sesMateria').value;
-      const selTop = document.getElementById('sesTopico');
-      const tops = ESTADO.topicos.filter(t => t.idMateria === idMat);
-      selTop.innerHTML = tops.map(t => `<option value="${t.id}">${t.topico} (Sessão: ${t.ultimoAproveitamentoSessao}% | Acum: ${t.aproveitamentoAcumulado}%)</option>`).join('');
-      mostrarResumoTopicoSessao();
-    }
-
-    function mostrarResumoTopicoSessao() {
-      const idTop = document.getElementById('sesTopico').value;
-      const box = document.getElementById('boxResumoTopicoSessao');
-      const t = ESTADO.topicos.find(x => x.id === idTop);
-      if (!t) { box.classList.add('hidden'); return; }
-      box.classList.remove('hidden');
-      box.innerHTML = `<div><strong>Banco:</strong> ${t.resolvidasTotal} respondidas de ${t.totalBanco} cadastradas | <strong>Acumulado:</strong> ${t.aproveitamentoAcumulado}%</div>`;
-    }
-
-    function atualizarPreviaSessao() {
-      const res = Number(document.getElementById('sesResolvidas').value || 0);
-      const ac = Number(document.getElementById('sesAcertos').value || 0);
-      document.getElementById('sesErros').value = Math.max(0, res - ac);
-      const pct = res > 0 ? ((ac / res) * 100).toFixed(1) : '0.0';
-      document.getElementById('badgeCalcSessao').textContent = `${pct}% na sessão`;
-    }
-
-    async function submeterSessao(e) {
-      e.preventDefault();
-      const idTop = document.getElementById('sesTopico').value;
-      const res = Number(document.getElementById('sesResolvidas').value);
-      const ac = Number(document.getElementById('sesAcertos').value);
-      const t = ESTADO.topicos.find(x => x.id === idTop);
-      if (!t) return;
-
-      const aprov = Number(((ac / res) * 100).toFixed(1));
-      const hoje = ESTADO.hojeYMD;
-
-      ESTADO.sessoes.unshift({
-        id: 'SES_' + Date.now(),
-        dataSessao: hoje,
-        idMateria: t.idMateria,
-        materia: t.materia,
-        idTopico: t.id,
-        topico: t.topico,
-        rodada: 1,
-        resolvidas: res,
-        acertos: ac,
-        erros: res - ac,
-        aproveitamento: aprov,
-        observacoes: document.getElementById('sesObs').value
-      });
-
-      t.resolvidasTotal += res;
-      t.acertosTotal += ac;
-      t.errosTotal += (res - ac);
-      t.aproveitamentoAcumulado = Number(((t.acertosTotal / t.resolvidasTotal) * 100).toFixed(1));
-      t.ultimoAproveitamentoSessao = aprov;
-
-      let rev = ESTADO.revisoes.find(r => r.idTopico === t.id && r.status !== 'Concluída');
-      if (rev) {
-        rev.status = 'Concluída';
-        rev.dataConclusao = hoje;
-      }
-
-      const dias = aprov >= 80 ? 3 : 1;
-      const proxDt = somarDias(hoje, dias);
-
-      ESTADO.revisoes.push({
-        id: 'REV_' + Date.now(),
-        idSessaoOrigem: 'SES_' + Date.now(),
-        idMateria: t.idMateria,
-        materia: t.materia,
-        idTopico: t.id,
-        topico: t.topico,
-        dataOrigem: hoje,
-        dataPrevistaOriginal: proxDt,
-        dataPrevistaAtual: proxDt,
-        etapa: aprov >= 80 ? 2 : 1,
-        totalEtapas: 5,
-        status: 'Programada',
-        tipoDataOrigem: aprov >= 80 ? 'Progressao_Espacada' : 'Reforco_Curto'
-      });
-
-      await salvarEstadoNoSupabase();
-      renderizarPainel();
-      renderizarAbaRegistrar();
-      irParaAba('painel');
-    }
-
-    function renderizarPainel() {
-      const hoje = ESTADO.hojeYMD;
-      const sHoje = ESTADO.sessoes.filter(s => s.dataSessao === hoje);
-      const resHoje = sHoje.reduce((a, b) => a + b.resolvidas, 0);
-      const acHoje = sHoje.reduce((a, b) => a + b.acertos, 0);
-
-      document.getElementById('pHojeResolvidas').textContent = `${resHoje} / 100`;
-      document.getElementById('pHojeAcertos').textContent = `Sessões de hoje: ${acHoje} acertos (${resHoje > 0 ? Math.round((acHoje / resHoje) * 100) : 0}%)`;
-
-      const revPend = ESTADO.revisoes.filter(r => r.status === 'Para Hoje' || r.status === 'Atrasada' || r.dataPrevistaAtual <= hoje && r.status !== 'Concluída');
-      document.getElementById('pRevHoje').textContent = `${revPend.length}`;
-
-      const cont = document.getElementById('listaHojePainel');
-      if (revPend.length === 0) {
-        cont.innerHTML = '<p class="text-slate-500 py-3 text-center">Nenhum tópico pendente para hoje.</p>';
-      } else {
-        cont.innerHTML = revPend.map(r => `
-          <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
-            <div>
-              <span class="px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-bold uppercase">${r.materia}</span>
-              <div class="font-bold text-slate-800 text-xs mt-1">${r.topico}</div>
-              <div class="text-[10px] text-slate-500">Previsão: ${formatarDataBR(r.dataPrevistaAtual)} (${r.status})</div>
-            </div>
-            <button onclick="atalhoRegistrarEstudo('${r.idMateria}', '${r.idTopico}')" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-bold text-xs">
-              Resolver Questões
-            </button>
-          </div>
-        `).join('');
-      }
-
-      // Painel direito - 0 questões
-      const contZero = document.getElementById('listaTopicosZeroQuestoesPainel');
-      const zeroQ = ESTADO.topicos.filter(t => t.resolvidasTotal === 0);
-      contZero.innerHTML = zeroQ.map(t => `
-        <div class="flex items-center justify-between py-1 border-b">
-          <div><div class="font-bold text-slate-800">${t.topico}</div><div class="text-[10px] text-slate-400">${t.materia}</div></div>
-          <button onclick="atalhoRegistrarEstudo('${t.idMateria}', '${t.id}')" class="px-2 py-1 bg-indigo-600 text-white rounded text-[10px] font-bold">1ª Bateria</button>
-        </div>
-      `).join('');
-    }
-
-    function renderizarAbaRegistrar() {
-      document.getElementById('tbodySessoes').innerHTML = ESTADO.sessoes.map(s => `
-        <tr class="hover:bg-slate-50">
-          <td class="py-2.5 px-3">${formatarDataBR(s.dataSessao)}</td>
-          <td class="py-2.5 px-3 font-bold">${s.materia} — ${s.topico}</td>
-          <td class="py-2.5 px-3 text-center font-bold ${s.aproveitamento >= 80 ? 'text-emerald-600' : 'text-rose-600'}">${s.aproveitamento}%</td>
-          <td class="py-2.5 px-3 text-center">${s.acertos}C / ${s.erros}E</td>
-          <td class="py-2.5 px-3">${s.observacoes || '—'}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderizarAbaMaterias() {
-      document.getElementById('listaMateriasOrdenavel').innerHTML = ESTADO.materias.map(m => `
-        <div class="p-3 flex items-center justify-between">
-          <span class="font-bold text-slate-800">${m.ordem}º. ${m.nome}</span>
-          <span class="text-xs text-slate-500">Mínimo: ${m.minQuestoes} q.</span>
-        </div>
-      `).join('');
-    }
-
-    function renderizarAbaTopicos() {
-      document.getElementById('tbodyTopicos').innerHTML = ESTADO.topicos.map(t => `
-        <tr class="hover:bg-slate-50">
-          <td class="py-2 px-3 font-semibold">${t.materia} — ${t.topico}</td>
-          <td class="py-2 px-3 text-center">${t.resolvidasTotal} / ${t.totalBanco}</td>
-          <td class="py-2 px-3 text-center font-bold">${t.ultimoAproveitamentoSessao}% (Acum: ${t.aproveitamentoAcumulado}%)</td>
-          <td class="py-2 px-3 text-[10px]">${t.prioridadeLabel}</td>
-        </tr>
-      `).join('');
-    }
-
-    function renderizarAbaCiclo() {
-      document.getElementById('containerCicloPlanejado').innerHTML = ESTADO.revisoes.map(r => `
-        <div class="p-3 bg-white border rounded-xl flex items-center justify-between">
-          <div>
-            <span class="font-bold">${r.materia} — ${r.topico}</span>
-            <div class="text-[11px] text-slate-500">Previsão: ${formatarDataBR(r.dataPrevistaAtual)} | Etapa: ${r.etapa}</div>
-          </div>
-          <span class="px-2 py-1 rounded bg-slate-100 text-xs font-bold">${r.status}</span>
-        </div>
-      `).join('');
-    }
-
-    function renderizarAbaRevisoes() {
-      document.getElementById('listaRevisoesDia').innerHTML = ESTADO.revisoes.map(r => `
-        <div class="p-3 bg-white border rounded-xl flex items-center justify-between">
-          <div><span class="font-bold">${r.materia} — ${r.topico}</span></div>
-          <button onclick="atalhoRegistrarEstudo('${r.idMateria}', '${r.idTopico}')" class="px-3 py-1 bg-indigo-600 text-white rounded font-bold">Resolver</button>
-        </div>
-      `).join('');
-    }
-
-    function renderizarEstatisticas() {
-      const resTotal = ESTADO.sessoes.reduce((a, b) => a + b.resolvidas, 0);
-      const acTotal = ESTADO.sessoes.reduce((a, b) => a + b.acertos, 0);
-      const erTotal = Math.max(0, resTotal - acTotal);
-
-      const ctx = document.getElementById('chartRoscaAcertosErros').getContext('2d');
-      new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Acertos', 'Erros'],
-          datasets: [{ data: [acTotal, erTotal], backgroundColor: ['#10b981', '#f43f5e'] }]
-        }
-      });
-      document.getElementById('legendaRoscaResumo').innerHTML = `<strong>Total:</strong> ${resTotal} questões | <strong>Acertos:</strong> ${acTotal} | <strong>Erros:</strong> ${erTotal}`;
-    }
-
-    function preencherAbaConfig() {
-      document.getElementById('cfgMetaDiaria').value = ESTADO.config.Meta_Diaria_Questoes;
-      document.getElementById('cfgMaxRevisoes').value = ESTADO.config.Max_Revisoes_Dia;
-    }
-
-    async function submeterConfiguracoes(e) {
-      e.preventDefault();
-      ESTADO.config.Meta_Diaria_Questoes = document.getElementById('cfgMetaDiaria').value;
-      ESTADO.config.Max_Revisoes_Dia = document.getElementById('cfgMaxRevisoes').value;
-      await salvarEstadoNoSupabase();
-    }
-
-    function atalhoRegistrarEstudo(idMat, idTop) {
-      irParaAba('registrar');
-      document.getElementById('sesMateria').value = idMat;
-      filtrarTopicosSelectSessao();
-      document.getElementById('sesTopico').value = idTop;
-    }
-
-    function somarDias(ymd, d) {
-      const p = ymd.split('-').map(Number);
-      const dt = new Date(p[0], p[1] - 1, p[2]);
-      dt.setDate(dt.getDate() + d);
-      return dt.toISOString().split('T')[0];
-    }
-
-    function formatarDataBR(ymd) {
-      if (!ymd) return '-';
-      const p = ymd.split('-');
-      return `${p[2]}/${p[1]}/${p[0]}`;
-    }
-
-    function alternarSubmenuAcoes(e) { e.stopPropagation(); document.getElementById('dropdownSubmenuAcoes').classList.toggle('hidden'); }
-    function fecharSubmenuAcoes() { document.getElementById('dropdownSubmenuAcoes').classList.add('hidden'); }
-    function fecharSubmenuFora(e) { if (!document.getElementById('containerSubmenuAcoes').contains(e.target)) fecharSubmenuAcoes(); }
-    function alternarSubAbaPainelEsq(q) { document.getElementById('subpainel-esq-hoje').classList.toggle('hidden', q !== 'hoje'); document.getElementById('subpainel-esq-amanha').classList.toggle('hidden', q !== 'amanha'); }
-    function alternarSubAbaPainelDir(q) { ['zero', 'reforco', 'materias'].forEach(k => document.getElementById(`subpainel-dir-${k}`).classList.toggle('hidden', k !== q)); }
-    function alternarSubAbaRegistrar(q) { document.getElementById('subaba-reg-form').classList.toggle('hidden', q !== 'form'); document.getElementById('subaba-reg-historico').classList.toggle('hidden', q !== 'historico'); }
-    function alternarSubAbaCadastros(q) { document.getElementById('subaba-cad-topicos').classList.toggle('hidden', q !== 'topicos'); document.getElementById('subaba-cad-materias').classList.toggle('hidden', q !== 'materias'); }
-    function abrirModalTeoriaHoje() { document.getElementById('modalTeoriaHoje').classList.remove('hidden'); }
-    function fecharModalTeoriaHoje() { document.getElementById('modalTeoriaHoje').classList.add('hidden'); }
-    function notificar(msg) {
-      const t = document.getElementById('toast');
-      document.getElementById('toastTexto').textContent = msg;
-      t.classList.remove('hidden');
-      setTimeout(() => t.classList.add('hidden'), 3500);
-    }
+    // A ETAPA 3 ENTRARÁ EXATAMENTE AQUI
   </script>
 </body>
 </html>
