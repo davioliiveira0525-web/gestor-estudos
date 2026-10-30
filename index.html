@@ -7,6 +7,11 @@
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    };
+  </script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Supabase JS v2 CDN -->
@@ -21,25 +26,158 @@
   <style>
     body {
       font-family: 'Inter', sans-serif;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* ==========================================================================
+     * GERENCIADOR GLOBAL DE TEMA (DARK / LIGHT MODE NATIVO NAS 8 ABAS)
+     * ========================================================================== */
+    html.dark body {
       background-color: #020617; /* slate-950 */
       color: #f1f5f9; /* slate-100 */
     }
+    html:not(.dark) body {
+      background-color: #f8fafc !important; /* slate-50 */
+      color: #0f172a !important; /* slate-900 */
+    }
+
+    /* Sobrescritas Inteligentes de Superfícies p/ Light Mode Global */
+    html:not(.dark) header {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      border-color: #e2e8f0 !important;
+      color: #0f172a !important;
+    }
+    html:not(.dark) .bg-slate-950,
+    html:not(.dark) .bg-slate-950\/80,
+    html:not(.dark) .bg-slate-950\/70,
+    html:not(.dark) .bg-slate-950\/60 {
+      background-color: #f1f5f9 !important; /* slate-100 */
+    }
+    html:not(.dark) .bg-slate-900,
+    html:not(.dark) .bg-slate-900\/95,
+    html:not(.dark) .bg-slate-900\/60 {
+      background-color: #ffffff !important;
+    }
+    html:not(.dark) .bg-slate-800,
+    html:not(.dark) .bg-slate-800\/50,
+    html:not(.dark) .bg-slate-800\/40 {
+      background-color: #f1f5f9 !important;
+      color: #1e293b !important;
+    }
+    html:not(.dark) .border-slate-800,
+    html:not(.dark) .border-slate-800\/80,
+    html:not(.dark) .border-slate-700 {
+      border-color: #e2e8f0 !important; /* slate-200 */
+    }
+    html:not(.dark) .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+      border-color: #e2e8f0 !important;
+    }
+
+    /* Tipografia Adaptativa em Light Mode (Preservando Botões Coloridos) */
+    html:not(.dark) h1,
+    html:not(.dark) h2,
+    html:not(.dark) h3,
+    html:not(.dark) .text-slate-100,
+    html:not(.dark) .text-slate-200 {
+      color: #0f172a !important;
+    }
+    html:not(.dark) .text-white:not(button):not(.bg-indigo-600):not(.bg-emerald-600):not(.bg-emerald-700):not(.bg-rose-600):not(.bg-teal-600):not(.bg-amber-500):not(.tab-btn-active):not(.subtab-active) {
+      color: #0f172a !important;
+    }
+    html:not(.dark) .text-slate-300,
+    html:not(.dark) .text-slate-400 {
+      color: #475569 !important; /* slate-600 */
+    }
+
+    /* Ajustes de Badges Suaves em Light Mode */
+    html:not(.dark) .bg-indigo-950,
+    html:not(.dark) .bg-indigo-950\/90,
+    html:not(.dark) .bg-indigo-950\/60,
+    html:not(.dark) .bg-indigo-950\/50,
+    html:not(.dark) .bg-indigo-950\/40,
+    html:not(.dark) .bg-indigo-950\/30 {
+      background-color: #eef2ff !important;
+      border-color: #c7d2fe !important;
+      color: #3730a3 !important;
+    }
+    html:not(.dark) .text-indigo-200,
+    html:not(.dark) .text-indigo-300,
+    html:not(.dark) .text-indigo-400 {
+      color: #4338ca !important;
+    }
+    html:not(.dark) .bg-emerald-950,
+    html:not(.dark) .bg-emerald-950\/50,
+    html:not(.dark) .bg-emerald-950\/30,
+    html:not(.dark) .bg-emerald-950\/20 {
+      background-color: #ecfdf5 !important;
+      border-color: #a7f3d0 !important;
+      color: #065f46 !important;
+    }
+    html:not(.dark) .text-emerald-200,
+    html:not(.dark) .text-emerald-300,
+    html:not(.dark) .text-emerald-400 {
+      color: #047857 !important;
+    }
+    html:not(.dark) .bg-rose-950,
+    html:not(.dark) .bg-rose-950\/60,
+    html:not(.dark) .bg-rose-950\/50,
+    html:not(.dark) .bg-rose-950\/40,
+    html:not(.dark) .bg-rose-950\/30,
+    html:not(.dark) .bg-rose-950\/20 {
+      background-color: #fff1f2 !important;
+      border-color: #fecdd3 !important;
+      color: #9f1239 !important;
+    }
+    html:not(.dark) .text-rose-200,
+    html:not(.dark) .text-rose-300,
+    html:not(.dark) .text-rose-400 {
+      color: #be123c !important;
+    }
+    html:not(.dark) .bg-amber-950,
+    html:not(.dark) .bg-amber-950\/60 {
+      background-color: #fffbeb !important;
+      border-color: #fde68a !important;
+      color: #92400e !important;
+    }
+    html:not(.dark) .text-amber-200,
+    html:not(.dark) .text-amber-300,
+    html:not(.dark) .text-amber-400 {
+      color: #b45309 !important;
+    }
+    html:not(.dark) .bg-teal-950,
+    html:not(.dark) .bg-teal-950\/40 {
+      background-color: #f0fdfa !important;
+      border-color: #99f6e4 !important;
+      color: #115e59 !important;
+    }
+    html:not(.dark) .text-teal-300 {
+      color: #0f766e !important;
+    }
+
+    /* Botões de Abas e Sub-abas */
     .tab-btn-active {
-      background-color: #4f46e5;
-      color: #ffffff;
+      background-color: #4f46e5 !important;
+      color: #ffffff !important;
       font-weight: 600;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     .tab-btn-inactive {
       color: #94a3b8;
+    }
+    html:not(.dark) .tab-btn-inactive {
+      color: #475569;
     }
     .tab-btn-inactive:hover {
       background-color: #1e293b;
       color: #ffffff;
     }
+    html:not(.dark) .tab-btn-inactive:hover {
+      background-color: #e2e8f0;
+      color: #0f172a;
+    }
     .subtab-active {
-      background-color: #4f46e5;
-      color: #ffffff;
+      background-color: #4f46e5 !important;
+      color: #ffffff !important;
       font-weight: 700;
     }
     .subtab-inactive {
@@ -47,54 +185,124 @@
       color: #94a3b8;
       font-weight: 600;
     }
+    html:not(.dark) .subtab-inactive {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
     .subtab-inactive:hover {
       background-color: #334155;
       color: #f8fafc;
     }
+    html:not(.dark) .subtab-inactive:hover {
+      background-color: #e2e8f0;
+      color: #0f172a;
+    }
+
     .dragging {
       opacity: 0.45;
       border: 2px dashed #6366f1;
     }
-    /* Inputs e Selects nativos no Tema Escuro */
-    input[type="text"],
-    input[type="number"],
-    input[type="date"],
-    input[type="url"],
-    input[type="password"],
-    select,
-    textarea {
+
+    /* Inputs e Selects Nativos Reativos ao Tema */
+    html.dark input[type="text"],
+    html.dark input[type="number"],
+    html.dark input[type="date"],
+    html.dark input[type="url"],
+    html.dark input[type="password"],
+    html.dark select,
+    html.dark textarea {
       background-color: #0f172a !important;
       color: #f8fafc !important;
       border-color: #334155 !important;
+    }
+    html:not(.dark) input[type="text"],
+    html:not(.dark) input[type="number"],
+    html:not(.dark) input[type="date"],
+    html:not(.dark) input[type="url"],
+    html:not(.dark) input[type="password"],
+    html:not(.dark) select,
+    html:not(.dark) textarea {
+      background-color: #ffffff !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
     }
     input:focus, select:focus, textarea:focus {
       outline: none !important;
       border-color: #6366f1 !important;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
     }
+
+    /* Destaques Cloze Deletion (Lei Seca) */
+    .fc-cloze-blank {
+      display: inline-block;
+      padding: 0.12rem 0.65rem;
+      margin: 0 0.15rem;
+      border-radius: 0.375rem;
+      background-color: #e0e7ff;
+      color: #3730a3;
+      font-weight: 800;
+      border: 1px dashed #6366f1;
+      letter-spacing: 0.05em;
+    }
+    html.dark .fc-cloze-blank {
+      background-color: #1e1b4b;
+      color: #a5b4fc;
+      border-color: #6366f1;
+    }
+    .fc-cloze-revealed {
+      display: inline-block;
+      padding: 0.12rem 0.65rem;
+      margin: 0 0.15rem;
+      border-radius: 0.375rem;
+      background-color: #dcfce7;
+      color: #15803d;
+      font-weight: 800;
+      border: 1px solid #86efac;
+    }
+    html.dark .fc-cloze-revealed {
+      background-color: #064e3b;
+      color: #6ee7b7;
+      border-color: #059669;
+    }
+
+    /* Modo Tela Cheia Imersivo (Fullscreen API) */
+    #fcSessaoPlayer:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    html.dark #fcSessaoPlayer:fullscreen {
+      background-color: #020617;
+      color: #f8fafc;
+    }
+    html:not(.dark) #fcSessaoPlayer:fullscreen {
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+
+    /* Scrollbar */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
+    html.dark ::-webkit-scrollbar-track { background: #0f172a; }
+    html.dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    html:not(.dark) ::-webkit-scrollbar-track { background: #f1f5f9; }
+    html:not(.dark) ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col bg-slate-950 text-slate-100" onclick="fecharSubmenuFora(event)">
 
   <!-- HEADER E NAVEGACAO PRINCIPAL -->
-  <header class="bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white sticky top-0 z-40 shadow-xl">
+  <header id="appHeaderPrincipal" class="bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white sticky top-0 z-40 shadow-xl">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-extrabold text-sm shadow-lg shadow-indigo-600/30">GR</div>
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-extrabold text-sm text-white shadow-lg shadow-indigo-600/30">GR</div>
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-base font-bold leading-tight text-white">Gestão de Revisão por Questões</h1>
@@ -107,6 +315,12 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
+        <!-- BOTAO TOGGLE DE TEMA (SOL / LUA) -->
+        <button type="button" onclick="alternarTemaGlobal()" id="btnToggleTemaGlobal" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold shadow flex items-center gap-1.5 transition" title="Alternar entre Modo Claro e Modo Escuro">
+          <span id="iconeTemaGlobal">☀️</span>
+          <span id="textoTemaGlobal" class="hidden sm:inline">Modo Claro</span>
+        </button>
+
         <!-- BOTAO EXPORTAR RELATORIO EXCEL (.XLSX) -->
         <button onclick="exportarRelatorioExcel()" id="btnExportarExcel" class="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 border border-emerald-500/40 text-white text-xs font-bold shadow flex items-center gap-1.5 transition">
           <span>📊 Exportar Relatório Excel</span>
@@ -158,7 +372,7 @@
       <button onclick="irParaAba('estatisticas')" id="nav-estatisticas" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Estatísticas e Gráficos</button>
       <button onclick="irParaAba('flashcards')" id="nav-flashcards" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive flex items-center gap-1.5">
         <span>⚡ Flashcards</span>
-        <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold uppercase">Modular</span>
+        <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold uppercase">3 Modos</span>
       </button>
       <button onclick="irParaAba('config')" id="nav-config" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Configurações</button>
     </nav>
@@ -927,1213 +1141,440 @@
       </div>
     </section>
 
-   <!-- ============================================================================
-     MÓDULO COMPLETO: CENTRAL DE REVISÃO ATIVA E FLASHCARDS DINÂMICOS
-     Substitua a <section id="aba-flashcards">...</section> original por este bloco
-     ============================================================================ -->
-<style>
-  /* Escopo de Tema Claro Ergonômico exclusivo para o Player e Modais de Flashcards */
-  .fc-light-scope input[type="text"],
-  .fc-light-scope input[type="number"],
-  .fc-light-scope select,
-  .fc-light-scope textarea {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #cbd5e1 !important;
-  }
-  .fc-light-scope input:focus,
-  .fc-light-scope select:focus,
-  .fc-light-scope textarea:focus {
-    border-color: #4f46e5 !important;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
-  }
-  .fc-cloze-blank {
-    display: inline-block;
-    padding: 0.1rem 0.6rem;
-    margin: 0 0.15rem;
-    border-radius: 0.375rem;
-    background-color: #e0e7ff;
-    color: #4338ca;
-    font-weight: 800;
-    border: 1px dashed #6366f1;
-    letter-spacing: 0.05em;
-  }
-  .fc-cloze-revealed {
-    display: inline-block;
-    padding: 0.1rem 0.6rem;
-    margin: 0 0.15rem;
-    border-radius: 0.375rem;
-    background-color: #dcfce7;
-    color: #15803d;
-    font-weight: 800;
-    border: 1px solid #86efac;
-  }
-</style>
+    <!-- ============================================================================
+         ABA 7: CENTRAL DE REVISÃO ATIVA E FLASHCARDS (3 TIPOS + FULLSCREEN + CSV)
+         ============================================================================ -->
+    <section id="aba-flashcards" class="hidden space-y-5">
+      <div id="containerDeckFlashcards" class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
 
-<section id="aba-flashcards" class="hidden space-y-5">
-  <div id="containerDeckFlashcards" class="fc-light-scope bg-slate-50 text-slate-900 rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
-
-    <!-- CABEÇALHO EXECUTIVO DA CENTRAL DE FLASHCARDS -->
-    <div class="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <div class="flex items-center gap-2">
-          <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-extrabold uppercase tracking-wider">
-            Aquecimento Tático Pré-TEC
-          </span>
-          <span id="fcBadgeTotalDeck" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold">
-            0 Cartões Cadastrados
-          </span>
-        </div>
-        <h2 class="text-lg font-extrabold text-slate-900 mt-1">Central de Revisão Ativa &amp; Estudo Reverso</h2>
-        <p class="text-xs text-slate-500">
-          Subordinada à Fila Única do Gestor de Questões (Corte de 80% no TEC Concursos)
-        </p>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2 text-xs">
-        <button type="button" onclick="abrirModalNovoFlashcard()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold shadow-xs transition">
-          + Criar Cartão
-        </button>
-        <button type="button" onclick="abrirModalImportarCSV()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold shadow-xs transition">
-          📥 Importar Lote (CSV)
-        </button>
-        <button type="button" onclick="carregarFlashcardsSupabase()" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold transition">
-          ↻ Atualizar Deck
-        </button>
-      </div>
-    </div>
-
-    <!-- BARRA DE FILTROS E ATALHOS DOS TÓPICOS DO DIA -->
-    <div id="fcPainelSelecao" class="p-6 space-y-6">
-      <!-- Sugestão Automática Baseada na Fila de Hoje do Gestor de Questões -->
-      <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 space-y-3">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-900">
-            🎯 Aquecimento Recomendado p/ Bateria de Hoje (Fila do TEC)
-          </span>
-          <span class="text-[11px] text-indigo-700 font-medium">
-            aqueça a memória muscular antes de abrir o caderno de questões
-          </span>
-        </div>
-        <div id="fcListaAtalhosHoje" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
-      </div>
-
-      <!-- Seletor Manual de Matéria / Tópico / Modalidade -->
-      <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-xs space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <!-- CABEÇALHO EXECUTIVO DA CENTRAL DE FLASHCARDS -->
+        <div class="bg-slate-900/60 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <label class="block font-bold text-slate-700 mb-1">1. Filtrar Matéria</label>
-            <select id="fcFiltroMateria" onchange="aoMudarMateriaFiltroFC()" class="w-full rounded-lg border px-3 py-2 font-medium">
-              <option value="">Todas as Matérias</option>
-            </select>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-extrabold uppercase tracking-wider">
+                Aquecimento Tático Pré-TEC
+              </span>
+              <span id="fcBadgeTotalDeck" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold">
+                0 Cartões Cadastrados
+              </span>
+            </div>
+            <h2 class="text-lg font-extrabold text-white mt-1">Central de Revisão Ativa &amp; Estudo Reverso</h2>
+            <p class="text-xs text-slate-400">
+              Subordinada à Fila Única do Gestor de Questões (Corte de 80% no TEC) • 1. Lei Seca (Cloze) | 2. PDF Base (C/E) | 3. Caderno de Erros
+            </p>
           </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">2. Filtrar Tópico</label>
-            <select id="fcFiltroTopico" onchange="renderizarVisaoDeckFC()" class="w-full rounded-lg border px-3 py-2 font-medium">
-              <option value="">Todos os Tópicos</option>
-            </select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">3. Modalidade</label>
-            <select id="fcFiltroTipo" onchange="renderizarVisaoDeckFC()" class="w-full rounded-lg border px-3 py-2 font-medium">
-              <option value="">Todas (Padrão, Cloze, Múltipla)</option>
-              <option value="PADRAO">Frente / Verso (Certo/Errado)</option>
-              <option value="CLOZE">Cloze Deletion (Omissão)</option>
-              <option value="MULTIPLA">Múltipla Escolha (Anti-Vício)</option>
-            </select>
-          </div>
-          <div class="flex items-end">
-            <button type="button" onclick="iniciarSessaoIntensivaFC()" class="w-full py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow-md shadow-indigo-600/20 transition flex items-center justify-center gap-2">
-              <span>⚡ Iniciar Intensivão (2 Fases)</span>
+
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <button type="button" onclick="abrirModalNovoFlashcard()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-bold shadow-xs transition">
+              + Criar Cartão
+            </button>
+            <button type="button" onclick="abrirModalImportarCSV()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-xs transition">
+              📥 Importar Lote (CSV)
+            </button>
+            <button type="button" onclick="carregarFlashcardsSupabase()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold transition">
+              ↻ Atualizar Deck
             </button>
           </div>
         </div>
 
-        <!-- Lista Compacta de Cartões do Filtro Atual -->
-        <div class="border-t border-slate-200 pt-4">
-          <div class="flex items-center justify-between mb-2 text-xs">
-            <span id="fcResumoFiltroTxt" class="font-bold text-slate-700">Cartões localizados: 0</span>
-            <span class="text-[11px] text-slate-500">Atalhos no Player: [Espaço] Virar | [1-4] Avaliar / Alternativas</span>
+        <!-- BARRA DE FILTROS, EXPORTADOR CSV CIRÚRGICO E ATALHOS DO DIA -->
+        <div id="fcPainelSelecao" class="p-6 space-y-6">
+          <!-- Sugestão Automática Baseada na Fila de Hoje do Gestor de Questões -->
+          <div class="bg-indigo-950/40 border border-indigo-800/70 rounded-xl p-4 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-300">
+                🎯 Aquecimento Recomendado p/ Bateria de Hoje (Fila do TEC)
+              </span>
+              <span class="text-[11px] text-indigo-200 font-medium">
+                Aqueça a memória muscular em tela cheia antes de abrir o caderno de questões
+              </span>
+            </div>
+            <div id="fcListaAtalhosHoje" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
           </div>
-          <div id="fcTabelaPreviewDeck" class="max-h-72 overflow-y-auto divide-y divide-slate-200 border border-slate-200 rounded-xl bg-slate-50 text-xs"></div>
-        </div>
-      </div>
-    </div>
 
-    <!-- ======================================================================
-         PLAYER DE SESSÃO INTENSIVA EM DUAS FASES (100% EM MEMÓRIA VOLÁTIL)
-         ====================================================================== -->
-    <div id="fcSessaoPlayer" class="hidden p-6 bg-slate-50 space-y-5">
-      <!-- Topbar do Player com Fase, Progresso e Cronômetro Persistente -->
-      <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <span id="fcBadgeFaseAtual" class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-extrabold uppercase tracking-wide">
-            FASE 1: Domínio Circular (+3)
-          </span>
-          <div>
-            <div id="fcTituloTopicoSessao" class="text-sm font-extrabold text-slate-900">Tópico</div>
-            <div id="fcSubtituloProgresso" class="text-[11px] text-slate-500 font-semibold">
-              Fila restante: 0 | Dominados Fase 1: 0 | Loops de erro: 0
+          <!-- Seletor Manual de Matéria / Tópico / Categoria Funcional -->
+          <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
+              <div class="md:col-span-3">
+                <label class="block font-bold text-slate-300 mb-1">1. Filtrar Matéria</label>
+                <select id="fcFiltroMateria" onchange="aoMudarMateriaFiltroFC()" class="w-full rounded-lg border px-3 py-2 font-medium">
+                  <option value="">Todas as Matérias</option>
+                </select>
+              </div>
+              <div class="md:col-span-4">
+                <label class="block font-bold text-slate-300 mb-1">2. Filtrar Tópico</label>
+                <select id="fcFiltroTopico" onchange="renderizarVisaoDeckFC()" class="w-full rounded-lg border px-3 py-2 font-medium">
+                  <option value="">Todos os Tópicos</option>
+                </select>
+              </div>
+              <div class="md:col-span-3">
+                <label class="block font-bold text-slate-300 mb-1">3. Tipo Funcional do Cartão</label>
+                <select id="fcFiltroTipo" onchange="renderizarVisaoDeckFC()" class="w-full rounded-lg border px-3 py-2 font-bold">
+                  <option value="">[ Todos os Tipos ]</option>
+                  <option value="CLOZE">1. Lei Seca (Cloze Deletion)</option>
+                  <option value="PADRAO">2. PDF Base (Certo ou Errado)</option>
+                  <option value="MULTIPLA">3. Caderno de Erros (Múltipla)</option>
+                </select>
+              </div>
+              <div class="md:col-span-2 flex items-end">
+                <button type="button" onclick="iniciarSessaoIntensivaFC()" class="w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow-md shadow-indigo-600/20 transition flex items-center justify-center gap-1.5" title="Inicia sessão imersiva em Tela Cheia">
+                  <span>⚡ Iniciar Foco</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- BARRA DE CONTAGEM TRIPARTIDA + EXPORTADOR CSV CIRÚRGICO POR TÓPICO/TIPO -->
+            <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-[11px] font-bold text-slate-400 uppercase mr-1">Divisão do Filtro:</span>
+                <span id="fcCountLeiSeca" class="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[11px]">
+                  📜 Lei Seca (Cloze): 0
+                </span>
+                <span id="fcCountPdfBase" class="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[11px]">
+                  ⚖️ PDF Base (C/E): 0
+                </span>
+                <span id="fcCountCadernoErros" class="px-2.5 py-1 rounded-lg bg-rose-950 text-rose-300 border border-rose-800 font-bold text-[11px]">
+                  🎯 Caderno de Erros: 0
+                </span>
+                <span id="fcEstimativaPreviaDeck" class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-[11px]">
+                  ⏱️ Tempo estimado: ~0 min
+                </span>
+              </div>
+
+              <!-- Exportador CSV Cirúrgico para Alimentação Diferencial de IA -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] font-bold text-slate-400">Exportar CSV p/ IA:</span>
+                <select id="fcSelectCategoriaExportCSV" class="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold">
+                  <option value="TODOS">[ Todos ]</option>
+                  <option value="CLOZE">[ Lei Seca ]</option>
+                  <option value="PADRAO">[ PDF Base ]</option>
+                  <option value="MULTIPLA">[ Caderno de Erros ]</option>
+                </select>
+                <button type="button" onclick="exportarCSVCirurgicoFlashcards()" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px] shadow flex items-center gap-1 transition" title="Baixa o CSV filtrado do tópico atual para evitar cartões repetidos em prompts futuros">
+                  <span>📤 Baixar CSV Cirúrgico</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Lista Compacta de Cartões do Filtro Atual -->
+            <div class="border-t border-slate-800 pt-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
+                <span id="fcResumoFiltroTxt" class="font-bold text-slate-200">Cartões localizados: 0</span>
+                <span class="text-[11px] text-slate-400">Atalhos no Player: [C / E] Julgar PDF Base | [Espaço] Virar Lei Seca | [1-4] Avaliar / Alternativas | [F] Tela Cheia</span>
+              </div>
+              <div id="fcTabelaPreviewDeck" class="max-h-72 overflow-y-auto divide-y divide-slate-800 border border-slate-800 rounded-xl bg-slate-900 text-xs"></div>
             </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-4">
-          <div class="text-right bg-slate-100 px-3.5 py-1.5 rounded-xl border border-slate-200">
-            <div class="text-[10px] font-bold uppercase text-slate-500">Tempo de Sessão | Média/Card</div>
-            <div class="text-sm font-mono font-extrabold text-slate-900">
-              <span id="fcTimerSessao">00:00</span>
-              <span class="text-slate-400 mx-1">|</span>
-              <span id="fcTempoMedioCard" class="text-indigo-600">0.0s</span>
+        <!-- ======================================================================
+             PLAYER DE SESSÃO INTENSIVA EM 2 FASES + FULLSCREEN + BARRA PREDITIVA
+             ====================================================================== -->
+        <div id="fcSessaoPlayer" class="hidden p-6 bg-slate-950 space-y-5">
+          <!-- Topbar do Player com Fase, Tempo Preditivo, Cronômetro e Controle Fullscreen -->
+          <div class="max-w-4xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <span id="fcBadgeFaseAtual" class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-extrabold uppercase tracking-wide">
+                  FASE 1: Domínio Circular (+3)
+                </span>
+                <div>
+                  <div id="fcTituloTopicoSessao" class="text-sm font-extrabold text-white">Tópico</div>
+                  <div id="fcSubtituloProgresso" class="text-[11px] text-slate-400 font-semibold">
+                    Fila restante: 0 | Dominados Fase 1: 0 | Loops de erro: 0
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Métrica Preditiva de Tempo Restante -->
+                <div class="text-right bg-indigo-950/60 px-3.5 py-1.5 rounded-xl border border-indigo-800/80">
+                  <div class="text-[10px] font-bold uppercase text-indigo-300">Previsão de Conclusão</div>
+                  <div id="fcTempoRestanteEstimado" class="text-xs font-extrabold text-indigo-200">
+                    Tempo restante estimado: ~1 min
+                  </div>
+                </div>
+
+                <!-- Cronômetro e Velocidade Média -->
+                <div class="text-right bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800">
+                  <div class="text-[10px] font-bold uppercase text-slate-400">Sessão | Média/Card</div>
+                  <div class="text-sm font-mono font-extrabold text-white">
+                    <span id="fcTimerSessao">00:00</span>
+                    <span class="text-slate-500 mx-1">|</span>
+                    <span id="fcTempoMedioCard" class="text-indigo-400">0.0s</span>
+                  </div>
+                </div>
+
+                <!-- Botão Alternar Tela Cheia (Fullscreen API) -->
+                <button type="button" onclick="alternarModoTelaCheiaFC()" id="btnFullscreenFC" class="px-3 py-2 rounded-lg border border-indigo-700 bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 text-xs font-bold transition" title="Ativar/Sair da Tela Cheia [Tecla F]">
+                  ⛶ Tela Cheia
+                </button>
+
+                <button type="button" onclick="encerrarSessaoFCManual()" class="px-3 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition">
+                  ✕ Sair
+                </button>
+              </div>
+            </div>
+
+            <!-- Barra Dinâmica de Evolução da Sessão até o Fim da Fase 2 -->
+            <div class="space-y-1 pt-1">
+              <div class="flex items-center justify-between text-[11px] font-bold">
+                <span id="fcTextoProgressoBarra" class="text-slate-300">Progresso Global da Sessão (Fase 1 + Fase 2): 0%</span>
+                <span id="fcPercentualBarra" class="text-indigo-400 font-extrabold">0%</span>
+              </div>
+              <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                <div id="fcBarraProgressoDinamica" class="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 transition-all duration-300" style="width: 0%"></div>
+              </div>
             </div>
           </div>
-          <button type="button" onclick="encerrarSessaoFCManual()" class="px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold">
-            Encerrar
-          </button>
-        </div>
-      </div>
 
-      <!-- Área Central do Cartão -->
-      <div class="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-lg p-6 md:p-8 space-y-6 min-h-[340px] flex flex-col justify-between">
-        <!-- Topo do Card: Badges de Modalidade, Tags e Identificação "NOVO" -->
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <span id="fcCardBadgeTipo" class="px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold text-[11px]">PADRÃO</span>
-            <span id="fcCardBadgeNovo" class="hidden px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-[11px] uppercase">✨ NOVO</span>
-            <span id="fcCardBadgeReincidencia" class="hidden px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-300 font-bold text-[11px]">Reincidência na sessão</span>
-          </div>
-          <span id="fcCardTags" class="text-[11px] text-slate-400 font-medium"></span>
-        </div>
-
-        <!-- Corpo Principal (Enunciado / Cloze / Opções Múltipla Escolha) -->
-        <div class="space-y-5 my-auto py-2">
-          <div id="fcCardFrente" class="text-base md:text-lg font-bold text-slate-900 leading-relaxed"></div>
-
-          <!-- Container exclusivo para Múltipla Escolha (Fisher-Yates + Reembaralhamento) -->
-          <div id="fcContainerOpcoesMultipla" class="hidden space-y-2.5"></div>
-
-          <!-- Caixa de Feedback Estruturado Imediato (Estudo Reverso por Alternativa) -->
-          <div id="fcBoxFeedbackAlternativa" class="hidden rounded-xl p-4 border text-xs space-y-2"></div>
-
-          <!-- Verso do Cartão (Padrão e Cloze) -->
-          <div id="fcCardVersoContainer" class="hidden pt-4 border-t border-slate-200 space-y-3">
-            <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600">Fundamentação / Dispositivo / Gabarito</div>
-            <div id="fcCardVersoTexto" class="text-sm text-slate-800 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-200 whitespace-pre-line"></div>
-          </div>
-        </div>
-
-        <!-- Rodapé de Controles do Player -->
-        <div class="pt-4 border-t border-slate-100">
-          <!-- Botão Mostrar Resposta (Para Padrão e Cloze) -->
-          <div id="fcBarraVirarCard" class="flex justify-center">
-            <button type="button" onclick="revelarVersoCardAtualFC()" class="w-full md:w-auto min-w-[260px] py-3 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm shadow-md transition">
-              Mostrar Resposta <span class="text-xs opacity-80 ml-1">[Espaço]</span>
-            </button>
-          </div>
-
-          <!-- Botões de Decisão da Sessão (Apenas após revelar resposta ou acertar múltipla escolha) -->
-          <div id="fcBarraAvaliacaoCard" class="hidden grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
-            <button type="button" onclick="avaliarCardSessaoFC('ERREI')" class="py-3 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold shadow-xs transition">
-              1. Errei (+3 pos)
-            </button>
-            <button type="button" onclick="avaliarCardSessaoFC('DIFICIL')" class="py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold shadow-xs transition">
-              2. Difícil (+3 pos)
-            </button>
-            <button type="button" onclick="avaliarCardSessaoFC('BOM')" class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-xs transition">
-              3. Bom (Avançar)
-            </button>
-            <button type="button" onclick="avaliarCardSessaoFC('FACIL')" class="py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow-xs transition">
-              4. Fácil (Dominado)
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ======================================================================
-         PAINEL EXECUTIVO DE DIAGNÓSTICO FINAL (PÓS-FASE 2)
-         ====================================================================== -->
-    <div id="fcPainelDiagnosticoFinal" class="hidden p-6 bg-slate-50 space-y-6">
-      <div class="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
-          <div>
-            <span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-[10px] uppercase">
-              Aquecimento de 2 Fases Concluído e Persistido
-            </span>
-            <h3 class="text-xl font-extrabold text-slate-900 mt-1">Diagnóstico Executivo da Sessão</h3>
-            <p id="fcDiagSubtitulo" class="text-xs text-slate-500"></p>
-          </div>
-          <button type="button" onclick="voltarParaDeckFC()" class="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-xs font-bold text-slate-700">
-            Voltar ao Deck
-          </button>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span class="text-[10px] font-bold uppercase text-slate-500">Tempo Total</span>
-            <div id="fcDiagTempoTotal" class="text-lg font-extrabold text-slate-900 mt-0.5">00:00</div>
-          </div>
-          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span class="text-[10px] font-bold uppercase text-slate-500">Média / Cartão</span>
-            <div id="fcDiagTempoMedio" class="text-lg font-extrabold text-indigo-600 mt-0.5">0.0s</div>
-          </div>
-          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span class="text-[10px] font-bold uppercase text-slate-500">Cartões Dominados</span>
-            <div id="fcDiagTotalCards" class="text-lg font-extrabold text-emerald-600 mt-0.5">0</div>
-          </div>
-          <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
-            <span class="text-[10px] font-bold uppercase text-slate-500">Loops de Erro (+3)</span>
-            <div id="fcDiagTotalLoops" class="text-lg font-extrabold text-rose-600 mt-0.5">0</div>
-          </div>
-        </div>
-
-        <div class="space-y-2">
-          <h4 class="text-xs font-extrabold uppercase text-slate-700">Cartões Críticos (Maior Reincidência de Erros na Sessão)</h4>
-          <div id="fcDiagListaCriticos" class="space-y-2 text-xs"></div>
-        </div>
-
-        <div class="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
-          <span class="text-xs text-slate-500 font-medium">
-            Memória muscular ativada. Siga imediatamente para a bateria prática no TEC Concursos:
-          </span>
-          <button type="button" id="fcBtnIrParaQuestoesTEC" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg transition">
-            🎯 Ir para Resolução de Questões (Registrar Bateria do TEC) →
-          </button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ========================================================================
-       MODAL 1: IMPORTADOR EM LOTE VIA TEXTO BRUTO CSV (SEPARADOR ';')
-       ======================================================================== -->
-  <div id="modalImportarCSVFlashcards" class="fc-light-scope fixed inset-0 z-50 hidden bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white text-slate-900 rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden">
-      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold">Importador em Lote de Flashcards (CSV com ponto e vírgula ';')</h3>
-          <p class="text-[11px] text-slate-300 mt-0.5">
-            Inicializa automaticamente: etapa = 1, fator_facilidade = 2.50, intervalo_dias = 1 e badge "Novo"
-          </p>
-        </div>
-        <button type="button" onclick="fecharModalImportarCSV()" class="text-slate-300 hover:text-white text-xs font-bold">Fechar</button>
-      </div>
-
-      <form onsubmit="processarImportacaoCSVFlashcards(event)" class="p-6 space-y-4 text-xs">
-        <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 space-y-1.5 leading-relaxed">
-          <div class="font-extrabold text-slate-900">Formato estrutural das 7 colunas (separadas por <code class="px-1.5 py-0.5 bg-slate-200 rounded font-mono">;</code>):</div>
-          <code class="block text-[11px] font-mono text-indigo-700 bg-indigo-50 p-2 rounded border border-indigo-200 overflow-x-auto">
-            id_materia;id_topico;tipo;frente;verso;tags;opcoes
-          </code>
-          <ul class="list-disc pl-5 text-[11px] text-slate-600 space-y-0.5">
-            <li><strong>id_materia / id_topico:</strong> Aceita tanto o ID exato (ex: <code>MAT_1</code>) quanto o nome da Matéria ou Tópico (o parser vincula automaticamente).</li>
-            <li><strong>tipo:</strong> <code>PADRAO</code>, <code>CLOZE</code> (use <code>{{c1::termo}}</code> na frente) ou <code>MULTIPLA</code>.</li>
-            <li><strong>opcoes (obrigatório p/ MULTIPLA):</strong> Array JSON contendo <code>[{"texto":"...","correta":true,"diagnostico":"...","artigo":"...","bizu":"..."}]</code>.</li>
-          </ul>
-        </div>
-
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <label class="font-bold text-slate-700">Cole abaixo as linhas em formato CSV *</label>
-            <button type="button" onclick="inserirExemploCSVFlashcards()" class="text-indigo-600 hover:underline font-bold text-[11px]">
-              Inserir exemplo das 3 modalidades
-            </button>
-          </div>
-          <textarea id="fcInputCSVBruto" rows="8" required placeholder="Direito Penal;Teoria do Crime;CLOZE;No erro de tipo essencial inevitável exclui-se o {{c1::dolo}} e a {{c2::culpa}}.;Art. 20, caput, do CP.;CP,Erro de Tipo;[]" class="w-full rounded-xl border p-3 font-mono text-[11px]"></textarea>
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
-          <button type="button" onclick="fecharModalImportarCSV()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-100">Cancelar</button>
-          <button type="submit" id="btnExecutarImportCSV" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow">
-            Importar e Gravar no Supabase
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- ========================================================================
-       MODAL 2: CRIADOR INDIVIDUAL DE CARTÃO (SUPORTE ÀS 3 MODALIDADES)
-       ======================================================================== -->
-  <div id="modalNovoFlashcard" class="fc-light-scope fixed inset-0 z-50 hidden bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
-    <div class="bg-white text-slate-900 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col">
-      <div class="px-6 py-4 bg-indigo-950 text-white flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold">Cadastrar Novo Flashcard Tático</h3>
-          <p class="text-[11px] text-indigo-200">Vincule diretamente à Matéria e ao Tópico do seu ciclo</p>
-        </div>
-        <button type="button" onclick="fecharModalNovoFlashcard()" class="text-indigo-200 hover:text-white text-xs font-bold">Fechar</button>
-      </div>
-
-      <form onsubmit="salvarNovoFlashcardIndividual(event)" class="p-6 space-y-4 text-xs overflow-y-auto">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Matéria *</label>
-            <select id="fcNovoMateria" required onchange="filtrarTopicosModalNovoFC()" class="w-full rounded-lg border px-3 py-2"></select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Tópico *</label>
-            <select id="fcNovoTopico" required class="w-full rounded-lg border px-3 py-2"></select>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-700 mb-1">Modalidade *</label>
-            <select id="fcNovoTipo" onchange="alternarCamposModalidadeNovoFC()" class="w-full rounded-lg border px-3 py-2 font-bold">
-              <option value="PADRAO">1. Padrão (Frente / Verso)</option>
-              <option value="CLOZE">2. Cloze ({{c1::termo}})</option>
-              <option value="MULTIPLA">3. Múltipla Escolha (Anti-Vício)</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Frente / Enunciado (Para Cloze, use {{c1::palavra oculta}}) *</label>
-          <textarea id="fcNovoFrente" rows="3" required class="w-full rounded-lg border p-2.5"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Verso / Fundamentação Geral *</label>
-          <textarea id="fcNovoVerso" rows="2" required class="w-full rounded-lg border p-2.5"></textarea>
-        </div>
-
-        <div id="fcBoxOpcoesNovoModal" class="hidden space-y-2 border-t border-slate-200 pt-3">
-          <div class="flex items-center justify-between">
-            <label class="font-bold text-slate-800">JSON de Alternativas Estruturadas (Diagnóstico + Artigo + Bizu)</label>
-            <button type="button" onclick="preencherTemplateJSONMultipla()" class="text-indigo-600 font-bold hover:underline text-[11px]">Carregar Modelo JSON</button>
-          </div>
-          <textarea id="fcNovoOpcoesJSON" rows="5" class="w-full rounded-lg border p-2.5 font-mono text-[11px]"></textarea>
-        </div>
-
-        <div>
-          <label class="block font-bold text-slate-700 mb-1">Tags (separadas por vírgula)</label>
-          <input type="text" id="fcNovoTags" placeholder="Ex: STF, Súmula Vinculante, Pegadinha" class="w-full rounded-lg border px-3 py-2">
-        </div>
-
-        <div class="pt-3 border-t border-slate-200 flex justify-end gap-2">
-          <button type="button" onclick="fecharModalNovoFlashcard()" class="px-4 py-2 rounded-xl border border-slate-300 font-bold text-slate-700">Cancelar</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow">Salvar Cartão</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</section>
-
-<script>
-  /* ==========================================================================
-   * MOTOR DE FLASHCARDS E SESSÃO INTENSIVA EM MEMÓRIA (2 FASES + ANTI-VÍCIO)
-   * ========================================================================== */
-  let FC_DECK = [];
-  let FC_SESSAO = null;
-  let FC_TIMER_INTERVAL = null;
-
-  // Hook automático na função aplicarEstado já existente na aplicação
-  const _aplicarEstadoOriginalFC = window.aplicarEstado;
-  window.aplicarEstado = function(dados) {
-    if (_aplicarEstadoOriginalFC) _aplicarEstadoOriginalFC(dados);
-    inicializarFiltrosFlashcardsUI();
-    carregarFlashcardsSupabase();
-  };
-
-  function inicializarFiltrosFlashcardsUI() {
-    if (!ESTADO || !ESTADO.materias) return;
-    const matAtivas = ESTADO.materias.filter(m => m.status === 'Ativo');
-    const selFiltroMat = document.getElementById('fcFiltroMateria');
-    const selNovoMat = document.getElementById('fcNovoMateria');
-
-    if (selFiltroMat) {
-      const vAnt = selFiltroMat.value;
-      selFiltroMat.innerHTML = '<option value="">Todas as Matérias</option>' +
-        matAtivas.map(m => `<option value="${m.id}">${m.ordem}. ${esc(m.nome)}</option>`).join('');
-      selFiltroMat.value = vAnt;
-    }
-    if (selNovoMat) {
-      selNovoMat.innerHTML = '<option value="">Selecione...</option>' +
-        matAtivas.map(m => `<option value="${m.id}">${esc(m.nome)}</option>`).join('');
-      filtrarTopicosModalNovoFC();
-    }
-    aoMudarMateriaFiltroFC();
-    renderizarAtalhosTopicosHojeFC();
-  }
-
-  function aoMudarMateriaFiltroFC() {
-    const idMat = document.getElementById('fcFiltroMateria')?.value || '';
-    const selTop = document.getElementById('fcFiltroTopico');
-    if (!selTop || !ESTADO) return;
-    const vAnt = selTop.value;
-    const topicos = ESTADO.topicos.filter(t => t.status === 'Ativo' && (!idMat || t.idMateria === idMat));
-    selTop.innerHTML = '<option value="">Todos os Tópicos</option>' +
-      topicos.map(t => `<option value="${t.id}">${esc(t.topico)}</option>`).join('');
-    if (topicos.some(t => t.id === vAnt)) selTop.value = vAnt;
-    renderizarVisaoDeckFC();
-  }
-
-  function filtrarTopicosModalNovoFC() {
-    const idMat = document.getElementById('fcNovoMateria')?.value || '';
-    const selTop = document.getElementById('fcNovoTopico');
-    if (!selTop || !ESTADO) return;
-    const topicos = ESTADO.topicos.filter(t => t.status === 'Ativo' && t.idMateria === idMat);
-    selTop.innerHTML = topicos.map(t => `<option value="${t.id}">${esc(t.topico)}</option>`).join('');
-  }
-
-  async function carregarFlashcardsSupabase() {
-    if (!supabaseClient) return;
-    try {
-      const { data, error } = await supabaseClient
-        .from('flashcards')
-        .select('*')
-        .eq('status', 'Ativo')
-        .order('criado_em', { ascending: false });
-      if (error) throw error;
-
-      FC_DECK = (data || []).map(normalizarRegistroFlashcard_);
-      const badgeTotal = document.getElementById('fcBadgeTotalDeck');
-      if (badgeTotal) badgeTotal.textContent = `${FC_DECK.length} Cartões Cadastrados`;
-      renderizarAtalhosTopicosHojeFC();
-      renderizarVisaoDeckFC();
-    } catch (err) {
-      console.warn('Aviso ao carregar flashcards:', err.message);
-    }
-  }
-
-  // Normaliza e garante compatibilidade mesmo que as colunas extras não existam ainda
-  function normalizarRegistroFlashcard_(row) {
-    let opcoesArr = [];
-    if (Array.isArray(row.opcoes)) {
-      opcoesArr = row.opcoes;
-    } else if (typeof row.opcoes === 'string' && row.opcoes.trim()) {
-      try { opcoesArr = JSON.parse(row.opcoes); } catch (e) { opcoesArr = []; }
-    }
-
-    let tipo = String(row.tipo || 'PADRAO').toUpperCase();
-    if (tipo === 'PADRAO' && /\{\{c\d+::/i.test(row.frente || '')) {
-      tipo = 'CLOZE';
-    } else if (opcoesArr.length > 0) {
-      tipo = 'MULTIPLA';
-    }
-
-    const isNovo = row.is_novo !== undefined ? Boolean(row.is_novo) : !Boolean(row.ultima_avaliacao);
-
-    return {
-      id: String(row.id),
-      idMateria: String(row.id_materia || ''),
-      idTopico: String(row.id_topico || ''),
-      tipo,
-      frente: String(row.frente || ''),
-      verso: String(row.verso || ''),
-      tags: String(row.tags || ''),
-      opcoes: opcoesArr,
-      etapa: Number(row.etapa || 1),
-      intervaloDias: Number(row.intervalo_dias || 1),
-      fatorFacilidade: Number(row.fator_facilidade || 2.5),
-      isNovo,
-      totalErros: Number(row.total_erros || 0),
-      totalRevisoes: Number(row.total_revisoes || 0)
-    };
-  }
-
-  function renderizarAtalhosTopicosHojeFC() {
-    const cont = document.getElementById('fcListaAtalhosHoje');
-    if (!cont || !ESTADO || !ESTADO.painel) return;
-    const hojeList = ESTADO.painel.atividadesHoje || [];
-
-    if (hojeList.length === 0) {
-      cont.innerHTML = `<div class="col-span-full text-xs text-slate-500 py-2">Nenhum tópico pendente na fila de hoje. Use o filtro abaixo para aquecer qualquer tópico.</div>`;
-      return;
-    }
-
-    cont.innerHTML = hojeList.map(at => {
-      const qtdCards = FC_DECK.filter(c => c.idTopico === at.idTopico).length;
-      return `
-        <div class="bg-white border border-indigo-200 rounded-xl p-3.5 shadow-xs flex flex-col justify-between gap-2">
-          <div>
-            <div class="flex items-center justify-between gap-1">
-              <span class="text-[10px] font-extrabold uppercase text-indigo-600">${esc(at.materia)}</span>
-              <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-bold text-[10px]">${qtdCards} card(s)</span>
+          <!-- Área Central do Cartão -->
+          <div class="max-w-4xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-6 md:p-8 space-y-6 min-h-[380px] flex flex-col justify-between">
+            <!-- Topo do Card: Badges de Categoria Funcional, Tags e Identificação "NOVO" -->
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div class="flex flex-wrap items-center gap-2">
+                <span id="fcCardBadgeTipo" class="px-2.5 py-1 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-800 font-extrabold text-[11px]">
+                  1. LEI SECA (CLOZE)
+                </span>
+                <span id="fcCardBadgeNovo" class="hidden px-2.5 py-0.5 rounded-md bg-emerald-950 text-emerald-300 border border-emerald-700 font-extrabold text-[11px] uppercase">✨ NOVO</span>
+                <span id="fcCardBadgeReincidencia" class="hidden px-2.5 py-0.5 rounded-md bg-rose-950 text-rose-300 border border-rose-800 font-bold text-[11px]">Reincidência na sessão</span>
+              </div>
+              <span id="fcCardTags" class="text-[11px] text-slate-400 font-medium"></span>
             </div>
-            <div class="text-xs font-extrabold text-slate-900 mt-1">${esc(at.topico)}</div>
-            <div class="text-[10px] text-slate-500 mt-0.5">Meta no TEC: ${at.questoesPlanejadas} questões | Última Sessão: ${at.ultimoAproveitamentoSessao || 0}%</div>
-          </div>
-          <div class="flex items-center gap-1.5 pt-2 border-t border-slate-100">
-            <button type="button" onclick="selecionarTopicoEIniciarFC('${at.idMateria}','${at.idTopico}')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition">
-              ⚡ Aquecer (${qtdCards})
-            </button>
-            <button type="button" onclick="atalhoRegistrarEstudo('${at.idMateria}','${at.idTopico}',${at.questoesPlanejadas})" class="py-1.5 px-2.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 font-semibold text-[11px]">
-              Ir p/ TEC
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
 
-  function selecionarTopicoEIniciarFC(idMateria, idTopico) {
-    document.getElementById('fcFiltroMateria').value = idMateria;
-    aoMudarMateriaFiltroFC();
-    document.getElementById('fcFiltroTopico').value = idTopico;
-    renderizarVisaoDeckFC();
-    iniciarSessaoIntensivaFC();
-  }
+            <!-- Corpo Principal (Enunciado / Cloze / Opções Múltipla Escolha) -->
+            <div class="space-y-5 my-auto py-2">
+              <div id="fcCardFrente" class="text-base md:text-lg font-bold text-white leading-relaxed"></div>
 
-  function obterCardsFiltradosFC() {
-    const idMat = document.getElementById('fcFiltroMateria')?.value || '';
-    const idTop = document.getElementById('fcFiltroTopico')?.value || '';
-    const tipo = document.getElementById('fcFiltroTipo')?.value || '';
+              <!-- Container exclusivo para Múltipla Escolha (Caderno de Erros - Fisher-Yates) -->
+              <div id="fcContainerOpcoesMultipla" class="hidden space-y-2.5"></div>
 
-    return FC_DECK.filter(c => {
-      if (idMat && c.idMateria !== idMat) return false;
-      if (idTop && c.idTopico !== idTop) return false;
-      if (tipo && c.tipo !== tipo) return false;
-      return true;
-    });
-  }
+              <!-- Caixa de Feedback Estruturado Imediato (Certo/Errado do PDF Base ou Estudo Reverso da Múltipla Escolha) -->
+              <div id="fcBoxFeedbackAlternativa" class="hidden rounded-xl p-4 border text-xs space-y-2"></div>
 
-  function renderizarVisaoDeckFC() {
-    const filtrados = obterCardsFiltradosFC();
-    const txtResumo = document.getElementById('fcResumoFiltroTxt');
-    const cont = document.getElementById('fcTabelaPreviewDeck');
-    if (txtResumo) txtResumo.textContent = `Cartões localizados para o treino: ${filtrados.length}`;
-    if (!cont) return;
-
-    if (filtrados.length === 0) {
-      cont.innerHTML = `<div class="p-6 text-center text-slate-500">Nenhum flashcard encontrado para este filtro. Clique em "+ Criar Cartão" ou "Importar Lote (CSV)".</div>`;
-      return;
-    }
-
-    const mapaTop = {};
-    (ESTADO?.topicos || []).forEach(t => { mapaTop[t.id] = t; });
-
-    cont.innerHTML = filtrados.map(c => {
-      const tObj = mapaTop[c.idTopico];
-      return `
-        <div class="p-3 bg-white hover:bg-slate-50 flex items-center justify-between gap-3">
-          <div class="space-y-0.5 flex-1">
-            <div class="flex items-center gap-1.5">
-              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[10px]">${esc(c.tipo)}</span>
-              ${c.isNovo ? '<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-extrabold text-[10px]">NOVO</span>' : ''}
-              <span class="text-[11px] font-bold text-indigo-700">${esc(tObj ? tObj.materia + ' • ' + tObj.topico : c.idTopico)}</span>
+              <!-- Verso do Cartão (Fundamentação / Dispositivo Legal) -->
+              <div id="fcCardVersoContainer" class="hidden pt-4 border-t border-slate-800 space-y-3">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-400">Fundamentação / Dispositivo Legal / Gabarito</div>
+                <div id="fcCardVersoTexto" class="text-sm text-slate-200 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800 whitespace-pre-line"></div>
+              </div>
             </div>
-            <div class="text-slate-800 font-medium line-clamp-1">${esc(c.frente)}</div>
+
+            <!-- Rodapé de Controles do Player -->
+            <div class="pt-4 border-t border-slate-800 space-y-3">
+              <!-- CONTROLE TIPO 1: Botão Mostrar Resposta (Exclusivo para Lei Seca / Cloze) -->
+              <div id="fcBarraVirarCard" class="hidden flex justify-center">
+                <button type="button" onclick="revelarVersoCardAtualFC()" class="w-full md:w-auto min-w-[280px] py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm shadow-md transition">
+                  Revelar Lacuna da Lei Seca <span class="text-xs opacity-80 ml-1">[Espaço]</span>
+                </button>
+              </div>
+
+              <!-- CONTROLE TIPO 2: Botões Ativos [ Certo ] e [ Errado ] (Exclusivo para PDF Base) -->
+              <div id="fcBarraCertoErradoPdfBase" class="hidden grid grid-cols-2 gap-4 max-w-lg mx-auto">
+                <button type="button" onclick="julgarCardPdfBaseFC('CERTO')" class="py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
+                  <span>✔ [ Certo ]</span>
+                  <span class="text-[11px] opacity-80 font-mono">(Tecla C)</span>
+                </button>
+                <button type="button" onclick="julgarCardPdfBaseFC('ERRADO')" class="py-3.5 px-5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
+                  <span>✖ [ Errado ]</span>
+                  <span class="text-[11px] opacity-80 font-mono">(Tecla E)</span>
+                </button>
+              </div>
+
+              <!-- Botões de Decisão / Avanço da Sessão (Abertos após revelar Cloze, julgar PDF Base ou acertar Caderno de Erros) -->
+              <div id="fcBarraAvaliacaoCard" class="hidden grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
+                <button type="button" onclick="avaliarCardSessaoFC('ERREI')" class="py-3 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold shadow-xs transition">
+                  1. Errei (+3 pos)
+                </button>
+                <button type="button" onclick="avaliarCardSessaoFC('DIFICIL')" class="py-3 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold shadow-xs transition">
+                  2. Difícil (+3 pos)
+                </button>
+                <button type="button" onclick="avaliarCardSessaoFC('BOM')" class="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold shadow-xs transition">
+                  3. Bom (Avançar)
+                </button>
+                <button type="button" onclick="avaliarCardSessaoFC('FACIL')" class="py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow-xs transition">
+                  4. Fácil (Dominado)
+                </button>
+              </div>
+            </div>
           </div>
-          <button type="button" onclick="excluirFlashcardIndividual('${c.id}')" class="text-rose-600 hover:underline text-[11px] font-semibold shrink-0">Excluir</button>
         </div>
-      `;
-    }).join('');
-  }
 
-  /* ==========================================================================
-   * ALGORITMO FISHER-YATES (ANTI-VÍCIO DE POSIÇÃO)
-   * ========================================================================== */
-  function embaralharFisherYates_(arr) {
-    const copia = arr.slice();
-    for (let i = copia.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const temp = copia[i];
-      copia[i] = copia[j];
-      copia[j] = temp;
-    }
-    return copia;
-  }
+        <!-- ======================================================================
+             PAINEL EXECUTIVO DE DIAGNÓSTICO FINAL (PÓS-FASE 2)
+             ====================================================================== -->
+        <div id="fcPainelDiagnosticoFinal" class="hidden p-6 bg-slate-950 space-y-6">
+          <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <span class="px-2.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 font-extrabold text-[10px] uppercase">
+                  Aquecimento de 2 Fases Concluído e Persistido
+                </span>
+                <h3 class="text-xl font-extrabold text-white mt-1">Diagnóstico Executivo da Sessão</h3>
+                <p id="fcDiagSubtitulo" class="text-xs text-slate-400"></p>
+              </div>
+              <button type="button" onclick="voltarParaDeckFC()" class="px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200">
+                Voltar ao Deck
+              </button>
+            </div>
 
-  /* ==========================================================================
-   * MOTOR DE SESSÃO INTENSIVA EM DUAS FASES (100% EM MEMÓRIA VOLÁTIL)
-   * ========================================================================== */
-  function iniciarSessaoIntensivaFC() {
-    const cardsBase = obterCardsFiltradosFC();
-    if (cardsBase.length === 0) {
-      notificar('Selecione um filtro que contenha ao menos 1 flashcard para iniciar.', true);
-      return;
-    }
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Tempo Total</span>
+                <div id="fcDiagTempoTotal" class="text-lg font-extrabold text-white mt-0.5">00:00</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Média / Cartão</span>
+                <div id="fcDiagTempoMedio" class="text-lg font-extrabold text-indigo-400 mt-0.5">0.0s</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Cartões Dominados</span>
+                <div id="fcDiagTotalCards" class="text-lg font-extrabold text-emerald-400 mt-0.5">0</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-[10px] font-bold uppercase text-slate-400">Loops de Erro (+3)</span>
+                <div id="fcDiagTotalLoops" class="text-lg font-extrabold text-rose-400 mt-0.5">0</div>
+              </div>
+            </div>
 
-    const idTop = document.getElementById('fcFiltroTopico')?.value || cardsBase[0].idTopico;
-    const idMat = document.getElementById('fcFiltroMateria')?.value || cardsBase[0].idMateria;
-    const topObj = (ESTADO?.topicos || []).find(t => t.id === idTop);
+            <div class="space-y-2">
+              <h4 class="text-xs font-extrabold uppercase text-slate-300">Cartões Críticos (Maior Reincidência de Erros na Sessão)</h4>
+              <div id="fcDiagListaCriticos" class="space-y-2 text-xs"></div>
+            </div>
 
-    FC_SESSAO = {
-      idMateriaAlvo: idMat,
-      idTopicoAlvo: idTop,
-      tituloSessao: topObj ? `${topObj.materia} — ${topObj.topico}` : 'Bateria Mista de Aquecimento',
-      questoesSugeridasTEC: topObj ? Math.max(10, topObj.minQuestoesMateria || 15) : 15,
-      fase: 1, // 1 = Domínio Circular (+3), 2 = Varredura de Confirmação Final
-      filaFase1: embaralharFisherYates_(cardsBase.map(c => ({ ...c }))),
-      filaEsperaFase2: [],
-      filaFase2: [],
-      cardAtual: null,
-      versoRevelado: false,
-      opcoesAtivasMultipla: [],
-      acertouMultiplaAtual: false,
-      errosPorCard: {},
-      ultimaAvaliacaoPorCard: {},
-      loopsProvocados: 0,
-      respostasComputadas: 0,
-      inicioTimestamp: Date.now(),
-      segundosDecorridos: 0
-    };
-
-    document.getElementById('fcPainelSelecao').classList.add('hidden');
-    document.getElementById('fcPainelDiagnosticoFinal').classList.add('hidden');
-    document.getElementById('fcSessaoPlayer').classList.remove('hidden');
-    document.getElementById('fcTituloTopicoSessao').textContent = FC_SESSAO.tituloSessao;
-
-    iniciarCronometroSessaoFC_();
-    carregarProximoCardSessaoFC_();
-  }
-
-  function iniciarCronometroSessaoFC_() {
-    if (FC_TIMER_INTERVAL) clearInterval(FC_TIMER_INTERVAL);
-    FC_TIMER_INTERVAL = setInterval(() => {
-      if (!FC_SESSAO) return;
-      FC_SESSAO.segundosDecorridos = Math.max(1, Math.floor((Date.now() - FC_SESSAO.inicioTimestamp) / 1000));
-      const min = String(Math.floor(FC_SESSAO.segundosDecorridos / 60)).padStart(2, '0');
-      const seg = String(FC_SESSAO.segundosDecorridos % 60).padStart(2, '0');
-      document.getElementById('fcTimerSessao').textContent = `${min}:${seg}`;
-      const media = FC_SESSAO.respostasComputadas > 0
-        ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas).toFixed(1)
-        : '0.0';
-      document.getElementById('fcTempoMedioCard').textContent = `${media}s`;
-    }, 500);
-  }
-
-  function carregarProximoCardSessaoFC_() {
-    if (!FC_SESSAO) return;
-
-    // Transição automática da Fase 1 para a Fase 2 quando a fila da Fase 1 zerar
-    if (FC_SESSAO.fase === 1 && FC_SESSAO.filaFase1.length === 0) {
-      FC_SESSAO.fase = 2;
-      FC_SESSAO.filaFase2 = FC_SESSAO.filaEsperaFase2.slice();
-      notificar('Fase 1 dominada! Iniciando Fase 2: Varredura Sequencial de Confirmação.');
-    }
-
-    // Conclusão da Fase 2 -> Painel Executivo Final e Persistência Batch no Supabase
-    if (FC_SESSAO.fase === 2 && FC_SESSAO.filaFase2.length === 0) {
-      finalizarSessaoEPersistirSupabase_();
-      return;
-    }
-
-    const filaAtiva = FC_SESSAO.fase === 1 ? FC_SESSAO.filaFase1 : FC_SESSAO.filaFase2;
-    FC_SESSAO.cardAtual = filaAtiva[0];
-    FC_SESSAO.versoRevelado = false;
-    FC_SESSAO.acertouMultiplaAtual = false;
-
-    atualizarHeaderProgressoPlayerFC_();
-    renderizarCardAtualNoPlayerFC_();
-  }
-
-  function atualizarHeaderProgressoPlayerFC_() {
-    const badgeFase = document.getElementById('fcBadgeFaseAtual');
-    const sub = document.getElementById('fcSubtituloProgresso');
-    if (FC_SESSAO.fase === 1) {
-      badgeFase.textContent = 'FASE 1: Domínio Circular (+3)';
-      badgeFase.className = 'px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-extrabold uppercase tracking-wide';
-      sub.textContent = `Fila Fase 1: ${FC_SESSAO.filaFase1.length} restante(s) | Dominados p/ Fase 2: ${FC_SESSAO.filaEsperaFase2.length} | Loops (+3): ${FC_SESSAO.loopsProvocados}`;
-    } else {
-      badgeFase.textContent = 'FASE 2: Varredura de Confirmação Final';
-      badgeFase.className = 'px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-extrabold uppercase tracking-wide';
-      sub.textContent = `Varredura Final: restam ${FC_SESSAO.filaFase2.length} de ${FC_SESSAO.filaEsperaFase2.length} cartões | Loops (+3): ${FC_SESSAO.loopsProvocados}`;
-    }
-  }
-
-  function formatarTextoCloze_(texto, revelar) {
-    const safe = esc(texto);
-    return safe.replace(/\{\{c\d+::(.*?)\}\}/gi, (_, termo) => {
-      if (!revelar) {
-        return `<span class="fc-cloze-blank">[ ... ]</span>`;
-      }
-      return `<span class="fc-cloze-revealed">${termo}</span>`;
-    });
-  }
-
-  function renderizarCardAtualNoPlayerFC_() {
-    const c = FC_SESSAO.cardAtual;
-    if (!c) return;
-
-    document.getElementById('fcCardBadgeTipo').textContent =
-      c.tipo === 'CLOZE' ? 'OMISSÃO (CLOZE)' : c.tipo === 'MULTIPLA' ? 'MÚLTIPLA ESCOLHA (ANTI-VÍCIO)' : 'FRENTE / VERSO';
-    document.getElementById('fcCardBadgeNovo').classList.toggle('hidden', !c.isNovo);
-
-    const errosCard = FC_SESSAO.errosPorCard[c.id] || 0;
-    const badgeReinc = document.getElementById('fcCardBadgeReincidencia');
-    badgeReinc.classList.toggle('hidden', errosCard === 0);
-    if (errosCard > 0) badgeReinc.textContent = `Reincidência: ${errosCard} erro(s) nesta sessão`;
-
-    document.getElementById('fcCardTags').textContent = c.tags ? `Tags: ${c.tags}` : '';
-    document.getElementById('fcBoxFeedbackAlternativa').classList.add('hidden');
-    document.getElementById('fcCardVersoContainer').classList.add('hidden');
-
-    const elFrente = document.getElementById('fcCardFrente');
-    const contMultipla = document.getElementById('fcContainerOpcoesMultipla');
-    const barraVirar = document.getElementById('fcBarraVirarCard');
-    const barraAval = document.getElementById('fcBarraAvaliacaoCard');
-
-    if (c.tipo === 'CLOZE') {
-      elFrente.innerHTML = formatarTextoCloze_(c.frente, false);
-      contMultipla.classList.add('hidden');
-      barraVirar.classList.remove('hidden');
-      barraAval.classList.add('hidden');
-    } else if (c.tipo === 'MULTIPLA') {
-      elFrente.textContent = c.frente;
-      contMultipla.classList.remove('hidden');
-      barraVirar.classList.add('hidden');
-      barraAval.classList.add('hidden');
-      FC_SESSAO.opcoesAtivasMultipla = embaralharFisherYates_(
-        (c.opcoes || []).map((op, idxOrig) => ({ ...op, _idOrig: idxOrig, descartada: false }))
-      );
-      renderizarOpcoesMultiplaAtivasFC_();
-    } else {
-      elFrente.textContent = c.frente;
-      contMultipla.classList.add('hidden');
-      barraVirar.classList.remove('hidden');
-      barraAval.classList.add('hidden');
-    }
-  }
-
-  function renderizarOpcoesMultiplaAtivasFC_() {
-    const cont = document.getElementById('fcContainerOpcoesMultipla');
-    const letras = ['A', 'B', 'C', 'D', 'E'];
-    const disponiveis = FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada);
-
-    cont.innerHTML = disponiveis.map((op, idx) => {
-      const letra = letras[idx] || String(idx + 1);
-      return `
-        <button type="button"
-                onclick="selecionarAlternativaMultiplaFC(${op._idOrig})"
-                class="w-full text-left p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-indigo-50/60 hover:border-indigo-300 transition flex items-start gap-3">
-          <span class="w-6 h-6 rounded-lg bg-white border border-slate-300 text-slate-800 font-extrabold text-xs flex items-center justify-center shrink-0">
-            ${letra}
-          </span>
-          <span class="text-xs md:text-sm font-semibold text-slate-800 leading-relaxed">${esc(op.texto)}</span>
-        </button>
-      `;
-    }).join('');
-  }
-
-  function selecionarAlternativaMultiplaFC(idOrig) {
-    if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
-    const c = FC_SESSAO.cardAtual;
-    const opClicada = FC_SESSAO.opcoesAtivasMultipla.find(o => o._idOrig === idOrig);
-    if (!opClicada) return;
-
-    const boxFeedback = document.getElementById('fcBoxFeedbackAlternativa');
-    boxFeedback.classList.remove('hidden');
-
-    if (opClicada.correta) {
-      // Acertou a alternativa
-      FC_SESSAO.acertouMultiplaAtual = true;
-      FC_SESSAO.versoRevelado = true;
-      boxFeedback.className = 'rounded-xl p-4 border bg-emerald-50 border-emerald-300 text-emerald-950 text-xs space-y-1.5';
-      boxFeedback.innerHTML = `
-        <div class="font-extrabold text-emerald-800 uppercase">✅ Alternativa Correta! Fundamentação Estruturada:</div>
-        <div><strong>Diagnóstico do Acerto:</strong> ${esc(opClicada.diagnostico || 'Afirmação integralmente correta.')}</div>
-        <div><strong>Dispositivo / Jurisprudência:</strong> <span class="font-semibold">${esc(opClicada.artigo || c.verso)}</span></div>
-        <div><strong>Bizu / Mnemônico:</strong> <span class="font-semibold text-indigo-800">${esc(opClicada.bizu || '—')}</span></div>
-      `;
-      document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
-    } else {
-      // Errou a alternativa -> Registra erro, mostra estudo reverso e REEMBARALHA as opções restantes!
-      FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
-      opClicada.descartada = true;
-
-      boxFeedback.className = 'rounded-xl p-4 border bg-rose-50 border-rose-300 text-rose-950 text-xs space-y-1.5';
-      boxFeedback.innerHTML = `
-        <div class="font-extrabold text-rose-700 uppercase">❌ Alternativa Incorreta — Estudo Reverso Imediato (Opções restantes reembaralhadas!):</div>
-        <div><strong>Diagnóstico do Erro:</strong> ${esc(opClicada.diagnostico || 'Distrator incorreto.')}</div>
-        <div><strong>Artigo / Jurisprudência de Referência:</strong> <span class="font-semibold">${esc(opClicada.artigo || c.verso)}</span></div>
-        <div><strong>Bizu / Alerta de Pegadinha:</strong> <span class="font-semibold text-rose-800">${esc(opClicada.bizu || 'Atenção à literalidade!')}</span></div>
-      `;
-
-      // Reembaralha apenas as alternativas que ainda não foram descartadas
-      const restantes = embaralharFisherYates_(FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada));
-      const descartadas = FC_SESSAO.opcoesAtivasMultipla.filter(o => o.descartada);
-      FC_SESSAO.opcoesAtivasMultipla = restantes.concat(descartadas);
-      renderizarOpcoesMultiplaAtivasFC_();
-    }
-  }
-
-  function revelarVersoCardAtualFC() {
-    if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
-    const c = FC_SESSAO.cardAtual;
-    FC_SESSAO.versoRevelado = true;
-
-    if (c.tipo === 'CLOZE') {
-      document.getElementById('fcCardFrente').innerHTML = formatarTextoCloze_(c.frente, true);
-    }
-
-    document.getElementById('fcCardVersoTexto').textContent = c.verso;
-    document.getElementById('fcCardVersoContainer').classList.remove('hidden');
-    document.getElementById('fcBarraVirarCard').classList.add('hidden');
-    document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
-  }
-
-  function avaliarCardSessaoFC(avaliacao) {
-    if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
-    const c = FC_SESSAO.cardAtual;
-    FC_SESSAO.respostasComputadas += 1;
-    FC_SESSAO.ultimaAvaliacaoPorCard[c.id] = avaliacao;
-
-    const acertou = avaliacao === 'BOM' || avaliacao === 'FACIL';
-
-    if (FC_SESSAO.fase === 1) {
-      // Remove da frente da fila da Fase 1
-      const itemAtual = FC_SESSAO.filaFase1.shift();
-      if (acertou) {
-        FC_SESSAO.filaEsperaFase2.push(itemAtual);
-      } else {
-        // Errou ou achou Difícil -> Reinserção exata 3 posições à frente (+3)
-        FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
-        FC_SESSAO.loopsProvocados += 1;
-        const posInsercao = Math.min(3, FC_SESSAO.filaFase1.length);
-        FC_SESSAO.filaFase1.splice(posInsercao, 0, itemAtual);
-      }
-    } else {
-      // Fase 2: Varredura de Confirmação Final
-      const itemAtual = FC_SESSAO.filaFase2.shift();
-      if (!acertou) {
-        FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
-        FC_SESSAO.loopsProvocados += 1;
-        const posInsercao = Math.min(3, FC_SESSAO.filaFase2.length);
-        FC_SESSAO.filaFase2.splice(posInsercao, 0, itemAtual);
-      }
-    }
-
-    carregarProximoCardSessaoFC_();
-  }
-
-  // Atalhos de Teclado Operacionais ([Espaço] e [1] a [4])
-  window.addEventListener('keydown', (ev) => {
-    const abaFC = document.getElementById('aba-flashcards');
-    const playerFC = document.getElementById('fcSessaoPlayer');
-    if (!abaFC || abaFC.classList.contains('hidden') || !playerFC || playerFC.classList.contains('hidden')) return;
-    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
-
-    if (ev.code === 'Space') {
-      ev.preventDefault();
-      if (!FC_SESSAO.versoRevelado && FC_SESSAO.cardAtual?.tipo !== 'MULTIPLA') {
-        revelarVersoCardAtualFC();
-      }
-    } else if (['1', '2', '3', '4'].includes(ev.key)) {
-      const num = Number(ev.key);
-      if (FC_SESSAO.versoRevelado) {
-        ev.preventDefault();
-        const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'BOM', 4: 'FACIL' };
-        avaliarCardSessaoFC(mapa[num]);
-      } else if (FC_SESSAO.cardAtual?.tipo === 'MULTIPLA') {
-        const disponiveis = FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada);
-        if (disponiveis[num - 1]) {
-          ev.preventDefault();
-          selecionarAlternativaMultiplaFC(disponiveis[num - 1]._idOrig);
-        }
-      }
-    }
-  });
-
-  async function finalizarSessaoEPersistirSupabase_() {
-    if (FC_TIMER_INTERVAL) clearInterval(FC_TIMER_INTERVAL);
-    document.getElementById('fcSessaoPlayer').classList.add('hidden');
-    document.getElementById('fcPainelDiagnosticoFinal').classList.remove('hidden');
-
-    const segs = Math.max(1, FC_SESSAO.segundosDecorridos);
-    const min = String(Math.floor(segs / 60)).padStart(2, '0');
-    const sRest = String(segs % 60).padStart(2, '0');
-    const mediaSeg = FC_SESSAO.respostasComputadas > 0
-      ? (segs / FC_SESSAO.respostasComputadas).toFixed(1)
-      : '0.0';
-
-    document.getElementById('fcDiagSubtitulo').textContent = FC_SESSAO.tituloSessao;
-    document.getElementById('fcDiagTempoTotal').textContent = `${min}:${sRest}`;
-    document.getElementById('fcDiagTempoMedio').textContent = `${mediaSeg}s`;
-    document.getElementById('fcDiagTotalCards').textContent = FC_SESSAO.filaEsperaFase2.length;
-    document.getElementById('fcDiagTotalLoops').textContent = FC_SESSAO.loopsProvocados;
-
-    const criticos = FC_SESSAO.filaEsperaFase2
-      .map(c => ({ card: c, erros: FC_SESSAO.errosPorCard[c.id] || 0 }))
-      .filter(x => x.erros > 0)
-      .sort((a, b) => b.erros - a.erros);
-
-    const contCrit = document.getElementById('fcDiagListaCriticos');
-    if (criticos.length === 0) {
-      contCrit.innerHTML = `<div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">Perfeito! Nenhum cartão sofreu reincidência de erro nesta bateria.</div>`;
-    } else {
-      contCrit.innerHTML = criticos.map(item => `
-        <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-between gap-3">
-          <div class="text-slate-800 font-semibold">${esc(item.card.frente)}</div>
-          <span class="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-extrabold text-[11px] shrink-0">${item.erros} erro(s)</span>
+            <div class="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              <span class="text-xs text-slate-400 font-medium">
+                Memória muscular ativada. Siga imediatamente para a bateria prática no TEC Concursos:
+              </span>
+              <button type="button" id="fcBtnIrParaQuestoesTEC" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg transition">
+                🎯 Ir para Resolução de Questões (Registrar Bateria do TEC) →
+              </button>
+            </div>
+          </div>
         </div>
-      `).join('');
-    }
 
-    const btnTEC = document.getElementById('fcBtnIrParaQuestoesTEC');
-    btnTEC.onclick = () => {
-      atalhoRegistrarEstudo(FC_SESSAO.idMateriaAlvo, FC_SESSAO.idTopicoAlvo, FC_SESSAO.questoesSugeridasTEC);
-    };
+      </div>
 
-    // Persistência única em lote (Batch Upsert) no Supabase apenas ao concluir a Fase 2
-    try {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      for (const c of FC_SESSAO.filaEsperaFase2) {
-        const errosSessao = FC_SESSAO.errosPorCard[c.id] || 0;
-        const avalFinal = FC_SESSAO.ultimaAvaliacaoPorCard[c.id] || 'BOM';
-        const novaEtapa = errosSessao === 0 ? c.etapa + 1 : 1;
-        const novoFator = errosSessao === 0
-          ? Number(Math.min(3.0, c.fatorFacilidade + 0.1).toFixed(2))
-          : Number(Math.max(1.3, c.fatorFacilidade - 0.2).toFixed(2));
+      <!-- ========================================================================
+           MODAL 1: IMPORTADOR EM LOTE VIA TEXTO BRUTO CSV (SEPARADOR ';')
+           ======================================================================== -->
+      <div id="modalImportarCSVFlashcards" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-700 overflow-hidden">
+          <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 text-white flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold">Importador em Lote de Flashcards (CSV com ponto e vírgula ';')</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">
+                Suporta: 1. CLOZE (Lei Seca), 2. PADRAO (PDF Base Certo/Errado) e 3. MULTIPLA (Caderno de Erros)
+              </p>
+            </div>
+            <button type="button" onclick="fecharModalImportarCSV()" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button>
+          </div>
 
-        await supabaseClient.from('flashcards').update({
-          etapa: novaEtapa,
-          fator_facilidade: novoFator,
-          ultima_avaliacao: `${avalFinal} (${hojeYMD})`,
-          is_novo: false,
-          total_erros: (c.totalErros || 0) + errosSessao,
-          total_revisoes: (c.totalRevisoes || 0) + 1
-        }).eq('id', c.id);
-      }
-      await carregarFlashcardsSupabase();
-    } catch (err) {
-      // Fallback caso as colunas estendidas ainda não tenham sido rodadas no SQL Editor
-      for (const c of FC_SESSAO.filaEsperaFase2) {
-        const avalFinal = FC_SESSAO.ultimaAvaliacaoPorCard[c.id] || 'BOM';
-        await supabaseClient.from('flashcards').update({
-          ultima_avaliacao: avalFinal
-        }).eq('id', c.id);
-      }
-      await carregarFlashcardsSupabase();
-    }
-  }
+          <form onsubmit="processarImportacaoCSVFlashcards(event)" class="p-6 space-y-4 text-xs">
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 space-y-1.5 leading-relaxed">
+              <div class="font-extrabold text-white">Formato estrutural das 7 colunas (separadas por <code class="px-1.5 py-0.5 bg-slate-800 rounded font-mono">;</code>):</div>
+              <code class="block text-[11px] font-mono text-indigo-300 bg-indigo-950/60 p-2 rounded border border-indigo-800 overflow-x-auto">
+                id_materia;id_topico;tipo;frente;verso;tags;opcoes
+              </code>
+              <ul class="list-disc pl-5 text-[11px] text-slate-400 space-y-0.5">
+                <li><strong>tipo = CLOZE (Lei Seca):</strong> Use <code>{{c1::termo legal}}</code> na coluna <code>frente</code>.</li>
+                <li><strong>tipo = PADRAO (PDF Base Certo/Errado):</strong> Proposição assertiva na <code>frente</code> e inicie o <code>verso</code> com <code>CERTO.</code> ou <code>ERRADO.</code> seguido da fundamentação.</li>
+                <li><strong>tipo = MULTIPLA (Caderno de Erros):</strong> Array JSON em <code>opcoes</code> contendo 4 ou 5 alternativas com <code>[{"texto":"...","correta":true,"diagnostico":"...","artigo":"...","bizu":"..."}]</code>.</li>
+              </ul>
+            </div>
 
-  function encerrarSessaoFCManual() {
-    if (FC_TIMER_INTERVAL) clearInterval(FC_TIMER_INTERVAL);
-    voltarParaDeckFC();
-  }
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="font-bold text-slate-300">Cole abaixo as linhas em formato CSV *</label>
+                <button type="button" onclick="inserirExemploCSVFlashcards()" class="text-indigo-400 hover:underline font-bold text-[11px]">
+                  Inserir exemplo dos 3 Tipos Funcionais
+                </button>
+              </div>
+              <textarea id="fcInputCSVBruto" rows="8" required placeholder="Direito Penal;Teoria do Crime;CLOZE;No erro de tipo essencial inevitável exclui-se o {{c1::dolo}} e a {{c2::culpa}}.;Art. 20, caput, do CP.;CP,Lei Seca;[]" class="w-full rounded-xl border p-3 font-mono text-[11px]"></textarea>
+            </div>
 
-  function voltarParaDeckFC() {
-    document.getElementById('fcSessaoPlayer').classList.add('hidden');
-    document.getElementById('fcPainelDiagnosticoFinal').classList.add('hidden');
-    document.getElementById('fcPainelSelecao').classList.remove('hidden');
-  }
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <button type="button" onclick="fecharModalImportarCSV()" class="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 font-bold hover:bg-slate-800">Cancelar</button>
+              <button type="submit" id="btnExecutarImportCSV" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow">
+                Importar e Gravar no Supabase
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
-  /* ==========================================================================
-   * IMPORTADOR EM LOTE VIA TEXTO BRUTO CSV (SEPARADOR ';') + CRIADOR INDIVIDUAL
-   * ========================================================================== */
-  function abrirModalImportarCSV() {
-    document.getElementById('modalImportarCSVFlashcards').classList.remove('hidden');
-  }
-  function fecharModalImportarCSV() {
-    document.getElementById('modalImportarCSVFlashcards').classList.add('hidden');
-  }
+      <!-- ========================================================================
+           MODAL 2: CRIADOR INDIVIDUAL DE CARTÃO (SUPORTE AOS 3 TIPOS FUNCIONAIS)
+           ======================================================================== -->
+      <div id="modalNovoFlashcard" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[92vh] flex flex-col">
+          <div class="px-6 py-4 bg-indigo-950 border-b border-indigo-800 text-white flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold">Cadastrar Novo Flashcard Tático</h3>
+              <p class="text-[11px] text-indigo-300">Escolha entre Lei Seca (Cloze), PDF Base (Certo/Errado) ou Caderno de Erros (Múltipla)</p>
+            </div>
+            <button type="button" onclick="fecharModalNovoFlashcard()" class="text-indigo-300 hover:text-white text-xs font-bold">Fechar</button>
+          </div>
 
-  function inserirExemploCSVFlashcards() {
-    const matPadrao = ESTADO?.materias?.[0]?.nome || 'Direito Constitucional';
-    const topPadrao = ESTADO?.topicos?.[0]?.topico || 'Direitos e Garantias Fundamentais';
-    const opcoesExemplo = JSON.stringify([
-      {
-        texto: "A casa é asilo inviolável, podendo nela ingressar por determinação judicial a qualquer hora do dia ou da noite.",
-        correta: false,
-        diagnostico: "Mandado judicial só pode ser cumprido durante o DIA.",
-        artigo: "Art. 5º, XI, da CF/88",
-        bizu: "Ordem judicial = SÓ DE DIA. Flagrante/Desastre/Socorro = DIA ou NOITE."
-      },
-      {
-        texto: "A casa é asilo inviolável, salvo em caso de flagrante delito ou desastre, ou para prestar socorro, ou, durante o dia, por determinação judicial.",
-        correta: true,
-        diagnostico: "Reproduz com exatidão as 4 hipóteses constitucionais de exceção à inviolabilidade domiciliar.",
-        artigo: "Art. 5º, XI, da CF/88",
-        bizu: "FDS de Dia e Noite (Flagrante, Desastre, Socorro) + Juiz só de Dia."
-      }
-    ]);
+          <form onsubmit="salvarNovoFlashcardIndividual(event)" class="p-6 space-y-4 text-xs overflow-y-auto">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Matéria *</label>
+                <select id="fcNovoMateria" required onchange="filtrarTopicosModalNovoFC()" class="w-full rounded-lg border px-3 py-2"></select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Tópico *</label>
+                <select id="fcNovoTopico" required class="w-full rounded-lg border px-3 py-2"></select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Tipo Funcional *</label>
+                <select id="fcNovoTipo" onchange="alternarCamposModalidadeNovoFC()" class="w-full rounded-lg border px-3 py-2 font-bold">
+                  <option value="CLOZE">1. Lei Seca (Cloze {{c1::}})</option>
+                  <option value="PADRAO">2. PDF Base (Certo / Errado)</option>
+                  <option value="MULTIPLA">3. Caderno de Erros (Múltipla)</option>
+                </select>
+              </div>
+            </div>
 
-    const linhas = [
-      `id_materia;id_topico;tipo;frente;verso;tags;opcoes`,
-      `${matPadrao};${topPadrao};PADRAO;É livre a manifestação do pensamento, sendo permitido o anonimato em denúncias eleitorais?;ERRADO. A Constituição veda expressamente o anonimato (Art. 5º, IV, CF/88).;CF88,Art5;[]`,
-      `${matPadrao};${topPadrao};CLOZE;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum, praticado {{c2::antes}} da naturalização, ou de comprovado envolvimento em {{c3::tráfico ilícito de entorpecentes}}.;Art. 5º, LI, da CF/88.;CF88,Extradição;[]`,
-      `${matPadrao};${topPadrao};MULTIPLA;Assinale a alternativa correta acerca da inviolabilidade domiciliar:;Art. 5º, XI, CF/88;CF88,Domicílio;${opcoesExemplo}`
-    ];
-    document.getElementById('fcInputCSVBruto').value = linhas.join('\n');
-  }
+            <!-- Seletor de Gabarito Oficial quando for PDF Base (Certo ou Errado) -->
+            <div id="fcBoxGabaritoCertoErradoModal" class="hidden p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+              <span class="font-bold text-slate-200">Gabarito da Proposição Assertiva (PDF Base): *</span>
+              <select id="fcNovoGabaritoCE" class="rounded-lg border px-3 py-1.5 font-extrabold">
+                <option value="ERRADO">✖ ERRADO</option>
+                <option value="CERTO">✔ CERTO</option>
+              </select>
+            </div>
 
-  function resolverIdMateriaETopicoCSV_(rawMat, rawTop) {
-    if (!ESTADO) return { idMateria: rawMat, idTopico: rawTop };
-    const matEncontrada = ESTADO.materias.find(
-      m => m.id.toLowerCase() === rawMat.toLowerCase() || m.nome.toLowerCase() === rawMat.toLowerCase()
-    );
-    const idMat = matEncontrada ? matEncontrada.id : (ESTADO.materias[0]?.id || rawMat);
+            <div>
+              <label id="lblFcNovoFrente" class="block font-bold text-slate-300 mb-1">Frente / Dispositivo Legal com Exclusão Estrita (Use {{c1::termo}}) *</label>
+              <textarea id="fcNovoFrente" rows="3" required placeholder="Ex: Art. 5º, XI - a casa é asilo inviolável do indivíduo, ninguém nela podendo penetrar sem o consentimento do morador, salvo em caso de {{c1::flagrante delito}} ou {{c2::desastre}}, ou para prestar socorro, ou, {{c3::durante o dia}}, por determinação judicial." class="w-full rounded-lg border p-2.5"></textarea>
+            </div>
 
-    const topEncontrado = ESTADO.topicos.find(
-      t => t.id.toLowerCase() === rawTop.toLowerCase() ||
-           (t.idMateria === idMat && t.topico.toLowerCase() === rawTop.toLowerCase()) ||
-           t.topico.toLowerCase() === rawTop.toLowerCase()
-    );
-    const idTop = topEncontrado ? topEncontrado.id : (ESTADO.topicos.find(t => t.idMateria === idMat)?.id || rawTop);
-    return { idMateria: idMat, idTopico: idTop };
-  }
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Verso / Fundamentação / Artigo ou Jurisprudência *</label>
+              <textarea id="fcNovoVerso" rows="2" required placeholder="Ex: Art. 5º, inciso XI, da CF/88." class="w-full rounded-lg border p-2.5"></textarea>
+            </div>
 
-  async function processarImportacaoCSVFlashcards(e) {
-    e.preventDefault();
-    const bruto = document.getElementById('fcInputCSVBruto').value.trim();
-    if (!bruto) return;
+            <div id="fcBoxOpcoesNovoModal" class="hidden space-y-2 border-t border-slate-800 pt-3">
+              <div class="flex items-center justify-between">
+                <label class="font-bold text-slate-200">JSON de Alternativas Agrupadas do Caderno de Erros (Diagnóstico + Artigo + Bizu)</label>
+                <button type="button" onclick="preencherTemplateJSONMultipla()" class="text-indigo-400 font-bold hover:underline text-[11px]">Carregar Modelo Denso (4 Opções)</button>
+              </div>
+              <textarea id="fcNovoOpcoesJSON" rows="6" class="w-full rounded-lg border p-2.5 font-mono text-[11px]"></textarea>
+            </div>
 
-    const btn = document.getElementById('btnExecutarImportCSV');
-    btn.disabled = true;
-    btn.textContent = 'Importando...';
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Tags (separadas por vírgula)</label>
+              <input type="text" id="fcNovoTags" placeholder="Ex: CF88, Prazo, Súmula Vinculante" class="w-full rounded-lg border px-3 py-2">
+            </div>
 
-    try {
-      const linhas = bruto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-      const novosRegistros = [];
-
-      linhas.forEach((linha, index) => {
-        if (index === 0 && linha.toLowerCase().startsWith('id_materia;')) return;
-        const partes = linha.split(';');
-        if (partes.length < 5) return;
-
-        const rawMat = partes[0].trim();
-        const rawTop = partes[1].trim();
-        const tipo = (partes[2] || 'PADRAO').trim().toUpperCase();
-        const frente = (partes[3] || '').trim();
-        const verso = (partes[4] || '').trim();
-        const tags = (partes[5] || '').trim();
-        const rawOpcoes = partes.slice(6).join(';').trim();
-
-        let opcoesParsed = [];
-        if (rawOpcoes) {
-          try { opcoesParsed = JSON.parse(rawOpcoes); } catch (err) { opcoesParsed = []; }
-        }
-
-        const { idMateria, idTopico } = resolverIdMateriaETopicoCSV_(rawMat, rawTop);
-
-        novosRegistros.push({
-          id: gerarId_('FC'),
-          id_materia: idMateria,
-          id_topico: idTopico,
-          tipo,
-          frente,
-          verso,
-          tags,
-          opcoes: opcoesParsed,
-          etapa: 1,
-          intervalo_dias: 1,
-          fator_facilidade: 2.50,
-          is_novo: true,
-          status: 'Ativo'
-        });
-      });
-
-      if (novosRegistros.length === 0) {
-        throw new Error('Nenhuma linha válida encontrada. Verifique o separador ";"');
-      }
-
-      const { error } = await supabaseClient.from('flashcards').insert(novosRegistros);
-      if (error) {
-        // Fallback caso o usuário ainda não tenha rodado o ALTER TABLE no Supabase
-        const fallbackRows = novosRegistros.map(r => ({
-          id: r.id,
-          id_materia: r.id_materia,
-          id_topico: r.id_topico,
-          frente: r.frente,
-          verso: r.verso,
-          tags: r.tags,
-          etapa: 1,
-          intervalo_dias: 1,
-          fator_facilidade: 2.50,
-          status: 'Ativo'
-        }));
-        const resFallback = await supabaseClient.from('flashcards').insert(fallbackRows);
-        if (resFallback.error) throw resFallback.error;
-      }
-
-      fecharModalImportarCSV();
-      document.getElementById('fcInputCSVBruto').value = '';
-      await carregarFlashcardsSupabase();
-      notificar(`${novosRegistros.length} flashcard(s) importado(s) com sucesso como "Novo"!`);
-    } catch (err) {
-      notificar('Erro na importação CSV: ' + (err.message || err), true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Importar e Gravar no Supabase';
-    }
-  }
-
-  function abrirModalNovoFlashcard() {
-    inicializarFiltrosFlashcardsUI();
-    document.getElementById('modalNovoFlashcard').classList.remove('hidden');
-  }
-  function fecharModalNovoFlashcard() {
-    document.getElementById('modalNovoFlashcard').classList.add('hidden');
-  }
-  function alternarCamposModalidadeNovoFC() {
-    const tipo = document.getElementById('fcNovoTipo').value;
-    document.getElementById('fcBoxOpcoesNovoModal').classList.toggle('hidden', tipo !== 'MULTIPLA');
-  }
-  function preencherTemplateJSONMultipla() {
-    document.getElementById('fcNovoOpcoesJSON').value = JSON.stringify([
-      {
-        texto: "Alternativa Correta aqui",
-        correta: true,
-        diagnostico: "Explicação objetiva do acerto",
-        artigo: "Art. X da Lei Y",
-        bizu: "Mnemônico rápido"
-      },
-      {
-        texto: "Distrator Incorreto 1",
-        correta: false,
-        diagnostico: "Por que está errada",
-        artigo: "Art. X da Lei Y",
-        bizu: "Cuidado com a inversão de prazo"
-      }
-    ], null, 2);
-  }
-
-  async function salvarNovoFlashcardIndividual(e) {
-    e.preventDefault();
-    const id_materia = document.getElementById('fcNovoMateria').value;
-    const id_topico = document.getElementById('fcNovoTopico').value;
-    const tipo = document.getElementById('fcNovoTipo').value;
-    const frente = document.getElementById('fcNovoFrente').value.trim();
-    const verso = document.getElementById('fcNovoVerso').value.trim();
-    const tags = document.getElementById('fcNovoTags').value.trim();
-    const rawJson = document.getElementById('fcNovoOpcoesJSON').value.trim();
-
-    let opcoes = [];
-    if (tipo === 'MULTIPLA') {
-      try {
-        opcoes = JSON.parse(rawJson);
-        if (!Array.isArray(opcoes) || opcoes.length < 2) throw new Error();
-      } catch (err) {
-        notificar('Informe um array JSON válido com pelo menos 2 alternativas para Múltipla Escolha.', true);
-        return;
-      }
-    }
-
-    try {
-      const registro = {
-        id: gerarId_('FC'),
-        id_materia,
-        id_topico,
-        tipo,
-        frente,
-        verso,
-        tags,
-        opcoes,
-        etapa: 1,
-        intervalo_dias: 1,
-        fator_facilidade: 2.50,
-        is_novo: true,
-        status: 'Ativo'
-      };
-      const { error } = await supabaseClient.from('flashcards').insert(registro);
-      if (error) throw error;
-
-      fecharModalNovoFlashcard();
-      await carregarFlashcardsSupabase();
-      notificar('Flashcard cadastrado com sucesso!');
-    } catch (err) {
-      notificar('Erro ao salvar cartão: ' + err.message, true);
-    }
-  }
-
-  async function excluirFlashcardIndividual(idCard) {
-    if (!confirm('Deseja realmente excluir este flashcard?')) return;
-    await supabaseClient.from('flashcards').delete().eq('id', idCard);
-    await carregarFlashcardsSupabase();
-    notificar('Cartão removido.');
-  }
-</script>
+            <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
+              <button type="button" onclick="fecharModalNovoFlashcard()" class="px-4 py-2 rounded-xl border border-slate-700 font-bold text-slate-300 hover:bg-slate-800">Cancelar</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow">Salvar Cartão</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
 
     <!-- ABA 8: CONFIGURACOES -->
     <section id="aba-config" class="hidden space-y-4">
@@ -2280,12 +1721,9 @@
 
   </main>
 
-  <!-- ==========================================================================
-       BLOCO DE SCRIPT: COLE AQUI O CONTEÚDO INTEGRAL DA ETAPA 3
-       ========================================================================== -->
-  <script>
+<script>
     /* ==========================================================================
-     * 1. CONFIGURAÇÃO E CONEXÃO SUPABASE (SA-EAST-1)
+     * 1. CONFIGURAÇÃO SUPABASE (SA-EAST-1) E GERENCIADOR GLOBAL DE TEMA
      * ========================================================================== */
     const DEFAULT_SUPABASE_URL = 'https://SUA-URL-DO-PROJETO.supabase.co';
     const DEFAULT_SUPABASE_ANON_KEY = 'SUA-CHAVE-ANON-PUBLIC-AQUI';
@@ -2297,6 +1735,40 @@
     let chartEvolucaoInstance = null;
     let chartMateriasInstance = null;
     let idArrastandoMateria = null;
+
+    // Inicialização imediata do Tema (Dark / Light Mode Nativo)
+    function inicializarTemaGlobal() {
+      const temaSalvo = localStorage.getItem('GR_THEME_MODE') || 'dark';
+      aplicarTemaGlobalUI(temaSalvo === 'dark');
+    }
+
+    function alternarTemaGlobal() {
+      const htmlEl = document.documentElement;
+      const novoIsDark = !htmlEl.classList.contains('dark');
+      localStorage.setItem('GR_THEME_MODE', novoIsDark ? 'dark' : 'light');
+      aplicarTemaGlobalUI(novoIsDark);
+    }
+
+    function aplicarTemaGlobalUI(isDark) {
+      const htmlEl = document.documentElement;
+      htmlEl.classList.toggle('dark', isDark);
+
+      const icone = document.getElementById('iconeTemaGlobal');
+      const texto = document.getElementById('textoTemaGlobal');
+      if (icone) icone.textContent = isDark ? '☀️' : '🌙';
+      if (texto) texto.textContent = isDark ? 'Modo Claro' : 'Modo Escuro';
+
+      if (typeof Chart !== 'undefined') {
+        Chart.defaults.color = isDark ? '#94a3b8' : '#334155';
+        Chart.defaults.borderColor = isDark ? '#1e293b' : '#e2e8f0';
+        const abaEst = document.getElementById('aba-estatisticas');
+        if (ESTADO && abaEst && !abaEst.classList.contains('hidden')) {
+          renderizarEstatisticas();
+        }
+      }
+    }
+
+    inicializarTemaGlobal();
 
     function obterCredenciaisSupabase() {
       const urlSalva = localStorage.getItem('GR_SUPABASE_URL');
@@ -2359,8 +1831,7 @@
     }
 
     window.addEventListener('DOMContentLoaded', async () => {
-      Chart.defaults.color = '#94a3b8';
-      Chart.defaults.borderColor = '#1e293b';
+      inicializarTemaGlobal();
       const cli = inicializarClienteSupabase();
       if (!cli) {
         abrirModalConexaoSupabase();
@@ -2371,7 +1842,7 @@
     });
 
     /* ==========================================================================
-     * 2. UTILITÁRIOS DE DATA, ID E FORMATAÇÃO (MIGRADOS DO CODE.GS)
+     * 2. UTILITÁRIOS DE DATA, ID E FORMATAÇÃO
      * ========================================================================== */
     function gerarId_(prefixo) {
       const rand = Math.floor(1000 + Math.random() * 9000);
@@ -2454,7 +1925,7 @@
     }
 
     /* ==========================================================================
-     * 3. REGRAS DE NEGÓCIO E MOTOR DE REPETIÇÃO ESPAÇADA (FIEL AO CODE.GS)
+     * 3. REGRAS DE NEGÓCIO E MOTOR DE REPETIÇÃO ESPAÇADA (CORTE DE 80%)
      * ========================================================================== */
     function obterInfoFluxoExplicito_(topicoObj, etapaAtual, totalEtapas, metaAprov, tipoDataOrigem, escalaArr, intervaloReforco) {
       const resolvidas = topicoObj ? topicoObj.resolvidasTotal : 0;
@@ -2633,7 +2104,6 @@
         return;
       }
 
-      // MODO ESTÁVEL (Preserva datas agendadas)
       const paraAlocarNovo = [];
 
       pendentes.forEach(rev => {
@@ -2731,7 +2201,6 @@
           const aConc = a.status === 'Concluída' ? 1 : 0;
           const bConc = b.status === 'Concluída' ? 1 : 0;
           if (aConc !== bConc) return aConc - bConc;
-
           if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) {
             return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
           }
@@ -3021,9 +2490,6 @@
       );
     }
 
-    /**
-     * MOTOR CENTRAL UNIFICADO ASSÍNCRONO (SUPABASE)
-     */
     async function recalcularERetornarEstado_(opcoes) {
       if (!supabaseClient) {
         inicializarClienteSupabase();
@@ -3083,7 +2549,6 @@
         }
       }
 
-      // 1. MATERIAS
       let materias = (resMat.data || []).map((r, idx) => ({
         rowIndex: idx + 1,
         id: String(r.id).trim(),
@@ -3100,7 +2565,6 @@
       const mapaMaterias = {};
       materias.forEach(m => { mapaMaterias[m.id] = m; });
 
-      // 2. QUESTOES INDIVIDUAIS
       const questoes = [];
       const questoesPorTopico = {};
       (resQue.data || []).forEach((r, idx) => {
@@ -3123,7 +2587,6 @@
         questoesPorTopico[q.idTopico].push(q);
       });
 
-      // 3. SESSOES DE ESTUDO (MACRO & MICRO)
       const sessoes = [];
       const datasSessoesPorTopico = {};
       (resSes.data || []).forEach((r, idx) => {
@@ -3177,7 +2640,6 @@
         ? Number(((globalAcertos / globalResolvidas) * 100).toFixed(1))
         : 0;
 
-      // 4. TOPICOS
       const topicos = [];
       const mapaTopicosObj = {};
       (resTop.data || []).forEach((r, idx) => {
@@ -3340,7 +2802,6 @@
         s.aproveitamentoGlobalMacro = aproveitamentoGlobalMacro;
       });
 
-      // 5. REVISOES
       const revisoesConcluidas = [];
       const pendentesPorTopico = {};
       const concluidasCountPorTopico = {};
@@ -3574,7 +3035,6 @@
 
       const revisoes = revisoesPendentes.concat(revisoesConcluidas);
 
-      // Persiste atualizações calculadas de Tópicos e Revisões Pendentes no Supabase em lote
       const payloadTopicos = topicos.map(t => ({
         id: t.id,
         id_materia: t.idMateria,
@@ -3693,7 +3153,6 @@
 
       const wb = XLSX.utils.book_new();
 
-      // ABA 1: Desempenho Consolidado por Tópico
       const rowsTopicos = ESTADO.topicos.map(t => ({
         'Ordem Matéria': t.ordemMateria,
         'Matéria': t.materia,
@@ -3717,7 +3176,6 @@
       ajustarLarguraColunasExcel_(wsTopicos, rowsTopicos);
       XLSX.utils.book_append_sheet(wb, wsTopicos, 'Desempenho Consolidado');
 
-      // ABA 2: Histórico Geral de Sessões (Micro vs Macro)
       const rowsSessoes = ESTADO.sessoes.map(s => ({
         'Data da Sessão': formatarDataBR(s.dataSessao),
         'Matéria': s.materia,
@@ -3736,7 +3194,6 @@
       ajustarLarguraColunasExcel_(wsSessoes, rowsSessoes);
       XLSX.utils.book_append_sheet(wb, wsSessoes, 'Historico Geral Sessoes');
 
-      // ABA 3: Fila Completa de Revisões Programadas
       const rowsFila = (ESTADO.programacaoCompleta || []).map(item => ({
         'Posição': `${item.posicaoFila}º`,
         'Próxima Data': formatarDataBR(item.dataProximaAtividade),
@@ -3755,7 +3212,6 @@
       ajustarLarguraColunasExcel_(wsFila, rowsFila);
       XLSX.utils.book_append_sheet(wb, wsFila, 'Fila de Revisoes');
 
-      // ABA 4: Resumo Consolidado por Matéria
       const rowsMaterias = ESTADO.materias.map(m => {
         const topMat = ESTADO.topicos.filter(t => t.idMateria === m.id);
         const totBanco = topMat.reduce((acc, x) => acc + x.totalBanco, 0);
@@ -3862,7 +3318,7 @@
         if (elAba) elAba.classList.toggle('hidden', a !== nomeAba);
         const btn = document.getElementById(`nav-${a}`);
         if (btn) {
-          btn.className = `px-3 py-1.5 rounded-lg whitespace-nowrap transition ${a === nomeAba ? 'tab-btn-active' : 'tab-btn-inactive'}`;
+          btn.className = `px-3 py-1.5 rounded-lg whitespace-nowrap transition ${a === nomeAba ? 'tab-btn-active' : 'tab-btn-inactive'} ${a === 'flashcards' ? 'flex items-center gap-1.5' : ''}`;
         }
       });
       const btnSub = document.getElementById('btnSubmenuAcoes');
@@ -3953,7 +3409,7 @@
     }
 
     /* ==========================================================================
-     * 6. AÇÕES E OPERAÇÕES CRUD NO SUPABASE
+     * 6. AÇÕES E OPERAÇÕES CRUD NO SUPABASE (ABAS 1 A 6 E 8)
      * ========================================================================== */
     function abrirModalTeoriaHoje(idMateriaPre, idTopicoPre) {
       document.getElementById('modalTeoriaHoje').classList.remove('hidden');
@@ -4732,7 +4188,7 @@
     }
 
     /* ==========================================================================
-     * 7. RENDERIZAÇÃO DE TELAS E COMPONENTES (TEMA ESCURO)
+     * 7. RENDERIZAÇÃO DE TELAS E COMPONENTES (ABAS 1 A 6 E 8)
      * ========================================================================== */
     function limparCerquilha(str) {
       return String(str || '').replace(/#/g, '');
@@ -5326,9 +4782,9 @@
             <div class="px-5 py-3 ${isPassado ? 'bg-rose-950' : 'bg-slate-950'} border-b border-slate-800 text-white flex flex-wrap items-center justify-between gap-2 text-xs">
               <div class="font-bold flex items-center gap-2">
                 <span>Data: ${formatarDataBR(dt)} — ${esc(grupo.diaSemana)}</span>
-                ${isHoje ? '<span class="px-2 py-0.5 rounded bg-indigo-600 text-[10px]">HOJE</span>' : ''}
-                ${isAmanha ? '<span class="px-2 py-0.5 rounded bg-emerald-600 text-[10px]">AMANHÃ</span>' : ''}
-                ${isPassado ? '<span class="px-2 py-0.5 rounded bg-rose-600 text-[10px]">EM ATRASO</span>' : ''}
+                ${isHoje ? '<span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px]">HOJE</span>' : ''}
+                ${isAmanha ? '<span class="px-2 py-0.5 rounded bg-emerald-600 text-white text-[10px]">AMANHÃ</span>' : ''}
+                ${isPassado ? '<span class="px-2 py-0.5 rounded bg-rose-600 text-white text-[10px]">EM ATRASO</span>' : ''}
                 ${temDeficit ? `<span class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-extrabold">${grupo.questoes.length}/${capMax} tópicos</span>` : ''}
               </div>
               <div class="flex items-center gap-3">
@@ -5791,6 +5247,7 @@
       document.getElementById('estKpiErros').textContent = somaErros;
       document.getElementById('estKpiAprov').textContent = `${aprovPonderado}%`;
 
+      const isDark = document.documentElement.classList.contains('dark');
       if (chartRoscaInstance) chartRoscaInstance.destroy();
       const ctxRosca = document.getElementById('chartRoscaAcertosErros').getContext('2d');
       chartRoscaInstance = new Chart(ctxRosca, {
@@ -5799,9 +5256,9 @@
           labels: ['Acertos', 'Erros'],
           datasets: [{
             data: somaResolvidas > 0 ? [somaAcertos, somaErros] : [1, 0],
-            backgroundColor: somaResolvidas > 0 ? ['#10b981', '#f43f5e'] : ['#1e293b', '#1e293b'],
+            backgroundColor: somaResolvidas > 0 ? ['#10b981', '#f43f5e'] : ['#64748b', '#64748b'],
             borderWidth: 2,
-            borderColor: '#0f172a'
+            borderColor: isDark ? '#0f172a' : '#ffffff'
           }]
         },
         options: {
@@ -5939,6 +5396,1141 @@
       el.classList.remove('hidden');
       if (timerToast) clearTimeout(timerToast);
       timerToast = setTimeout(() => el.classList.add('hidden'), 4500);
+    }
+
+/* ==========================================================================
+     * 8. MOTOR DE FLASHCARDS (3 TIPOS FUNCIONAIS + CSV CIRÚRGICO + FULLSCREEN)
+     * ========================================================================== */
+    let FC_DECK = [];
+    let FC_SESSAO = null;
+    let FC_TIMER_INTERVAL = null;
+
+    // Hook automático na função aplicarEstado já existente na aplicação
+    const _aplicarEstadoOriginalFC = window.aplicarEstado;
+    window.aplicarEstado = function(dados) {
+      if (_aplicarEstadoOriginalFC) _aplicarEstadoOriginalFC(dados);
+      inicializarFiltrosFlashcardsUI();
+      carregarFlashcardsSupabase();
+    };
+
+    function obterVelocidadeMediaTopicoSeg_(idTopico) {
+      const chave = `GR_FC_SPEED_${idTopico || 'GLOBAL'}`;
+      const salvo = Number(localStorage.getItem(chave));
+      if (salvo && salvo >= 3 && salvo <= 180) return salvo;
+      const globalSalvo = Number(localStorage.getItem('GR_FC_SPEED_GLOBAL'));
+      return (globalSalvo && globalSalvo >= 3 && globalSalvo <= 180) ? globalSalvo : 14;
+    }
+
+    function salvarVelocidadeMediaTopicoSeg_(idTopico, mediaSeg) {
+      const limpo = Math.min(180, Math.max(4, Number(mediaSeg || 14)));
+      if (idTopico) {
+        const ant = obterVelocidadeMediaTopicoSeg_(idTopico);
+        const ponderada = ((ant * 0.4) + (limpo * 0.6)).toFixed(1);
+        localStorage.setItem(`GR_FC_SPEED_${idTopico}`, ponderada);
+      }
+      localStorage.setItem('GR_FC_SPEED_GLOBAL', limpo.toFixed(1));
+    }
+
+    function inicializarFiltrosFlashcardsUI() {
+      if (!ESTADO || !ESTADO.materias) return;
+      const matAtivas = ESTADO.materias.filter(m => m.status === 'Ativo');
+      const selFiltroMat = document.getElementById('fcFiltroMateria');
+      const selNovoMat = document.getElementById('fcNovoMateria');
+
+      if (selFiltroMat) {
+        const vAnt = selFiltroMat.value;
+        selFiltroMat.innerHTML = '<option value="">Todas as Matérias</option>' +
+          matAtivas.map(m => `<option value="${m.id}">${m.ordem}. ${esc(m.nome)}</option>`).join('');
+        selFiltroMat.value = vAnt;
+      }
+      if (selNovoMat) {
+        selNovoMat.innerHTML = '<option value="">Selecione...</option>' +
+          matAtivas.map(m => `<option value="${m.id}">${esc(m.nome)}</option>`).join('');
+        filtrarTopicosModalNovoFC();
+      }
+      aoMudarMateriaFiltroFC();
+      renderizarAtalhosTopicosHojeFC();
+    }
+
+    function aoMudarMateriaFiltroFC() {
+      const idMat = document.getElementById('fcFiltroMateria')?.value || '';
+      const selTop = document.getElementById('fcFiltroTopico');
+      if (!selTop || !ESTADO) return;
+      const vAnt = selTop.value;
+      const topicos = ESTADO.topicos.filter(t => t.status === 'Ativo' && (!idMat || t.idMateria === idMat));
+      selTop.innerHTML = '<option value="">Todos os Tópicos</option>' +
+        topicos.map(t => `<option value="${t.id}">${esc(t.topico)}</option>`).join('');
+      if (topicos.some(t => t.id === vAnt)) selTop.value = vAnt;
+      renderizarVisaoDeckFC();
+    }
+
+    function filtrarTopicosModalNovoFC() {
+      const idMat = document.getElementById('fcNovoMateria')?.value || '';
+      const selTop = document.getElementById('fcNovoTopico');
+      if (!selTop || !ESTADO) return;
+      const topicos = ESTADO.topicos.filter(t => t.status === 'Ativo' && t.idMateria === idMat);
+      selTop.innerHTML = topicos.map(t => `<option value="${t.id}">${esc(t.topico)}</option>`).join('');
+    }
+
+    async function carregarFlashcardsSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('flashcards')
+          .select('*')
+          .eq('status', 'Ativo')
+          .order('criado_em', { ascending: false });
+        if (error) throw error;
+
+        FC_DECK = (data || []).map(normalizarRegistroFlashcard_);
+        const badgeTotal = document.getElementById('fcBadgeTotalDeck');
+        if (badgeTotal) badgeTotal.textContent = `${FC_DECK.length} Cartões Cadastrados`;
+        renderizarAtalhosTopicosHojeFC();
+        renderizarVisaoDeckFC();
+      } catch (err) {
+        console.warn('Aviso ao carregar flashcards:', err.message);
+      }
+    }
+
+    // Normaliza as 3 categorias: CLOZE (Lei Seca), PADRAO (PDF Base C/E) e MULTIPLA (Caderno de Erros)
+    function normalizarRegistroFlashcard_(row) {
+      let opcoesArr = [];
+      if (Array.isArray(row.opcoes)) {
+        opcoesArr = row.opcoes;
+      } else if (typeof row.opcoes === 'string' && row.opcoes.trim()) {
+        try { opcoesArr = JSON.parse(row.opcoes); } catch (e) { opcoesArr = []; }
+      }
+
+      let tipo = String(row.tipo || 'PADRAO').toUpperCase().trim();
+      if (tipo === 'LEI_SECA' || /\{\{c\d+::/i.test(row.frente || '')) {
+        tipo = 'CLOZE';
+      } else if (tipo === 'CADERNO_ERROS' || opcoesArr.length > 0) {
+        tipo = 'MULTIPLA';
+      } else {
+        tipo = 'PADRAO';
+      }
+
+      const versoStr = String(row.verso || '').trim();
+      const tagsStr = String(row.tags || '').trim();
+      let gabaritoCE = 'CERTO';
+      if (/^(ERRADO|INCORRETO|FALSO)\b/i.test(versoStr) || /\bGABARITO\s*:\s*E(RRADO)?\b/i.test(versoStr) || /\bERRADO\b/i.test(tagsStr)) {
+        gabaritoCE = 'ERRADO';
+      } else if (/^(CERTO|CORRETO|VERDADEIRO)\b/i.test(versoStr) || /\bGABARITO\s*:\s*C(ERTO)?\b/i.test(versoStr)) {
+        gabaritoCE = 'CERTO';
+      }
+
+      const isNovo = row.is_novo !== undefined ? Boolean(row.is_novo) : !Boolean(row.ultima_avaliacao);
+
+      return {
+        id: String(row.id),
+        idMateria: String(row.id_materia || ''),
+        idTopico: String(row.id_topico || ''),
+        tipo,
+        gabaritoCE,
+        frente: String(row.frente || ''),
+        verso: versoStr,
+        tags: tagsStr,
+        opcoes: opcoesArr,
+        etapa: Number(row.etapa || 1),
+        intervaloDias: Number(row.intervalo_dias || 1),
+        fatorFacilidade: Number(row.fator_facilidade || 2.5),
+        isNovo,
+        totalErros: Number(row.total_erros || 0),
+        totalRevisoes: Number(row.total_revisoes || 0)
+      };
+    }
+
+    function obterLabelFuncionalTipoFC_(tipo) {
+      if (tipo === 'CLOZE') return '1. LEI SECA (CLOZE)';
+      if (tipo === 'MULTIPLA') return '3. CADERNO DE ERROS (MÚLTIPLA)';
+      return '2. PDF BASE (CERTO / ERRADO)';
+    }
+
+    function renderizarAtalhosTopicosHojeFC() {
+      const cont = document.getElementById('fcListaAtalhosHoje');
+      if (!cont || !ESTADO || !ESTADO.painel) return;
+      const hojeList = ESTADO.painel.atividadesHoje || [];
+
+      if (hojeList.length === 0) {
+        cont.innerHTML = `<div class="col-span-full text-xs text-slate-400 py-2">Nenhum tópico pendente na fila de hoje. Utilize os filtros abaixo para aquecer qualquer tópico ou exportar CSV.</div>`;
+        return;
+      }
+
+      cont.innerHTML = hojeList.map(at => {
+        const cardsTopico = FC_DECK.filter(c => c.idTopico === at.idTopico);
+        const qtdCloze = cardsTopico.filter(c => c.tipo === 'CLOZE').length;
+        const qtdCE = cardsTopico.filter(c => c.tipo === 'PADRAO').length;
+        const qtdMult = cardsTopico.filter(c => c.tipo === 'MULTIPLA').length;
+        const velMedia = obterVelocidadeMediaTopicoSeg_(at.idTopico);
+        const minEst = Math.max(1, Math.ceil((cardsTopico.length * 2 * velMedia) / 60));
+
+        return `
+          <div class="bg-slate-900 border border-indigo-800/70 rounded-xl p-3.5 shadow-xs flex flex-col justify-between gap-2.5">
+            <div>
+              <div class="flex items-center justify-between gap-1">
+                <span class="text-[10px] font-extrabold uppercase text-indigo-400">${esc(at.materia)}</span>
+                <span class="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px]">
+                  ${cardsTopico.length} card(s) • ~${cardsTopico.length > 0 ? minEst : 0} min
+                </span>
+              </div>
+              <div class="text-xs font-extrabold text-white mt-1">${esc(at.topico)}</div>
+              <div class="text-[10px] text-slate-400 mt-1">
+                Lei Seca: <strong>${qtdCloze}</strong> | PDF Base: <strong>${qtdCE}</strong> | Cad. Erros: <strong>${qtdMult}</strong>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 pt-2 border-t border-slate-800">
+              <button type="button" onclick="selecionarTopicoEIniciarFC('${at.idMateria}','${at.idTopico}')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition">
+                ⚡ Aquecer (${cardsTopico.length})
+              </button>
+              <button type="button" onclick="atalhoRegistrarEstudo('${at.idMateria}','${at.idTopico}',${at.questoesPlanejadas})" class="py-1.5 px-2.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-200 font-semibold text-[11px]">
+                Ir p/ TEC
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selecionarTopicoEIniciarFC(idMateria, idTopico) {
+      document.getElementById('fcFiltroMateria').value = idMateria;
+      aoMudarMateriaFiltroFC();
+      document.getElementById('fcFiltroTopico').value = idTopico;
+      renderizarVisaoDeckFC();
+      iniciarSessaoIntensivaFC();
+    }
+
+    function obterCardsFiltradosFC() {
+      const idMat = document.getElementById('fcFiltroMateria')?.value || '';
+      const idTop = document.getElementById('fcFiltroTopico')?.value || '';
+      const tipo = document.getElementById('fcFiltroTipo')?.value || '';
+
+      return FC_DECK.filter(c => {
+        if (idMat && c.idMateria !== idMat) return false;
+        if (idTop && c.idTopico !== idTop) return false;
+        if (tipo && c.tipo !== tipo) return false;
+        return true;
+      });
+    }
+
+    function renderizarVisaoDeckFC() {
+      const idMat = document.getElementById('fcFiltroMateria')?.value || '';
+      const idTop = document.getElementById('fcFiltroTopico')?.value || '';
+
+      const baseTopico = FC_DECK.filter(c => {
+        if (idMat && c.idMateria !== idMat) return false;
+        if (idTop && c.idTopico !== idTop) return false;
+        return true;
+      });
+
+      const qtdLeiSeca = baseTopico.filter(c => c.tipo === 'CLOZE').length;
+      const qtdPdfBase = baseTopico.filter(c => c.tipo === 'PADRAO').length;
+      const qtdCadErros = baseTopico.filter(c => c.tipo === 'MULTIPLA').length;
+
+      const elLei = document.getElementById('fcCountLeiSeca');
+      const elPdf = document.getElementById('fcCountPdfBase');
+      const elErros = document.getElementById('fcCountCadernoErros');
+      if (elLei) elLei.textContent = `📜 Lei Seca (Cloze): ${qtdLeiSeca}`;
+      if (elPdf) elPdf.textContent = `⚖️ PDF Base (C/E): ${qtdPdfBase}`;
+      if (elErros) elErros.textContent = `🎯 Caderno de Erros: ${qtdCadErros}`;
+
+      const filtrados = obterCardsFiltradosFC();
+      const velMedia = obterVelocidadeMediaTopicoSeg_(idTop || 'GLOBAL');
+      const minPrevistos = filtrados.length > 0 ? Math.max(1, Math.ceil((filtrados.length * 2 * velMedia) / 60)) : 0;
+
+      const elEst = document.getElementById('fcEstimativaPreviaDeck');
+      if (elEst) elEst.textContent = `⏱️ Tempo estimado (2 Fases): ~${minPrevistos} min (${velMedia.toFixed(0)}s/card)`;
+
+      const txtResumo = document.getElementById('fcResumoFiltroTxt');
+      const cont = document.getElementById('fcTabelaPreviewDeck');
+      if (txtResumo) txtResumo.textContent = `Cartões localizados para o treino: ${filtrados.length}`;
+      if (!cont) return;
+
+      if (filtrados.length === 0) {
+        cont.innerHTML = `<div class="p-6 text-center text-slate-400">Nenhum flashcard encontrado para este filtro. Clique em "+ Criar Cartão" ou "Importar Lote (CSV)".</div>`;
+        return;
+      }
+
+      const mapaTop = {};
+      (ESTADO?.topicos || []).forEach(t => { mapaTop[t.id] = t; });
+
+      cont.innerHTML = filtrados.map(c => {
+        const tObj = mapaTop[c.idTopico];
+        const corBadge = c.tipo === 'CLOZE'
+          ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+          : c.tipo === 'MULTIPLA'
+            ? 'bg-rose-950 text-rose-300 border border-rose-800'
+            : 'bg-emerald-950 text-emerald-300 border border-emerald-800';
+
+        return `
+          <div class="p-3 bg-slate-900 hover:bg-slate-800/60 flex items-center justify-between gap-3">
+            <div class="space-y-0.5 flex-1">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="px-2 py-0.5 rounded font-bold text-[10px] ${corBadge}">${esc(obterLabelFuncionalTipoFC_(c.tipo))}</span>
+                ${c.tipo === 'PADRAO' ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[9px] font-bold">Gabarito: ${c.gabaritoCE}</span>` : ''}
+                ${c.isNovo ? '<span class="px-2 py-0.5 rounded bg-amber-500 text-slate-950 font-extrabold text-[10px]">NOVO</span>' : ''}
+                <span class="text-[11px] font-bold text-indigo-400">${esc(tObj ? tObj.materia + ' • ' + tObj.topico : c.idTopico)}</span>
+              </div>
+              <div class="text-slate-200 font-medium line-clamp-1">${esc(c.frente)}</div>
+            </div>
+            <button type="button" onclick="excluirFlashcardIndividual('${c.id}')" class="text-rose-400 hover:underline text-[11px] font-semibold shrink-0">Excluir</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* ==========================================================================
+     * EXPORTADOR CSV CIRÚRGICO POR TÓPICO E CATEGORIA (PARA RETROALIMENTAR IA)
+     * ========================================================================== */
+    function limparCampoCSVExport_(str) {
+      return String(str || '')
+        .replace(/\r?\n/g, ' ')
+        .replace(/;/g, ',')
+        .trim();
+    }
+
+    function exportarCSVCirurgicoFlashcards() {
+      const idMat = document.getElementById('fcFiltroMateria')?.value || '';
+      const idTop = document.getElementById('fcFiltroTopico')?.value || '';
+      const catExport = document.getElementById('fcSelectCategoriaExportCSV')?.value || 'TODOS';
+
+      let lista = FC_DECK.filter(c => {
+        if (idMat && c.idMateria !== idMat) return false;
+        if (idTop && c.idTopico !== idTop) return false;
+        if (catExport !== 'TODOS' && c.tipo !== catExport) return false;
+        return true;
+      });
+
+      if (lista.length === 0) {
+        notificar('Nenhum cartão encontrado para exportar neste tópico/categoria.', true);
+        return;
+      }
+
+      const mapaTop = {};
+      (ESTADO?.topicos || []).forEach(t => { mapaTop[t.id] = t; });
+      const mapaMat = {};
+      (ESTADO?.materias || []).forEach(m => { mapaMat[m.id] = m; });
+
+      const cabecalho = 'id_materia;id_topico;tipo;frente;verso;tags;opcoes';
+      const linhas = lista.map(c => {
+        const nomeMat = mapaMat[c.idMateria]?.nome || c.idMateria;
+        const nomeTop = mapaTop[c.idTopico]?.topico || c.idTopico;
+        const opcoesJson = (c.tipo === 'MULTIPLA' && Array.isArray(c.opcoes))
+          ? JSON.stringify(c.opcoes).replace(/;/g, ',')
+          : '[]';
+
+        return [
+          limparCampoCSVExport_(nomeMat),
+          limparCampoCSVExport_(nomeTop),
+          c.tipo,
+          limparCampoCSVExport_(c.frente),
+          limparCampoCSVExport_(c.verso),
+          limparCampoCSVExport_(c.tags),
+          opcoesJson
+        ].join(';');
+      });
+
+      const conteudoCSV = '\uFEFF' + [cabecalho].concat(linhas).join('\n');
+      const blob = new Blob([conteudoCSV], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const topObj = mapaTop[idTop];
+      const sufixoTopico = topObj
+        ? topObj.topico.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 35)
+        : 'Deck_Geral';
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Flashcards_${sufixoTopico}_${catExport}_${ESTADO?.hojeYMD || '2026'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      notificar(`CSV Cirúrgico exportado (${lista.length} cartões - Filtro: ${catExport}). Pronto para enviar à IA!`);
+    }
+
+    /* ==========================================================================
+     * MODO TELA CHEIA IMERSIVO (FULLSCREEN API DO NAVEGADOR)
+     * ========================================================================== */
+    function ativarModoTelaCheiaFC_() {
+      const playerEl = document.getElementById('fcSessaoPlayer');
+      if (!playerEl) return;
+      if (!document.fullscreenElement && playerEl.requestFullscreen) {
+        playerEl.requestFullscreen().catch(() => {});
+      }
+      atualizarBotaoFullscreenUI_();
+    }
+
+    function sairModoTelaCheiaFC_() {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      atualizarBotaoFullscreenUI_();
+    }
+
+    function alternarModoTelaCheiaFC() {
+      if (!document.fullscreenElement) {
+        ativarModoTelaCheiaFC_();
+      } else {
+        sairModoTelaCheiaFC_();
+      }
+    }
+
+    function atualizarBotaoFullscreenUI_() {
+      const btn = document.getElementById('btnFullscreenFC');
+      if (!btn) return;
+      const emTelaCheia = Boolean(document.fullscreenElement);
+      btn.textContent = emTelaCheia ? '🗗 Sair da Tela Cheia' : '⛶ Tela Cheia';
+    }
+
+    document.addEventListener('fullscreenchange', atualizarBotaoFullscreenUI_);
+
+    /* ==========================================================================
+     * ALGORITMO FISHER-YATES (ANTI-VÍCIO DE POSIÇÃO)
+     * ========================================================================== */
+    function embaralharFisherYates_(arr) {
+      const copia = arr.slice();
+      for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = copia[i];
+        copia[i] = copia[j];
+        copia[j] = temp;
+      }
+      return copia;
+    }
+
+    /* ==========================================================================
+     * MOTOR DE SESSÃO INTENSIVA EM 2 FASES + BARRA DINÂMICA E TEMPO PREDITIVO
+     * ========================================================================== */
+    function iniciarSessaoIntensivaFC() {
+      const cardsBase = obterCardsFiltradosFC();
+      if (cardsBase.length === 0) {
+        notificar('Selecione um filtro que contenha ao menos 1 flashcard para iniciar.', true);
+        return;
+      }
+
+      const idTop = document.getElementById('fcFiltroTopico')?.value || cardsBase[0].idTopico;
+      const idMat = document.getElementById('fcFiltroMateria')?.value || cardsBase[0].idMateria;
+      const topObj = (ESTADO?.topicos || []).find(t => t.id === idTop);
+
+      FC_SESSAO = {
+        idMateriaAlvo: idMat,
+        idTopicoAlvo: idTop,
+        tituloSessao: topObj ? `${topObj.materia} — ${topObj.topico}` : 'Bateria Mista de Aquecimento',
+        questoesSugeridasTEC: topObj ? Math.max(10, topObj.minQuestoesMateria || 15) : 15,
+        totalCardsUnicos: cardsBase.length,
+        velocidadeHistoricaSeg: obterVelocidadeMediaTopicoSeg_(idTop),
+        fase: 1, // 1 = Domínio Circular (+3), 2 = Varredura de Confirmação Final
+        filaFase1: embaralharFisherYates_(cardsBase.map(c => ({ ...c }))),
+        filaEsperaFase2: [],
+        filaFase2: [],
+        cardAtual: null,
+        versoRevelado: false,
+        julgouCertoErradoAtual: false,
+        acertouCertoErradoAtual: false,
+        opcoesAtivasMultipla: [],
+        acertouMultiplaAtual: false,
+        errosPorCard: {},
+        ultimaAvaliacaoPorCard: {},
+        loopsProvocados: 0,
+        respostasComputadas: 0,
+        inicioTimestamp: Date.now(),
+        segundosDecorridos: 0
+      };
+
+      document.getElementById('fcPainelSelecao').classList.add('hidden');
+      document.getElementById('fcPainelDiagnosticoFinal').classList.add('hidden');
+      document.getElementById('fcSessaoPlayer').classList.remove('hidden');
+      document.getElementById('fcTituloTopicoSessao').textContent = FC_SESSAO.tituloSessao;
+
+      ativarModoTelaCheiaFC_();
+      iniciarCronometroSessaoFC_();
+      carregarProximoCardSessaoFC_();
+    }
+
+    function atualizarBarraProgressoETempoPreditivoFC_() {
+      if (!FC_SESSAO) return;
+      const N = Math.max(1, FC_SESSAO.totalCardsUnicos);
+      const totalEtapasMeta = N * 2; // Fase 1 (N) + Fase 2 (N)
+
+      let concluidos = 0;
+      let passadasRestantes = 0;
+
+      if (FC_SESSAO.fase === 1) {
+        concluidos = FC_SESSAO.filaEsperaFase2.length;
+        passadasRestantes = FC_SESSAO.filaFase1.length + N;
+      } else {
+        const concluidosFase2 = Math.max(0, N - FC_SESSAO.filaFase2.length);
+        concluidos = N + concluidosFase2;
+        passadasRestantes = FC_SESSAO.filaFase2.length;
+      }
+
+      const perc = Math.min(100, Math.round((concluidos / totalEtapasMeta) * 100));
+      const barra = document.getElementById('fcBarraProgressoDinamica');
+      const txtPerc = document.getElementById('fcPercentualBarra');
+      const txtBarra = document.getElementById('fcTextoProgressoBarra');
+      if (barra) barra.style.width = `${perc}%`;
+      if (txtPerc) txtPerc.textContent = `${perc}%`;
+      if (txtBarra) {
+        txtBarra.textContent = `Progresso da Sessão (${concluidos}/${totalEtapasMeta} validações até concluir Fase 2)`;
+      }
+
+      // Cálculo Preditivo Dinâmico (Combina velocidade histórica do tópico com a velocidade da sessão atual)
+      const velSessao = FC_SESSAO.respostasComputadas >= 2
+        ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas)
+        : FC_SESSAO.velocidadeHistoricaSeg;
+      const velCombinada = (FC_SESSAO.velocidadeHistoricaSeg * 0.4) + (velSessao * 0.6);
+      const segsRestantes = Math.max(0, Math.round(passadasRestantes * velCombinada));
+      const minRestantes = Math.max(1, Math.ceil(segsRestantes / 60));
+
+      const elTempoEst = document.getElementById('fcTempoRestanteEstimado');
+      if (elTempoEst) {
+        elTempoEst.textContent = segsRestantes <= 25
+          ? 'Tempo restante estimado: < 1 min'
+          : `Tempo restante estimado: ~${minRestantes} min`;
+      }
+    }
+
+    function iniciarCronometroSessaoFC_() {
+      if (FC_TIMER_INTERVAL) clearInterval(FC_TIMER_INTERVAL);
+      FC_TIMER_INTERVAL = setInterval(() => {
+        if (!FC_SESSAO) return;
+        FC_SESSAO.segundosDecorridos = Math.max(1, Math.floor((Date.now() - FC_SESSAO.inicioTimestamp) / 1000));
+        const min = String(Math.floor(FC_SESSAO.segundosDecorridos / 60)).padStart(2, '0');
+        const seg = String(FC_SESSAO.segundosDecorridos % 60).padStart(2, '0');
+        document.getElementById('fcTimerSessao').textContent = `${min}:${seg}`;
+        const media = FC_SESSAO.respostasComputadas > 0
+          ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas).toFixed(1)
+          : FC_SESSAO.velocidadeHistoricaSeg.toFixed(1);
+        document.getElementById('fcTempoMedioCard').textContent = `${media}s`;
+        atualizarBarraProgressoETempoPreditivoFC_();
+      }, 500);
+    }
+
+    function carregarProximoCardSessaoFC_() {
+      if (!FC_SESSAO) return;
+
+      if (FC_SESSAO.fase === 1 && FC_SESSAO.filaFase1.length === 0) {
+        FC_SESSAO.fase = 2;
+        FC_SESSAO.filaFase2 = FC_SESSAO.filaEsperaFase2.slice();
+        notificar('Fase 1 dominada! Iniciando Fase 2: Varredura Sequencial de Confirmação.');
+      }
+
+      if (FC_SESSAO.fase === 2 && FC_SESSAO.filaFase2.length === 0) {
+        finalizarSessaoEPersistirSupabase_();
+        return;
+      }
+
+      const filaAtiva = FC_SESSAO.fase === 1 ? FC_SESSAO.filaFase1 : FC_SESSAO.filaFase2;
+      FC_SESSAO.cardAtual = filaAtiva[0];
+      FC_SESSAO.versoRevelado = false;
+      FC_SESSAO.julgouCertoErradoAtual = false;
+      FC_SESSAO.acertouCertoErradoAtual = false;
+      FC_SESSAO.acertouMultiplaAtual = false;
+
+      atualizarHeaderProgressoPlayerFC_();
+      atualizarBarraProgressoETempoPreditivoFC_();
+      renderizarCardAtualNoPlayerFC_();
+    }
+
+    function atualizarHeaderProgressoPlayerFC_() {
+      const badgeFase = document.getElementById('fcBadgeFaseAtual');
+      const sub = document.getElementById('fcSubtituloProgresso');
+      if (FC_SESSAO.fase === 1) {
+        badgeFase.textContent = 'FASE 1: Domínio Circular (+3)';
+        badgeFase.className = 'px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-extrabold uppercase tracking-wide';
+        sub.textContent = `Fila Fase 1: ${FC_SESSAO.filaFase1.length} restante(s) | Dominados p/ Fase 2: ${FC_SESSAO.filaEsperaFase2.length} | Loops (+3): ${FC_SESSAO.loopsProvocados}`;
+      } else {
+        badgeFase.textContent = 'FASE 2: Varredura de Confirmação Final';
+        badgeFase.className = 'px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-extrabold uppercase tracking-wide';
+        sub.textContent = `Varredura Final: restam ${FC_SESSAO.filaFase2.length} de ${FC_SESSAO.filaEsperaFase2.length} cartões | Loops (+3): ${FC_SESSAO.loopsProvocados}`;
+      }
+    }
+
+    function formatarTextoCloze_(texto, revelar) {
+      const safe = esc(texto);
+      return safe.replace(/\{\{c\d+::(.*?)\}\}/gi, (_, termo) => {
+        if (!revelar) {
+          return `<span class="fc-cloze-blank">[ ... ]</span>`;
+        }
+        return `<span class="fc-cloze-revealed">${termo}</span>`;
+      });
+    }
+
+    function renderizarCardAtualNoPlayerFC_() {
+      const c = FC_SESSAO.cardAtual;
+      if (!c) return;
+
+      const badgeTipo = document.getElementById('fcCardBadgeTipo');
+      badgeTipo.textContent = obterLabelFuncionalTipoFC_(c.tipo);
+      badgeTipo.className = c.tipo === 'CLOZE'
+        ? 'px-2.5 py-1 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-800 font-extrabold text-[11px]'
+        : c.tipo === 'MULTIPLA'
+          ? 'px-2.5 py-1 rounded-md bg-rose-950 text-rose-300 border border-rose-800 font-extrabold text-[11px]'
+          : 'px-2.5 py-1 rounded-md bg-emerald-950 text-emerald-300 border border-emerald-800 font-extrabold text-[11px]';
+
+      document.getElementById('fcCardBadgeNovo').classList.toggle('hidden', !c.isNovo);
+
+      const errosCard = FC_SESSAO.errosPorCard[c.id] || 0;
+      const badgeReinc = document.getElementById('fcCardBadgeReincidencia');
+      badgeReinc.classList.toggle('hidden', errosCard === 0);
+      if (errosCard > 0) badgeReinc.textContent = `Reincidência: ${errosCard} erro(s) nesta sessão`;
+
+      document.getElementById('fcCardTags').textContent = c.tags ? `Tags: ${c.tags}` : '';
+      document.getElementById('fcBoxFeedbackAlternativa').classList.add('hidden');
+      document.getElementById('fcCardVersoContainer').classList.add('hidden');
+
+      const elFrente = document.getElementById('fcCardFrente');
+      const contMultipla = document.getElementById('fcContainerOpcoesMultipla');
+      const barraVirarCloze = document.getElementById('fcBarraVirarCard');
+      const barraCertoErrado = document.getElementById('fcBarraCertoErradoPdfBase');
+      const barraAval = document.getElementById('fcBarraAvaliacaoCard');
+
+      barraVirarCloze.classList.add('hidden');
+      barraCertoErrado.classList.add('hidden');
+      barraAval.classList.add('hidden');
+
+      if (c.tipo === 'CLOZE') {
+        // 1. LEI SECA (Exclusão Estrita Cloze Deletion)
+        elFrente.innerHTML = formatarTextoCloze_(c.frente, false);
+        contMultipla.classList.add('hidden');
+        barraVirarCloze.classList.remove('hidden');
+      } else if (c.tipo === 'MULTIPLA') {
+        // 3. CADERNO DE ERROS (Múltipla Escolha Agrupada + Fisher-Yates)
+        elFrente.textContent = c.frente;
+        contMultipla.classList.remove('hidden');
+        FC_SESSAO.opcoesAtivasMultipla = embaralharFisherYates_(
+          (c.opcoes || []).map((op, idxOrig) => ({ ...op, _idOrig: idxOrig, descartada: false }))
+        );
+        renderizarOpcoesMultiplaAtivasFC_();
+      } else {
+        // 2. PDF BASE (Certo ou Errado Operacional com 2 botões ativos)
+        elFrente.textContent = c.frente;
+        contMultipla.classList.add('hidden');
+        barraCertoErrado.classList.remove('hidden');
+      }
+    }
+
+    // Julgamento operacional imediato para cartões do Tipo 2: PDF Base ([ Certo ] vs [ Errado ])
+    function julgarCardPdfBaseFC(escolhaUsuario) {
+      if (!FC_SESSAO || !FC_SESSAO.cardAtual || FC_SESSAO.julgouCertoErradoAtual) return;
+      const c = FC_SESSAO.cardAtual;
+      FC_SESSAO.julgouCertoErradoAtual = true;
+      FC_SESSAO.versoRevelado = true;
+
+      const gabaritoReal = c.gabaritoCE || 'CERTO';
+      const acertou = escolhaUsuario === gabaritoReal;
+      FC_SESSAO.acertouCertoErradoAtual = acertou;
+
+      if (!acertou) {
+        FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
+      }
+
+      const boxFeedback = document.getElementById('fcBoxFeedbackAlternativa');
+      boxFeedback.classList.remove('hidden');
+
+      if (acertou) {
+        boxFeedback.className = 'rounded-xl p-4 border bg-emerald-950/60 border-emerald-700 text-emerald-200 text-xs space-y-1';
+        boxFeedback.innerHTML = `
+          <div class="font-extrabold text-emerald-300 uppercase">✅ Julgamento Correto! Você marcou [${escolhaUsuario}] — Gabarito Oficial: ${gabaritoReal}</div>
+          <div>Confira a fundamentação doutrinária/jurisprudencial abaixo e avance nos botões do player.</div>
+        `;
+      } else {
+        boxFeedback.className = 'rounded-xl p-4 border bg-rose-950/60 border-rose-700 text-rose-200 text-xs space-y-1';
+        boxFeedback.innerHTML = `
+          <div class="font-extrabold text-rose-300 uppercase">❌ Erro de Julgamento! Você marcou [${escolhaUsuario}], mas o gabarito é [${gabaritoReal}]</div>
+          <div>Atenção à pegadinha assertiva na fundamentação abaixo. Recomendado avaliar como "1. Errei (+3 pos)".</div>
+        `;
+      }
+
+      document.getElementById('fcCardVersoTexto').textContent = c.verso;
+      document.getElementById('fcCardVersoContainer').classList.remove('hidden');
+      document.getElementById('fcBarraCertoErradoPdfBase').classList.add('hidden');
+      document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
+    }
+
+    function renderizarOpcoesMultiplaAtivasFC_() {
+      const cont = document.getElementById('fcContainerOpcoesMultipla');
+      const letras = ['A', 'B', 'C', 'D', 'E'];
+      const disponiveis = FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada);
+
+      cont.innerHTML = disponiveis.map((op, idx) => {
+        const letra = letras[idx] || String(idx + 1);
+        return `
+          <button type="button"
+                  onclick="selecionarAlternativaMultiplaFC(${op._idOrig})"
+                  class="w-full text-left p-3.5 rounded-xl border border-slate-800 bg-slate-950 hover:bg-indigo-950/50 hover:border-indigo-700 transition flex items-start gap-3">
+            <span class="w-6 h-6 rounded-lg bg-slate-900 border border-slate-700 text-slate-200 font-extrabold text-xs flex items-center justify-center shrink-0">
+              ${letra}
+            </span>
+            <span class="text-xs md:text-sm font-semibold text-slate-200 leading-relaxed">${esc(op.texto)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selecionarAlternativaMultiplaFC(idOrig) {
+      if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      const c = FC_SESSAO.cardAtual;
+      const opClicada = FC_SESSAO.opcoesAtivasMultipla.find(o => o._idOrig === idOrig);
+      if (!opClicada) return;
+
+      const boxFeedback = document.getElementById('fcBoxFeedbackAlternativa');
+      boxFeedback.classList.remove('hidden');
+
+      if (opClicada.correta) {
+        FC_SESSAO.acertouMultiplaAtual = true;
+        FC_SESSAO.versoRevelado = true;
+        boxFeedback.className = 'rounded-xl p-4 border bg-emerald-950/60 border-emerald-700 text-emerald-200 text-xs space-y-1.5';
+        boxFeedback.innerHTML = `
+          <div class="font-extrabold text-emerald-300 uppercase">✅ Alternativa Correta! Estudo Reverso Concluído:</div>
+          <div><strong>Diagnóstico do Acerto:</strong> ${esc(opClicada.diagnostico || 'Afirmação integralmente correta.')}</div>
+          <div><strong>Artigo / Jurisprudência:</strong> <span class="font-semibold">${esc(opClicada.artigo || c.verso)}</span></div>
+          <div><strong>Bizu / Mnemônico:</strong> <span class="font-semibold text-indigo-300">${esc(opClicada.bizu || '—')}</span></div>
+        `;
+        document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
+      } else {
+        FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
+        opClicada.descartada = true;
+
+        boxFeedback.className = 'rounded-xl p-4 border bg-rose-950/60 border-rose-700 text-rose-200 text-xs space-y-1.5';
+        boxFeedback.innerHTML = `
+          <div class="font-extrabold text-rose-300 uppercase">❌ Distrator Incorreto — Estudo Reverso Imediato (Alternativas restantes reembaralhadas!):</div>
+          <div><strong>Diagnóstico do Erro:</strong> ${esc(opClicada.diagnostico || 'Distrator incorreto.')}</div>
+          <div><strong>Artigo / Jurisprudência:</strong> <span class="font-semibold">${esc(opClicada.artigo || c.verso)}</span></div>
+          <div><strong>Bizu / Alerta de Pegadinha:</strong> <span class="font-semibold text-amber-300">${esc(opClicada.bizu || 'Atenção à literalidade!')}</span></div>
+        `;
+
+        const restantes = embaralharFisherYates_(FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada));
+        const descartadas = FC_SESSAO.opcoesAtivasMultipla.filter(o => o.descartada);
+        FC_SESSAO.opcoesAtivasMultipla = restantes.concat(descartadas);
+        renderizarOpcoesMultiplaAtivasFC_();
+      }
+    }
+
+    function revelarVersoCardAtualFC() {
+      if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      const c = FC_SESSAO.cardAtual;
+      FC_SESSAO.versoRevelado = true;
+
+      if (c.tipo === 'CLOZE') {
+        document.getElementById('fcCardFrente').innerHTML = formatarTextoCloze_(c.frente, true);
+      }
+
+      document.getElementById('fcCardVersoTexto').textContent = c.verso;
+      document.getElementById('fcCardVersoContainer').classList.remove('hidden');
+      document.getElementById('fcBarraVirarCard').classList.add('hidden');
+      document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
+    }
+
+    function avaliarCardSessaoFC(avaliacao) {
+      if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      const c = FC_SESSAO.cardAtual;
+      FC_SESSAO.respostasComputadas += 1;
+      FC_SESSAO.ultimaAvaliacaoPorCard[c.id] = avaliacao;
+
+      const acertou = avaliacao === 'BOM' || avaliacao === 'FACIL';
+
+      if (FC_SESSAO.fase === 1) {
+        const itemAtual = FC_SESSAO.filaFase1.shift();
+        if (acertou) {
+          FC_SESSAO.filaEsperaFase2.push(itemAtual);
+        } else {
+          FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
+          FC_SESSAO.loopsProvocados += 1;
+          const posInsercao = Math.min(3, FC_SESSAO.filaFase1.length);
+          FC_SESSAO.filaFase1.splice(posInsercao, 0, itemAtual);
+        }
+      } else {
+        const itemAtual = FC_SESSAO.filaFase2.shift();
+        if (!acertou) {
+          FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
+          FC_SESSAO.loopsProvocados += 1;
+          const posInsercao = Math.min(3, FC_SESSAO.filaFase2.length);
+          FC_SESSAO.filaFase2.splice(posInsercao, 0, itemAtual);
+        }
+      }
+
+      carregarProximoCardSessaoFC_();
+    }
+
+    // Atalhos de Teclado Operacionais ([Espaço], [C]/[E] p/ PDF Base, [1]-[4] e [F] p/ Tela Cheia)
+    window.addEventListener('keydown', (ev) => {
+      const abaFC = document.getElementById('aba-flashcards');
+      const playerFC = document.getElementById('fcSessaoPlayer');
+      if (!abaFC || abaFC.classList.contains('hidden') || !playerFC || playerFC.classList.contains('hidden')) return;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+
+      const keyUpper = (ev.key || '').toUpperCase();
+
+      if (keyUpper === 'F') {
+        ev.preventDefault();
+        alternarModoTelaCheiaFC();
+        return;
+      }
+
+      if (ev.code === 'Space') {
+        ev.preventDefault();
+        if (!FC_SESSAO.versoRevelado && FC_SESSAO.cardAtual?.tipo === 'CLOZE') {
+          revelarVersoCardAtualFC();
+        }
+      } else if ((keyUpper === 'C' || keyUpper === 'E') && !FC_SESSAO.versoRevelado && FC_SESSAO.cardAtual?.tipo === 'PADRAO') {
+        ev.preventDefault();
+        julgarCardPdfBaseFC(keyUpper === 'C' ? 'CERTO' : 'ERRADO');
+      } else if (['1', '2', '3', '4'].includes(ev.key)) {
+        const num = Number(ev.key);
+        if (FC_SESSAO.versoRevelado) {
+          ev.preventDefault();
+          const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'BOM', 4: 'FACIL' };
+          avaliarCardSessaoFC(mapa[num]);
+        } else if (FC_SESSAO.cardAtual?.tipo === 'MULTIPLA') {
+          const disponiveis = FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada);
+          if (disponiveis[num - 1]) {
+            ev.preventDefault();
+            selecionarAlternativaMultiplaFC(disponiveis[num - 1]._idOrig);
+          }
+        }
+      }
+    });
+
+    async function finalizarSessaoEPersistirSupabase_() {
+      if (FC_TIMER_INTERVAL) clearInterval(FC_TIMER_INTERVAL);
+      sairModoTelaCheiaFC_();
+
+      document.getElementById('fcSessaoPlayer').classList.add('hidden');
+      document.getElementById('fcPainelDiagnosticoFinal').classList.remove('hidden');
+
+      const segs = Math.max(1, FC_SESSAO.segundosDecorridos);
+      const min = String(Math.floor(segs / 60)).padStart(2, '0');
+      const sRest = String(segs % 60).padStart(2, '0');
+      const mediaSegNum = FC_SESSAO.respostasComputadas > 0
+        ? (segs / FC_SESSAO.respostasComputadas)
+        : FC_SESSAO.velocidadeHistoricaSeg;
+
+      salvarVelocidadeMediaTopicoSeg_(FC_SESSAO.idTopicoAlvo, mediaSegNum);
+
+      document.getElementById('fcDiagSubtitulo').textContent = FC_SESSAO.tituloSessao;
+      document.getElementById('fcDiagTempoTotal').textContent = `${min}:${sRest}`;
+      document.getElementById('fcDiagTempoMedio').textContent = `${mediaSegNum.toFixed(1)}s`;
+      document.getElementById('fcDiagTotalCards').textContent = FC_SESSAO.filaEsperaFase2.length;
+      document.getElementById('fcDiagTotalLoops').textContent = FC_SESSAO.loopsProvocados;
+
+      const criticos = FC_SESSAO.filaEsperaFase2
+        .map(c => ({ card: c, erros: FC_SESSAO.errosPorCard[c.id] || 0 }))
+        .filter(x => x.erros > 0)
+        .sort((a, b) => b.erros - a.erros);
+
+      const contCrit = document.getElementById('fcDiagListaCriticos');
+      if (criticos.length === 0) {
+        contCrit.innerHTML = `<div class="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-bold">Perfeito! Nenhum cartão sofreu reincidência de erro nesta bateria.</div>`;
+      } else {
+        contCrit.innerHTML = criticos.map(item => `
+          <div class="p-3 rounded-xl bg-rose-950/50 border border-rose-800 flex items-center justify-between gap-3">
+            <div class="text-slate-200 font-semibold">${esc(item.card.frente)}</div>
+            <span class="px-2.5 py-1 rounded-lg bg-rose-600 text-white font-extrabold text-[11px] shrink-0">${item.erros} erro(s)</span>
+          </div>
+        `).join('');
+      }
+
+      const btnTEC = document.getElementById('fcBtnIrParaQuestoesTEC');
+      btnTEC.onclick = () => {
+        atalhoRegistrarEstudo(FC_SESSAO.idMateriaAlvo, FC_SESSAO.idTopicoAlvo, FC_SESSAO.questoesSugeridasTEC);
+      };
+
+      try {
+        const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+        for (const c of FC_SESSAO.filaEsperaFase2) {
+          const errosSessao = FC_SESSAO.errosPorCard[c.id] || 0;
+          const avalFinal = FC_SESSAO.ultimaAvaliacaoPorCard[c.id] || 'BOM';
+          const novaEtapa = errosSessao === 0 ? c.etapa + 1 : 1;
+          const novoFator = errosSessao === 0
+            ? Number(Math.min(3.0, c.fatorFacilidade + 0.1).toFixed(2))
+            : Number(Math.max(1.3, c.fatorFacilidade - 0.2).toFixed(2));
+
+          await supabaseClient.from('flashcards').update({
+            etapa: novaEtapa,
+            fator_facilidade: novoFator,
+            ultima_avaliacao: `${avalFinal} (${hojeYMD}) | ~${mediaSegNum.toFixed(1)}s`,
+            is_novo: false,
+            total_erros: (c.totalErros || 0) + errosSessao,
+            total_revisoes: (c.totalRevisoes || 0) + 1
+          }).eq('id', c.id);
+        }
+        await carregarFlashcardsSupabase();
+      } catch (err) {
+        console.warn('Erro ao persistir estatísticas do deck:', err.message);
+      }
+    }
+
+    function encerrarSessaoFCManual() {
+      if (FC_TIMER_INTERVAL) clearInterval(FC_TIMER_INTERVAL);
+      sairModoTelaCheiaFC_();
+      voltarParaDeckFC();
+    }
+
+    function voltarParaDeckFC() {
+      sairModoTelaCheiaFC_();
+      document.getElementById('fcSessaoPlayer').classList.add('hidden');
+      document.getElementById('fcPainelDiagnosticoFinal').classList.add('hidden');
+      document.getElementById('fcPainelSelecao').classList.remove('hidden');
+    }
+
+    /* ==========================================================================
+     * IMPORTADOR EM LOTE VIA CSV (SEPARADOR ';') + CRIADOR INDIVIDUAL (3 TIPOS)
+     * ========================================================================== */
+    function abrirModalImportarCSV() {
+      document.getElementById('modalImportarCSVFlashcards').classList.remove('hidden');
+    }
+    function fecharModalImportarCSV() {
+      document.getElementById('modalImportarCSVFlashcards').classList.add('hidden');
+    }
+
+    function inserirExemploCSVFlashcards() {
+      const matPadrao = ESTADO?.materias?.[0]?.nome || 'Direito Constitucional';
+      const topPadrao = ESTADO?.topicos?.[0]?.topico || 'Direitos e Garantias Fundamentais';
+      const opcoesExemplo = JSON.stringify([
+        {
+          texto: "A casa é asilo inviolável, podendo nela ingressar por determinação judicial a qualquer hora do dia ou da noite.",
+          correta: false,
+          diagnostico: "Mandado judicial só pode ser cumprido durante o DIA.",
+          artigo: "Art. 5º, XI, da CF/88",
+          bizu: "Ordem judicial = SÓ DE DIA. Flagrante/Desastre/Socorro = DIA ou NOITE."
+        },
+        {
+          texto: "A casa é asilo inviolável, salvo em caso de flagrante delito ou desastre, ou para prestar socorro, ou, durante o dia, por determinação judicial.",
+          correta: true,
+          diagnostico: "Reproduz com exatidão as 4 hipóteses constitucionais de exceção à inviolabilidade domiciliar.",
+          artigo: "Art. 5º, XI, da CF/88",
+          bizu: "FDS de Dia e Noite (Flagrante, Desastre, Socorro) + Juiz só de Dia."
+        }
+      ]);
+
+      const linhas = [
+        `id_materia;id_topico;tipo;frente;verso;tags;opcoes`,
+        `${matPadrao};${topPadrao};CLOZE;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum, praticado {{c2::antes}} da naturalização, ou de comprovado envolvimento em {{c3::tráfico ilícito de entorpecentes}}.;Art. 5º, LI, da CF/88.;Lei Seca,CF88;[]`,
+        `${matPadrao};${topPadrao};PADRAO;É livre a manifestação do pensamento, sendo permitido o anonimato em denúncias eleitorais.;ERRADO. A Constituição veda expressamente o anonimato (Art. 5º, IV, CF/88).;PDF Base,CF88;[]`,
+        `${matPadrao};${topPadrao};MULTIPLA;Assinale a alternativa correta acerca da inviolabilidade domiciliar (Revisão Agrupada TEC):;Art. 5º, XI, CF/88;Caderno de Erros,Domicílio;${opcoesExemplo}`
+      ];
+      document.getElementById('fcInputCSVBruto').value = linhas.join('\n');
+    }
+
+    function resolverIdMateriaETopicoCSV_(rawMat, rawTop) {
+      if (!ESTADO) return { idMateria: rawMat, idTopico: rawTop };
+      const matEncontrada = ESTADO.materias.find(
+        m => m.id.toLowerCase() === rawMat.toLowerCase() || m.nome.toLowerCase() === rawMat.toLowerCase()
+      );
+      const idMat = matEncontrada ? matEncontrada.id : (ESTADO.materias[0]?.id || rawMat);
+
+      const topEncontrado = ESTADO.topicos.find(
+        t => t.id.toLowerCase() === rawTop.toLowerCase() ||
+             (t.idMateria === idMat && t.topico.toLowerCase() === rawTop.toLowerCase()) ||
+             t.topico.toLowerCase() === rawTop.toLowerCase()
+      );
+      const idTop = topEncontrado ? topEncontrado.id : (ESTADO.topicos.find(t => t.idMateria === idMat)?.id || rawTop);
+      return { idMateria: idMat, idTopico: idTop };
+    }
+
+    async function processarImportacaoCSVFlashcards(e) {
+      e.preventDefault();
+      const bruto = document.getElementById('fcInputCSVBruto').value.trim();
+      if (!bruto) return;
+
+      const btn = document.getElementById('btnExecutarImportCSV');
+      btn.disabled = true;
+      btn.textContent = 'Importando...';
+
+      try {
+        const linhas = bruto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const novosRegistros = [];
+
+        linhas.forEach((linha, index) => {
+          if (index === 0 && linha.toLowerCase().startsWith('id_materia;')) return;
+          const partes = linha.split(';');
+          if (partes.length < 5) return;
+
+          const rawMat = partes[0].trim();
+          const rawTop = partes[1].trim();
+          let tipo = (partes[2] || 'PADRAO').trim().toUpperCase();
+          if (tipo === 'LEI_SECA') tipo = 'CLOZE';
+          if (tipo === 'PDF_BASE') tipo = 'PADRAO';
+          if (tipo === 'CADERNO_ERROS') tipo = 'MULTIPLA';
+
+          const frente = (partes[3] || '').trim();
+          const verso = (partes[4] || '').trim();
+          const tags = (partes[5] || '').trim();
+          const rawOpcoes = partes.slice(6).join(';').trim();
+
+          let opcoesParsed = [];
+          if (rawOpcoes) {
+            try { opcoesParsed = JSON.parse(rawOpcoes); } catch (err) { opcoesParsed = []; }
+          }
+
+          const { idMateria, idTopico } = resolverIdMateriaETopicoCSV_(rawMat, rawTop);
+
+          novosRegistros.push({
+            id: gerarId_('FC'),
+            id_materia: idMateria,
+            id_topico: idTopico,
+            tipo,
+            frente,
+            verso,
+            tags,
+            opcoes: opcoesParsed,
+            etapa: 1,
+            intervalo_dias: 1,
+            fator_facilidade: 2.50,
+            is_novo: true,
+            status: 'Ativo'
+          });
+        });
+
+        if (novosRegistros.length === 0) {
+          throw new Error('Nenhuma linha válida encontrada. Verifique o separador ";"');
+        }
+
+        const { error } = await supabaseClient.from('flashcards').insert(novosRegistros);
+        if (error) throw error;
+
+        fecharModalImportarCSV();
+        document.getElementById('fcInputCSVBruto').value = '';
+        await carregarFlashcardsSupabase();
+        notificar(`${novosRegistros.length} flashcard(s) importado(s) com sucesso!`);
+      } catch (err) {
+        notificar('Erro na importação CSV: ' + (err.message || err), true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Importar e Gravar no Supabase';
+      }
+    }
+
+    function abrirModalNovoFlashcard() {
+      inicializarFiltrosFlashcardsUI();
+      alternarCamposModalidadeNovoFC();
+      document.getElementById('modalNovoFlashcard').classList.remove('hidden');
+    }
+
+    function fecharModalNovoFlashcard() {
+      document.getElementById('modalNovoFlashcard').classList.add('hidden');
+    }
+
+    function alternarCamposModalidadeNovoFC() {
+      const tipo = document.getElementById('fcNovoTipo').value;
+      const boxOpcoes = document.getElementById('fcBoxOpcoesNovoModal');
+      const boxGabaritoCE = document.getElementById('fcBoxGabaritoCertoErradoModal');
+      const lblFrente = document.getElementById('lblFcNovoFrente');
+
+      boxOpcoes.classList.toggle('hidden', tipo !== 'MULTIPLA');
+      boxGabaritoCE.classList.toggle('hidden', tipo !== 'PADRAO');
+
+      if (lblFrente) {
+        if (tipo === 'CLOZE') {
+          lblFrente.textContent = '1. Lei Seca — Texto Legal com Exclusão Estrita (Use {{c1::termo}}) *';
+        } else if (tipo === 'PADRAO') {
+          lblFrente.textContent = '2. PDF Base — Proposição Assertiva para Julgamento [Certo] ou [Errado] *';
+        } else {
+          lblFrente.textContent = '3. Caderno de Erros — Comando da Questão Agrupada *';
+        }
+      }
+    }
+
+    function preencherTemplateJSONMultipla() {
+      document.getElementById('fcNovoOpcoesJSON').value = JSON.stringify([
+        {
+          texto: "Alternativa Correta consolidada aqui",
+          correta: true,
+          diagnostico: "Explicação direta do acerto jurídico",
+          artigo: "Art. X da Lei Y / Súmula Z",
+          bizu: "Mnemônico rápido de fixação"
+        },
+        {
+          texto: "Distrator 1 (Pegadinha real errada na bateria do TEC)",
+          correta: false,
+          diagnostico: "Diagnóstico exato do erro",
+          artigo: "Art. X, §1º, da Lei Y",
+          bizu: "Atenção à inversão de prazo/competência"
+        },
+        {
+          texto: "Distrator 2 (Pegadinha real errada na bateria do TEC)",
+          correta: false,
+          diagnostico: "Diagnóstico exato do erro",
+          artigo: "Art. W da Lei Y",
+          bizu: "Cuidado com 'salvo' vs 'inclusive'"
+        },
+        {
+          texto: "Distrator 3 (Pegadinha real errada na bateria do TEC)",
+          correta: false,
+          diagnostico: "Diagnóstico exato do erro",
+          artigo: "Jurisprudência STF/STJ",
+          bizu: "Regra geral vs exceção"
+        }
+      ], null, 2);
+    }
+
+    async function salvarNovoFlashcardIndividual(e) {
+      e.preventDefault();
+      const id_materia = document.getElementById('fcNovoMateria').value;
+      const id_topico = document.getElementById('fcNovoTopico').value;
+      const tipo = document.getElementById('fcNovoTipo').value;
+      const frente = document.getElementById('fcNovoFrente').value.trim();
+      let verso = document.getElementById('fcNovoVerso').value.trim();
+      const tags = document.getElementById('fcNovoTags').value.trim();
+      const rawJson = document.getElementById('fcNovoOpcoesJSON').value.trim();
+
+      if (tipo === 'CLOZE' && !/\{\{c\d+::/i.test(frente)) {
+        notificar('Em cartões de Lei Seca (Cloze), envolva ao menos um termo com {{c1::termo}}.', true);
+        return;
+      }
+
+      if (tipo === 'PADRAO') {
+        const gabCE = document.getElementById('fcNovoGabaritoCE').value;
+        if (!/^(CERTO|ERRADO)\b/i.test(verso)) {
+          verso = `${gabCE}. ${verso}`;
+        }
+      }
+
+      let opcoes = [];
+      if (tipo === 'MULTIPLA') {
+        try {
+          opcoes = JSON.parse(rawJson);
+          if (!Array.isArray(opcoes) || opcoes.length < 2) throw new Error();
+        } catch (err) {
+          notificar('Informe um array JSON válido com pelo menos 2 alternativas para o Caderno de Erros.', true);
+          return;
+        }
+      }
+
+      try {
+        const registro = {
+          id: gerarId_('FC'),
+          id_materia,
+          id_topico,
+          tipo,
+          frente,
+          verso,
+          tags,
+          opcoes,
+          etapa: 1,
+          intervalo_dias: 1,
+          fator_facilidade: 2.50,
+          is_novo: true,
+          status: 'Ativo'
+        };
+        const { error } = await supabaseClient.from('flashcards').insert(registro);
+        if (error) throw error;
+
+        fecharModalNovoFlashcard();
+        await carregarFlashcardsSupabase();
+        notificar('Flashcard cadastrado com sucesso!');
+      } catch (err) {
+        notificar('Erro ao salvar cartão: ' + err.message, true);
+      }
+    }
+
+    async function excluirFlashcardIndividual(idCard) {
+      if (!confirm('Deseja realmente excluir este flashcard?')) return;
+      await supabaseClient.from('flashcards').delete().eq('id', idCard);
+      await carregarFlashcardsSupabase();
+      notificar('Cartão removido.');
     }
   </script>
 </body>
