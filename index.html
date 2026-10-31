@@ -418,9 +418,13 @@
         Revisões <span id="badgeMenuRevisoes" class="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold text-[10px] hidden">0</span>
       </button>
       <button onclick="irParaAba('estatisticas')" id="nav-estatisticas" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Estatísticas e Gráficos</button>
-      <button onclick="irParaAba('flashcards')" id="nav-flashcards" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive flex items-center gap-1.5">
+     <button onclick="irParaAba('flashcards')" id="nav-flashcards" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive flex items-center gap-1.5">
         <span> Flashcards</span>
         <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold uppercase">3 Modos</span>
+      </button>
+      <button onclick="irParaAba('cronograma')" id="nav-cronograma" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive flex items-center gap-1.5">
+        <span> Cronograma 50 Semanas</span>
+        <span id="badgeMenuCronograma" class="px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[9px] font-bold">S04</span>
       </button>
       <button onclick="irParaAba('config')" id="nav-config" class="px-3 py-1.5 rounded-lg whitespace-nowrap transition tab-btn-inactive">Configurações</button>
     </nav>
@@ -1604,6 +1608,236 @@
       </div>
     </section>
 
+    <!-- ============================================================================
+         ABA NOVA: CRONOGRAMA DINÂMICO DE ESTUDO TEÓRICO (50 SEMANAS - DELTA & MP)
+         ============================================================================ -->
+    <section id="aba-cronograma" class="hidden space-y-5">
+
+      <!-- CABEÇALHO EXECUTIVO E CONTROLE DE CADÊNCIA FLEXÍVEL -->
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 p-5 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-extrabold uppercase tracking-wider">
+                Extensiva Delta &amp; MP — 50 Semanas
+              </span>
+              <span id="cronBadgeCicloBloco" class="px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">
+                Bloco 1 (Semanas 01 a 05)
+              </span>
+            </div>
+            <h2 class="text-lg font-extrabold text-white mt-1">Planejamento Dinâmico de Matérias Novas</h2>
+            <p class="text-xs text-slate-400">
+              Recálculo automático de datas por atraso ou mudança de ritmo • Ao concluir uma meta, o tópico vai direto p/ Revisões e Flashcards
+            </p>
+          </div>
+
+          <!-- CONTROLES DE RITMO (CADÊNCIA) E EXPORTAÇÃO EXCEL -->
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+              <label for="cronInputDiasPorMeta" class="font-bold text-slate-300">Ritmo Atual:</label>
+              <select id="cronInputDiasPorMeta" onchange="alterarCadenciaCronograma(this.value)" class="rounded-lg border px-2.5 py-1 font-extrabold text-indigo-400">
+                <option value="1">1 dia por Meta (Férias Intensivo)</option>
+                <option value="1.5">1,5 dia por Meta (Ritmo Acelerado)</option>
+                <option value="2">2 dias por Meta (Ritmo Padrão)</option>
+                <option value="3" selected>3 dias por Meta (Período Faculdade)</option>
+                <option value="4">4 dias por Meta (Semana de Provas)</option>
+              </select>
+            </div>
+
+            <button type="button" onclick="recalcularDatasCronogramaDinamico(true)" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold shadow transition" title="Reorganiza todas as datas futuras a partir de hoje com base no seu ritmo atual">
+              ↻ Recalcular Prazos a Partir de Hoje
+            </button>
+
+            <button type="button" onclick="exportarCronograma50SemanasExcel()" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold shadow flex items-center gap-1.5 transition">
+              <span>📊 Exportar Cronograma (.xlsx)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PAINEL DE LOCALIZAÇÃO ATUAL E BARRA DE PROGRESSO GLOBAL -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          <div class="lg:col-span-5 p-4 rounded-xl bg-indigo-950/40 border border-indigo-800/80 space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-bold text-indigo-300 uppercase">
+              <span id="cronLabelOndeEstou">📍 Onde Estou Agora</span>
+              <span id="cronLabelDataMetaAtual" class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px]">Em Andamento</span>
+            </div>
+            <div id="cronTextoSemanaEMetaAtual" class="text-sm font-extrabold text-white">
+              Semana 04 • Meta 3
+            </div>
+            <div id="cronTextoTopicoMetaAtual" class="text-xs font-semibold text-indigo-200 line-clamp-1">
+              Direito Administrativo — Serviços Públicos
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="font-bold text-slate-200">
+                Progresso Real do Curso: <strong id="cronTxtMetasConcluidas" class="text-emerald-400">0 / 0 metas</strong>
+              </span>
+              <span id="cronTxtPercentualGlobal" class="px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 font-extrabold">
+                0.0% Concluído
+              </span>
+            </div>
+            <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+              <div id="cronBarraProgressoGlobal" class="h-full bg-gradient-to-r from-indigo-600 to-emerald-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between text-[11px] text-slate-400 font-medium">
+              <span id="cronTxtSemanasConcluidas">Semanas finalizadas: 3 de 50</span>
+              <span id="cronTxtPaginasLidasTotal">Páginas de doutrina vencidas: 0 pág.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5 CARDS DE CONTAGEM REGRESSIVA DINÂMICA -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1">
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-indigo-400 block">1. Para Concluir a Meta Atual</span>
+            <div id="cronRegMetaAtual" class="text-base font-extrabold text-white">Faltam 2 partes</div>
+            <p id="cronRegMetaAtualSub" class="text-[11px] text-slate-400">Previsão: —</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">2. Para Fechar a Semana Atual</span>
+            <div id="cronRegSemanaAtual" class="text-base font-extrabold text-white">Faltam 3 metas</div>
+            <p id="cronRegSemanaAtualSub" class="text-[11px] text-slate-400">Término estimado: —</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-amber-800/60 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-amber-400 block">3. Próxima Semana de Revisão</span>
+            <div id="cronRegProxRevisao" class="text-base font-extrabold text-white">Semana 05</div>
+            <p id="cronRegProxRevisaoSub" class="text-[11px] text-slate-400">Data prevista: —</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-teal-400 block">4. Metade do Curso (Semana 25)</span>
+            <div id="cronRegMetadeCurso" class="text-base font-extrabold text-white">Faltam 0 metas</div>
+            <p id="cronRegMetadeCursoSub" class="text-[11px] text-slate-400">Previsão (50%): —</p>
+          </div>
+
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-indigo-800/70 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-indigo-300 block">5. Conclusão do Curso (50 Sem.)</span>
+            <div id="cronRegFimCurso" class="text-base font-extrabold text-indigo-400">Faltam 0 metas</div>
+            <p id="cronRegFimCursoSub" class="text-[11px] text-slate-400">Formatura Teórica: —</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- RÉGUA DE PREVISÃO EM BLOCOS DE 5 SEMANAS -->
+      <div class="bg-slate-900 rounded-2xl border border-slate-800 p-4 shadow-lg space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-xs font-extrabold uppercase text-white">📊 Horizonte Preditivo por Blocos (De 5 em 5 Semanas)</h3>
+            <p class="text-[11px] text-slate-400">Clique em um bloco para filtrar as semanas correspondentes abaixo</p>
+          </div>
+          <button type="button" onclick="selecionarBlocoCronograma(0)" id="btnCronBlocoTodos" class="px-3 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold">
+            Ver Todos os 10 Blocos
+          </button>
+        </div>
+        <div id="cronGridBlocos5Semanas" class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 text-xs"></div>
+      </div>
+
+      <!-- FILTROS DE NAVEGAÇÃO -->
+      <div class="bg-slate-900 rounded-xl border border-slate-800 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="font-bold text-slate-300">Ir para Semana:</label>
+          <select id="cronSelectSemanaFiltro" onchange="renderizarListaSemanasCronograma()" class="rounded-lg border px-3 py-1.5 font-bold">
+            <option value="ATUAL">📍 Semana em Curso + Próxima</option>
+            <option value="TODAS">Todas as 50 Semanas</option>
+          </select>
+
+          <select id="cronSelectStatusFiltro" onchange="renderizarListaSemanasCronograma()" class="rounded-lg border px-3 py-1.5">
+            <option value="">Todos os Status</option>
+            <option value="PENDENTE">Apenas Pendentes / Em Andamento</option>
+            <option value="CONCLUIDO">Apenas Concluídas</option>
+          </select>
+
+          <input type="text" id="cronInputBuscaTopico" oninput="renderizarListaSemanasCronograma()" placeholder="Buscar matéria, lei ou tópico..." class="rounded-lg border px-3 py-1.5 w-56">
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="abrirModalNovaMetaCronograma()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold">
+            + Adicionar Meta Extra na Semana
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTAINER DAS SEMANAS E METAS -->
+      <div id="cronContainerSemanas" class="space-y-5"></div>
+
+      <!-- MODAL: ALIMENTAR PÁGINAS, LEI SECA E PARTES -->
+      <div id="modalEditarMetaCronograma" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[92vh] flex flex-col">
+          <div class="px-6 py-4 bg-indigo-950 border-b border-indigo-800 text-white flex items-center justify-between">
+            <div>
+              <h3 id="modalCronTitulo" class="text-sm font-bold">Planejar / Alimentar Páginas da Meta</h3>
+              <p class="text-[11px] text-indigo-300">Divida as páginas em partes (Padrão Semana 04) e informe os artigos da Lei Seca</p>
+            </div>
+            <button type="button" onclick="fecharModalEditarMetaCronograma()" class="text-indigo-300 hover:text-white text-xs font-bold">Fechar</button>
+          </div>
+
+          <form onsubmit="salvarEdicaoMetaCronograma(event)" class="p-6 space-y-4 text-xs overflow-y-auto">
+            <input type="hidden" id="editCronId" value="">
+
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Semana (1 a 50)</label>
+                <input type="number" id="editCronSemana" min="1" max="50" required class="w-full rounded-lg border px-3 py-2 font-bold">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Nº da Meta</label>
+                <input type="number" id="editCronNumeroMeta" min="1" max="35" required class="w-full rounded-lg border px-3 py-2 font-bold">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Total de Páginas (PDF)</label>
+                <input type="number" id="editCronPaginas" min="0" value="45" oninput="gerarPreviaDivisaoPartesModal()" class="w-full rounded-lg border px-3 py-2 font-bold">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Dividir em Quantas Partes?</label>
+                <select id="editCronTotalPartes" onchange="gerarPreviaDivisaoPartesModal()" class="w-full rounded-lg border px-3 py-2 font-bold">
+                  <option value="1">1 Parte (Meta Única)</option>
+                  <option value="2">2 Partes (Parte 1 e 2)</option>
+                  <option value="3" selected>3 Partes (Padrão Semana 4)</option>
+                  <option value="4">4 Partes</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Matéria *</label>
+                <input type="text" id="editCronMateria" required placeholder="Ex: Direito Administrativo" class="w-full rounded-lg border px-3 py-2">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Tópico / Assunto *</label>
+                <input type="text" id="editCronTopico" required placeholder="Ex: Serviços Públicos" class="w-full rounded-lg border px-3 py-2">
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Artigos da Lei Seca Correspondente (Opcional)</label>
+              <input type="text" id="editCronLeiSeca" placeholder="Ex: Lei nº 8.987/1995 - Artigos 1º a 40 | Lei nº 10.741/2003 - Art. 93 a 110" class="w-full rounded-lg border px-3 py-2">
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Súmulas / Observações / Tempo de Leitura</label>
+              <input type="text" id="editCronSumulas" placeholder="Ex: Leitura das 7 súmulas na pág. 4 | Tempo estimado: 2h30" class="w-full rounded-lg border px-3 py-2">
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+              <div class="font-extrabold text-indigo-400 uppercase text-[10px]">Divisão Automática de Páginas por Parte (Editável):</div>
+              <div id="boxInputsPartesModal" class="space-y-2"></div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-800 flex justify-end gap-2">
+              <button type="button" onclick="fecharModalEditarMetaCronograma()" class="px-4 py-2 rounded-xl border border-slate-700 font-bold text-slate-300 hover:bg-slate-800">Cancelar</button>
+              <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow">Salvar e Recalcular Cronograma</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </section>
+    
     <!-- ABA 8: CONFIGURACOES -->
     <section id="aba-config" class="hidden space-y-4">
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
@@ -3337,7 +3571,7 @@
     }
 
     function irParaAba(nomeAba) {
-      const abas = ['painel', 'registrar', 'cadastros', 'ciclo', 'revisoes', 'estatisticas', 'flashcards', 'config'];
+     const abas = ['painel', 'registrar', 'cadastros', 'ciclo', 'revisoes', 'estatisticas', 'flashcards', 'cronograma', 'config'];
       abas.forEach(a => {
         const elAba = document.getElementById(`aba-${a}`);
         if (elAba) elAba.classList.toggle('hidden', a !== nomeAba);
@@ -6711,5 +6945,1235 @@
       notificar('Cartão removido.');
     }
   </script>
+
+  <script>
+    /* ==========================================================================
+     * 9. MOTOR DO CRONOGRAMA DINÂMICO DE 50 SEMANAS (EXTENSIVA DELTA & MP)
+     * ========================================================================== */
+    let CRON_METAS = [];
+    let CRON_BLOCO_FILTRO = 0;
+    let CRON_CADENCIA_DIAS = Number(localStorage.getItem('GR_CRON_CADENCIA_DIAS') || 3);
+
+    const _aplicarEstadoOriginalCron = window.aplicarEstado;
+    window.aplicarEstado = function(dados) {
+      if (_aplicarEstadoOriginalCron) _aplicarEstadoOriginalCron(dados);
+      const selCad = document.getElementById('cronInputDiasPorMeta');
+      if (selCad) selCad.value = String(CRON_CADENCIA_DIAS);
+      carregarCronogramaSupabase();
+    };
+
+    async function carregarCronogramaSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const { data, error } = await supabaseClient
+          .from('cronograma_metas')
+          .select('*')
+          .order('ordem_global', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+          if (typeof inicializarSeed50SemanasSupabase === 'function') {
+            await inicializarSeed50SemanasSupabase();
+            return;
+          }
+        }
+
+        CRON_METAS = (data || []).map(normalizarMetaCronograma_);
+        await recalcularDatasCronogramaDinamico(false);
+        popularSelectFiltroSemanasCron_();
+        renderizarDashboardCronograma();
+        renderizarListaSemanasCronograma();
+      } catch (err) {
+        console.warn('Aviso ao carregar cronograma de 50 semanas:', err.message);
+      }
+    }
+
+    function normalizarMetaCronograma_(r) {
+      let partesArr = [];
+      if (Array.isArray(r.detalhes_partes)) {
+        partesArr = r.detalhes_partes;
+      } else if (typeof r.detalhes_partes === 'string' && r.detalhes_partes.trim()) {
+        try { partesArr = JSON.parse(r.detalhes_partes); } catch (e) { partesArr = []; }
+      }
+
+      const totPartes = Math.max(1, Number(r.total_partes || 3));
+      const pagTotal = Math.max(0, Number(r.paginas_total || 0));
+
+      if (partesArr.length !== totPartes) {
+        partesArr = gerarDivisaoPadraoPartes_(pagTotal, totPartes, Number(r.partes_concluidas || 0));
+      }
+
+      const concluidasCount = partesArr.filter(p => p.concluida).length;
+      const statusReal = concluidasCount >= totPartes
+        ? 'Concluído'
+        : (concluidasCount > 0 ? 'Em Andamento' : 'Pendente');
+
+      return {
+        id: String(r.id),
+        numeroSemana: Number(r.numero_semana || 1),
+        tipoSemana: String(r.tipo_semana || (Number(r.numero_semana) % 5 === 0 ? 'REVISAO' : 'CONTEUDO')),
+        numeroMeta: Number(r.numero_meta || 1),
+        materia: String(r.materia || ''),
+        topico: String(r.topico || ''),
+        paginasTotal: pagTotal,
+        totalPartes: totPartes,
+        partesConcluidas: concluidasCount,
+        detalhesPartes: partesArr,
+        leiSeca: String(r.lei_seca || ''),
+        sumulas: String(r.sumulas || ''),
+        status: statusReal,
+        dataPrevista: String(r.data_prevista || ''),
+        dataConclusao: String(r.data_conclusao || ''),
+        integradoRevisao: Boolean(r.integrado_revisao),
+        ordemGlobal: Number(r.ordem_global || 1)
+      };
+    }
+
+    function gerarDivisaoPadraoPartes_(paginasTotal, totalPartes, partesConcluidas) {
+      const arr = [];
+      const porParte = paginasTotal > 0 ? Math.floor(paginasTotal / totalPartes) : 0;
+      let pagIni = 1;
+
+      for (let i = 1; i <= totalPartes; i++) {
+        const pagFim = (i === totalPartes) ? paginasTotal : (pagIni + porParte - 1);
+        const labelPag = paginasTotal > 0
+          ? `Pág. ${pagIni} a ${Math.max(pagIni, pagFim)} (${Math.max(1, pagFim - pagIni + 1)} pág.)`
+          : `Parte ${i}/${totalPartes}`;
+        arr.push({
+          parte: i,
+          descricao: labelPag,
+          concluida: i <= partesConcluidas,
+          dataConclusaoParte: ''
+        });
+        pagIni = pagFim + 1;
+      }
+      return arr;
+    }
+
+    async function alterarCadenciaCronograma(novoValor) {
+      CRON_CADENCIA_DIAS = Math.max(0.5, Number(novoValor || 3));
+      localStorage.setItem('GR_CRON_CADENCIA_DIAS', String(CRON_CADENCIA_DIAS));
+      await recalcularDatasCronogramaDinamico(true);
+      notificar(`Ritmo atualizado para ${CRON_CADENCIA_DIAS} dia(s) por meta. Todo o calendário das 50 semanas foi recalculado!`);
+    }
+
+    async function recalcularDatasCronogramaDinamico(persistirNoBanco = false) {
+      if (!CRON_METAS || CRON_METAS.length === 0) return;
+
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      let cursorDiasAcumulados = 0;
+      const atualizacoesBanco = [];
+
+      CRON_METAS.forEach(m => {
+        if (m.status === 'Concluído') {
+          if (!m.dataPrevista) m.dataPrevista = m.dataConclusao || hojeYMD;
+          return;
+        }
+
+        const fracaoRestante = Math.max(0.25, (m.totalPartes - m.partesConcluidas) / Math.max(1, m.totalPartes));
+        const pesoTipo = m.tipoSemana === 'REVISAO' ? 0.35 : 1.0;
+        const diasParaEstaMeta = CRON_CADENCIA_DIAS * fracaoRestante * pesoTipo;
+
+        const diasInteiros = Math.round(cursorDiasAcumulados);
+        const novaDataPrevista = somarDiasYMD_(hojeYMD, diasInteiros);
+
+        const diasPorParte = CRON_CADENCIA_DIAS / Math.max(1, m.totalPartes);
+        let offsetParte = cursorDiasAcumulados;
+        m.detalhesPartes.forEach(p => {
+          if (!p.concluida) {
+            p.dataPrevistaParte = somarDiasYMD_(hojeYMD, Math.round(offsetParte));
+            offsetParte += diasPorParte * pesoTipo;
+          }
+        });
+
+        cursorDiasAcumulados += diasParaEstaMeta;
+
+        if (m.dataPrevista !== novaDataPrevista) {
+          m.dataPrevista = novaDataPrevista;
+          atualizacoesBanco.push({
+            id: m.id,
+            numero_semana: m.numeroSemana,
+            tipo_semana: m.tipoSemana,
+            numero_meta: m.numeroMeta,
+            materia: m.materia,
+            topico: m.topico,
+            paginas_total: m.paginasTotal,
+            total_partes: m.totalPartes,
+            partes_concluidas: m.partesConcluidas,
+            detalhes_partes: m.detalhesPartes,
+            lei_seca: m.leiSeca,
+            sumulas: m.sumulas,
+            status: m.status,
+            data_prevista: m.dataPrevista,
+            data_conclusao: m.dataConclusao,
+            integrado_revisao: m.integradoRevisao,
+            ordem_global: m.ordemGlobal
+          });
+        }
+      });
+
+      if (persistirNoBanco && atualizacoesBanco.length > 0 && supabaseClient) {
+        try {
+          await supabaseClient.from('cronograma_metas').upsert(atualizacoesBanco, { onConflict: 'id' });
+        } catch (e) {
+          console.warn('Erro ao salvar novas datas:', e.message);
+        }
+      }
+
+      renderizarDashboardCronograma();
+      renderizarListaSemanasCronograma();
+    }
+
+    function renderizarDashboardCronograma() {
+      if (!CRON_METAS || CRON_METAS.length === 0) return;
+
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const totalMetas = CRON_METAS.length;
+      const concluidas = CRON_METAS.filter(m => m.status === 'Concluído');
+      const pendentes = CRON_METAS.filter(m => m.status !== 'Concluído');
+      const metaAtual = pendentes.length > 0 ? pendentes[0] : CRON_METAS[CRON_METAS.length - 1];
+
+      const semanaAtualNum = metaAtual ? metaAtual.numeroSemana : 50;
+      const blocoAtualNum = Math.ceil(semanaAtualNum / 5);
+      const semIniBloco = (blocoAtualNum - 1) * 5 + 1;
+      const semFimBloco = blocoAtualNum * 5;
+
+      const badgeMenu = document.getElementById('badgeMenuCronograma');
+      if (badgeMenu) badgeMenu.textContent = `S${String(semanaAtualNum).padStart(2, '0')}`;
+
+      const badgeBloco = document.getElementById('cronBadgeCicloBloco');
+      if (badgeBloco) {
+        badgeBloco.textContent = `Bloco ${blocoAtualNum} (Semanas ${String(semIniBloco).padStart(2, '0')} a ${String(semFimBloco).padStart(2, '0')})`;
+      }
+
+      document.getElementById('cronTextoSemanaEMetaAtual').textContent =
+        `Semana ${String(semanaAtualNum).padStart(2, '0')} de 50 • Meta ${metaAtual.numeroMeta}`;
+      document.getElementById('cronTextoTopicoMetaAtual').textContent =
+        `${metaAtual.materia} — ${metaAtual.topico}`;
+      document.getElementById('cronLabelDataMetaAtual').textContent =
+        metaAtual.status === 'Concluído' ? 'Curso Concluído!' : `Prevista: ${formatarDataBR(metaAtual.dataPrevista)}`;
+
+      const somaPartesTotal = CRON_METAS.reduce((acc, m) => acc + m.totalPartes, 0);
+      const somaPartesFeitas = CRON_METAS.reduce((acc, m) => acc + m.partesConcluidas, 0);
+      const percGlobal = somaPartesTotal > 0 ? ((somaPartesFeitas / somaPartesTotal) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('cronTxtMetasConcluidas').textContent = `${concluidas.length} / ${totalMetas} metas`;
+      document.getElementById('cronTxtPercentualGlobal').textContent = `${percGlobal}% Concluído`;
+      document.getElementById('cronBarraProgressoGlobal').style.width = `${percGlobal}%`;
+
+      let semanas100Porcento = 0;
+      for (let s = 1; s <= 50; s++) {
+        const mSem = CRON_METAS.filter(x => x.numeroSemana === s);
+        if (mSem.length > 0 && mSem.every(x => x.status === 'Concluído')) semanas100Porcento++;
+      }
+      const paginasLidas = CRON_METAS.reduce((acc, m) => {
+        if (m.paginasTotal <= 0) return acc;
+        return acc + Math.round(m.paginasTotal * (m.partesConcluidas / Math.max(1, m.totalPartes)));
+      }, 0);
+
+      document.getElementById('cronTxtSemanasConcluidas').textContent = `Semanas finalizadas: ${semanas100Porcento} de 50`;
+      document.getElementById('cronTxtPaginasLidasTotal').textContent = `Páginas de doutrina lidas: ${paginasLidas} pág.`;
+
+      const partesRestMeta = Math.max(0, metaAtual.totalPartes - metaAtual.partesConcluidas);
+      const diasMetaAtual = Math.max(1, Math.ceil((partesRestMeta / Math.max(1, metaAtual.totalPartes)) * CRON_CADENCIA_DIAS));
+      document.getElementById('cronRegMetaAtual').textContent =
+        partesRestMeta === 0 ? 'Concluída!' : `Falta(m) ${partesRestMeta} parte(s)`;
+      document.getElementById('cronRegMetaAtualSub').textContent =
+        `~${diasMetaAtual} dia(s) • Conclusão: ${formatarDataBR(somarDiasYMD_(hojeYMD, diasMetaAtual))}`;
+
+      const metasRestSemana = CRON_METAS.filter(m => m.numeroSemana === semanaAtualNum && m.status !== 'Concluído');
+      const ultimaDaSemana = metasRestSemana.length > 0 ? metasRestSemana[metasRestSemana.length - 1] : metaAtual;
+      const diasFimSemana = Math.max(0, diferencaDias_(hojeYMD, ultimaDaSemana.dataPrevista));
+      document.getElementById('cronRegSemanaAtual').textContent =
+        `Falta(m) ${metasRestSemana.length} meta(s)`;
+      document.getElementById('cronRegSemanaAtualSub').textContent =
+        `~${diasFimSemana} dia(s) • Fecha em ${formatarDataBR(ultimaDaSemana.dataPrevista)}`;
+
+      const proxSemRevisao = Math.min(50, Math.ceil(semanaAtualNum / 5) * 5);
+      const metasAteRevisao = pendentes.filter(m => m.numeroSemana < proxSemRevisao);
+      const primeiraMetaRevisao = CRON_METAS.find(m => m.numeroSemana === proxSemRevisao);
+      const dataIniRevisao = primeiraMetaRevisao ? primeiraMetaRevisao.dataPrevista : hojeYMD;
+      const diasAteRevisao = Math.max(0, diferencaDias_(hojeYMD, dataIniRevisao));
+      document.getElementById('cronRegProxRevisao').textContent =
+        semanaAtualNum === proxSemRevisao ? `Na Semana ${proxSemRevisao} agora!` : `Semana ${String(proxSemRevisao).padStart(2, '0')} (${metasAteRevisao.length} metas)`;
+      document.getElementById('cronRegProxRevisaoSub').textContent =
+        `Faltam ~${diasAteRevisao} dias (${formatarDataBR(dataIniRevisao)})`;
+
+      const pendentesAteMetade = pendentes.filter(m => m.numeroSemana <= 25);
+      const ultimaMetaSem25 = CRON_METAS.filter(m => m.numeroSemana <= 25).slice(-1)[0];
+      const dataMetade = ultimaMetaSem25 ? ultimaMetaSem25.dataPrevista : hojeYMD;
+      const diasAteMetade = Math.max(0, diferencaDias_(hojeYMD, dataMetade));
+      document.getElementById('cronRegMetadeCurso').textContent =
+        pendentesAteMetade.length === 0 ? '50% já atingido!' : `Faltam ${pendentesAteMetade.length} metas`;
+      document.getElementById('cronRegMetadeCursoSub').textContent =
+        pendentesAteMetade.length === 0 ? 'Marco superado' : `~${diasAteMetade} dias • Em ${formatarDataBR(dataMetade)}`;
+
+      const ultimaMetaCurso = CRON_METAS[CRON_METAS.length - 1];
+      const dataFimCurso = ultimaMetaCurso ? ultimaMetaCurso.dataPrevista : hojeYMD;
+      const diasAteFimCurso = Math.max(0, diferencaDias_(hojeYMD, dataFimCurso));
+      document.getElementById('cronRegFimCurso').textContent =
+        pendentes.length === 0 ? '100% Concluído!' : `Faltam ${pendentes.length} metas`;
+      document.getElementById('cronRegFimCursoSub').textContent =
+        `~${diasAteFimCurso} dias • Em ${formatarDataBR(dataFimCurso)}`;
+
+      const contBlocos = document.getElementById('cronGridBlocos5Semanas');
+      if (contBlocos) {
+        let htmlBlocos = '';
+        for (let b = 1; b <= 10; b++) {
+          const sIni = (b - 1) * 5 + 1;
+          const sFim = b * 5;
+          const metasBloco = CRON_METAS.filter(m => m.numeroSemana >= sIni && m.numeroSemana <= sFim);
+          const concBloco = metasBloco.filter(m => m.status === 'Concluído').length;
+          const pctBloco = metasBloco.length > 0 ? Math.round((concBloco / metasBloco.length) * 100) : 0;
+          const ultimaBloco = metasBloco[metasBloco.length - 1];
+          const dtFimBloco = ultimaBloco ? formatarDataBR(ultimaBloco.dataPrevista || ultimaBloco.dataConclusao) : '—';
+          const isAtivo = CRON_BLOCO_FILTRO === b;
+
+          htmlBlocos += `
+            <button type="button" onclick="selecionarBlocoCronograma(${b})"
+                    class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between ${
+                      isAtivo
+                        ? 'bg-indigo-600 text-white border-indigo-400 ring-2 ring-indigo-400'
+                        : pctBloco === 100
+                          ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-200 hover:bg-emerald-950/60'
+                          : 'bg-slate-950 border-slate-800 text-slate-200 hover:border-indigo-700'
+                    }">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-extrabold uppercase">
+                  <span>Bloco ${b}</span>
+                  <span>${pctBloco}%</span>
+                </div>
+                <div class="text-[11px] font-bold mt-0.5">Sem. ${String(sIni).padStart(2, '0')} a ${String(sFim).padStart(2, '0')}</div>
+              </div>
+              <div class="mt-2 pt-1.5 border-t border-slate-800/60 text-[10px] opacity-90">
+                Término: <strong>${dtFimBloco}</strong>
+              </div>
+            </button>
+          `;
+        }
+        contBlocos.innerHTML = htmlBlocos;
+      }
+    }
+
+    function selecionarBlocoCronograma(numBloco) {
+      CRON_BLOCO_FILTRO = numBloco;
+      const selSem = document.getElementById('cronSelectSemanaFiltro');
+      if (selSem && numBloco > 0) selSem.value = 'TODAS';
+      renderizarDashboardCronograma();
+      renderizarListaSemanasCronograma();
+    }
+
+    function popularSelectFiltroSemanasCron_() {
+      const sel = document.getElementById('cronSelectSemanaFiltro');
+      if (!sel) return;
+      const valAnt = sel.value || 'ATUAL';
+      let opts = `
+        <option value="ATUAL">📍 Semana em Curso + Próxima</option>
+        <option value="TODAS">Todas as 50 Semanas</option>
+      `;
+      for (let s = 1; s <= 50; s++) {
+        const isRev = s % 5 === 0;
+        opts += `<option value="${s}">Semana ${String(s).padStart(2, '0')} ${isRev ? '(Revisão Geral)' : ''}</option>`;
+      }
+      sel.innerHTML = opts;
+      sel.value = valAnt;
+    }
+
+    function renderizarListaSemanasCronograma() {
+      const cont = document.getElementById('cronContainerSemanas');
+      if (!cont || !CRON_METAS) return;
+
+      const filtroSem = document.getElementById('cronSelectSemanaFiltro')?.value || 'ATUAL';
+      const filtroStatus = document.getElementById('cronSelectStatusFiltro')?.value || '';
+      const termoBusca = (document.getElementById('cronInputBuscaTopico')?.value || '').trim().toLowerCase();
+
+      const primeiraPendente = CRON_METAS.find(m => m.status !== 'Concluído');
+      const semanaAtualNum = primeiraPendente ? primeiraPendente.numeroSemana : 4;
+
+      const metasFiltradas = CRON_METAS.filter(m => {
+        if (CRON_BLOCO_FILTRO > 0) {
+          const sIni = (CRON_BLOCO_FILTRO - 1) * 5 + 1;
+          const sFim = CRON_BLOCO_FILTRO * 5;
+          if (m.numeroSemana < sIni || m.numeroSemana > sFim) return false;
+        } else if (filtroSem === 'ATUAL') {
+          if (m.numeroSemana !== semanaAtualNum && m.numeroSemana !== semanaAtualNum + 1) return false;
+        } else if (filtroSem !== 'TODAS') {
+          if (m.numeroSemana !== Number(filtroSem)) return false;
+        }
+
+        if (filtroStatus === 'PENDENTE' && m.status === 'Concluído') return false;
+        if (filtroStatus === 'CONCLUIDO' && m.status !== 'Concluído') return false;
+
+        if (termoBusca) {
+          const alvo = `${m.materia} ${m.topico} ${m.leiSeca}`.toLowerCase();
+          if (!alvo.includes(termoBusca)) return false;
+        }
+        return true;
+      });
+
+      if (metasFiltradas.length === 0) {
+        cont.innerHTML = `<div class="bg-slate-900 rounded-xl border border-slate-800 p-8 text-center text-xs text-slate-400">Nenhuma meta localizada para este filtro.</div>`;
+        return;
+      }
+
+      const porSemana = {};
+      metasFiltradas.forEach(m => {
+        if (!porSemana[m.numeroSemana]) porSemana[m.numeroSemana] = [];
+        porSemana[m.numeroSemana].push(m);
+      });
+
+      const semanasNums = Object.keys(porSemana).map(Number).sort((a, b) => a - b);
+
+      cont.innerHTML = semanasNums.map(numSem => {
+        const lista = porSemana[numSem];
+        const todasMetasSem = CRON_METAS.filter(x => x.numeroSemana === numSem);
+        const concluidasSem = todasMetasSem.filter(x => x.status === 'Concluído').length;
+        const pctSem = todasMetasSem.length > 0 ? Math.round((concluidasSem / todasMetasSem.length) * 100) : 0;
+        const isRevisao = numSem % 5 === 0;
+        const ultimaMetaSem = todasMetasSem[todasMetasSem.length - 1];
+        const dataFimSemana = ultimaMetaSem ? formatarDataBR(ultimaMetaSem.dataPrevista || ultimaMetaSem.dataConclusao) : '—';
+
+        return `
+          <div class="bg-slate-900 rounded-2xl border ${numSem === semanaAtualNum ? 'border-indigo-500 shadow-indigo-950/30' : 'border-slate-800'} shadow-lg overflow-hidden">
+            <div class="px-5 py-3.5 ${isRevisao ? 'bg-amber-950/60 border-b border-amber-800/70' : 'bg-slate-950 border-b border-slate-800'} flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <span class="px-3 py-1 rounded-lg ${isRevisao ? 'bg-amber-500 text-slate-950' : 'bg-indigo-600 text-white'} font-extrabold text-xs uppercase">
+                  Semana ${String(numSem).padStart(2, '0')} ${isRevisao ? '• REVISÃO DE BLOCO' : ''}
+                </span>
+                ${numSem === semanaAtualNum ? '<span class="px-2 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[10px] uppercase">📍 SEMANA ATUAL</span>' : ''}
+                <span class="text-xs font-bold text-slate-300">
+                  ${concluidasSem}/${todasMetasSem.length} Metas Concluídas (${pctSem}%)
+                </span>
+              </div>
+
+              <div class="text-xs font-semibold text-slate-300">
+                Previsão de fechamento da Semana ${String(numSem).padStart(2, '0')}: <strong class="text-indigo-400">${dataFimSemana}</strong>
+              </div>
+            </div>
+
+            <div class="p-4 space-y-3 text-xs">
+              ${lista.map(m => {
+                const isConc = m.status === 'Concluído';
+                const isAndamento = m.status === 'Em Andamento';
+
+                return `
+                  <div class="p-4 rounded-xl border ${
+                    isConc
+                      ? 'bg-emerald-950/20 border-emerald-800/70'
+                      : isAndamento
+                        ? 'bg-indigo-950/30 border-indigo-700'
+                        : 'bg-slate-950/80 border-slate-800'
+                  } space-y-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div class="space-y-1 flex-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 font-extrabold text-[10px]">
+                            META ${m.numeroMeta}
+                          </span>
+                          <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px] uppercase">
+                            ${esc(m.materia)}
+                          </span>
+                          <span class="px-2 py-0.5 rounded font-bold text-[10px] ${
+                            isConc
+                              ? 'bg-emerald-600 text-white'
+                              : isAndamento
+                                ? 'bg-amber-500 text-slate-950'
+                                : 'bg-slate-800 text-slate-400'
+                          }">
+                            ${esc(m.status)} (${m.partesConcluidas}/${m.totalPartes} partes)
+                          </span>
+                          ${m.paginasTotal > 0 ? `<span class="text-[11px] font-bold text-slate-400">📖 ${m.paginasTotal} páginas</span>` : ''}
+                        </div>
+
+                        <div class="text-sm font-extrabold text-white pt-0.5">${esc(m.topico)}</div>
+
+                        ${m.leiSeca ? `<div class="text-[11px] text-indigo-300 font-medium">⚖️ <strong>Lei Seca:</strong> ${esc(m.leiSeca)}</div>` : ''}
+                        ${m.sumulas ? `<div class="text-[11px] text-slate-400">📌 <strong>Súmulas / Obs:</strong> ${esc(m.sumulas)}</div>` : ''}
+                      </div>
+
+                      <div class="text-right space-y-1.5 shrink-0">
+                        <div class="text-[11px] font-bold ${isConc ? 'text-emerald-400' : 'text-indigo-300'}">
+                          ${isConc ? `Finalizada em: ${formatarDataBR(m.dataConclusao || m.dataPrevista)}` : `Previsão: ${formatarDataBR(m.dataPrevista)}`}
+                        </div>
+                        <div class="flex flex-wrap items-center justify-end gap-1.5">
+                          <button type="button" onclick="abrirModalEditarMetaCronograma('${m.id}')" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px]">
+                            ✏️ Alimentar Páginas / Partes
+                          </button>
+                          ${!isConc ? `
+                            <button type="button" onclick="concluirMetaInteiraCronograma('${m.id}')" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow">
+                              ✔ Concluir Meta e Enviar p/ Revisão
+                            </button>
+                          ` : `
+                            <button type="button" onclick="atalhoCriarFlashcardsDaMeta('${m.id}')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">
+                              ⚡ Flashcards do Tópico
+                            </button>
+                            <button type="button" onclick="reabrirMetaCronograma('${m.id}')" class="px-2 py-1 rounded-lg border border-rose-800 text-rose-400 hover:bg-rose-950 text-[10px]">
+                              Reabrir
+                            </button>
+                          `}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
+                      ${m.detalhesPartes.map((p, idxP) => `
+                        <label class="flex items-center justify-between gap-2 p-2.5 rounded-xl border cursor-pointer transition ${
+                          p.concluida
+                            ? 'bg-emerald-950/40 border-emerald-700/80 text-emerald-200'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-indigo-700'
+                        }">
+                          <div class="flex items-center gap-2">
+                            <input type="checkbox" ${p.concluida ? 'checked' : ''}
+                                   onchange="alternarConclusaoParteMeta('${m.id}', ${idxP}, this.checked)"
+                                   class="rounded text-emerald-600 w-4 h-4">
+                            <div>
+                              <span class="font-extrabold text-[11px] block">Parte ${p.parte}/${m.totalPartes}</span>
+                              <span class="text-[10px] opacity-85">${esc(p.descricao)}</span>
+                            </div>
+                          </div>
+                          <span class="text-[10px] font-semibold opacity-75">
+                            ${p.concluida ? 'OK' : (p.dataPrevistaParte ? formatarDataBR(p.dataPrevistaParte).slice(0, 5) : '')}
+                          </span>
+                        </label>
+                      `).join('')}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function alternarConclusaoParteMeta(idMeta, idxParte, marcado) {
+      const m = CRON_METAS.find(x => x.id === idMeta);
+      if (!m || !m.detalhesPartes[idxParte]) return;
+
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      m.detalhesPartes[idxParte].concluida = Boolean(marcado);
+      m.detalhesPartes[idxParte].dataConclusaoParte = marcado ? hojeYMD : '';
+
+      m.partesConcluidas = m.detalhesPartes.filter(p => p.concluida).length;
+      const concluiuTudoAgora = m.partesConcluidas >= m.totalPartes;
+
+      m.status = concluiuTudoAgora
+        ? 'Concluído'
+        : (m.partesConcluidas > 0 ? 'Em Andamento' : 'Pendente');
+
+      if (concluiuTudoAgora) {
+        m.dataConclusao = hojeYMD;
+      } else {
+        m.dataConclusao = '';
+      }
+
+      await persistirMetaIndividualSupabase_(m);
+      await recalcularDatasCronogramaDinamico(true);
+
+      if (concluiuTudoAgora && m.tipoSemana !== 'REVISAO') {
+        await integrarMetaConcluidaNaFilaDeRevisoes_(m);
+      }
+    }
+
+    async function concluirMetaInteiraCronograma(idMeta) {
+      const m = CRON_METAS.find(x => x.id === idMeta);
+      if (!m) return;
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+
+      m.detalhesPartes.forEach(p => {
+        p.concluida = true;
+        if (!p.dataConclusaoParte) p.dataConclusaoParte = hojeYMD;
+      });
+      m.partesConcluidas = m.totalPartes;
+      m.status = 'Concluído';
+      m.dataConclusao = hojeYMD;
+
+      await persistirMetaIndividualSupabase_(m);
+      await recalcularDatasCronogramaDinamico(true);
+
+      if (m.tipoSemana !== 'REVISAO') {
+        await integrarMetaConcluidaNaFilaDeRevisoes_(m);
+      } else {
+        notificar(`Meta ${m.numeroMeta} da Semana ${m.numeroSemana} concluída e cronograma recalculado!`);
+      }
+    }
+
+    async function reabrirMetaCronograma(idMeta) {
+      const m = CRON_METAS.find(x => x.id === idMeta);
+      if (!m) return;
+      m.detalhesPartes.forEach(p => { p.concluida = false; p.dataConclusaoParte = ''; });
+      m.partesConcluidas = 0;
+      m.status = 'Pendente';
+      m.dataConclusao = '';
+
+      await persistirMetaIndividualSupabase_(m);
+      await recalcularDatasCronogramaDinamico(true);
+      notificar('Meta reaberta e datas futuras recalculadas.');
+    }
+
+    async function integrarMetaConcluidaNaFilaDeRevisoes_(metaObj) {
+      if (!ESTADO || !supabaseClient) return;
+      try {
+        const hojeYMD = ESTADO.hojeYMD;
+        const amanhaYMD = ESTADO.amanhaYMD;
+
+        let matExistente = ESTADO.materias.find(
+          x => x.nome.toLowerCase() === metaObj.materia.toLowerCase()
+        );
+        if (!matExistente) {
+          const novoIdMat = gerarId_('MAT');
+          const novaOrdem = ESTADO.materias.length + 1;
+          await supabaseClient.from('materias').insert({
+            id: novoIdMat,
+            ordem: novaOrdem,
+            nome: metaObj.materia,
+            estudo_diario: 'Nao',
+            freq_semanal: 3,
+            min_questoes: 15,
+            status: 'Ativo',
+            data_cadastro: hojeYMD
+          });
+          matExistente = { id: novoIdMat, nome: metaObj.materia };
+        }
+
+        let topExistente = ESTADO.topicos.find(
+          t => t.idMateria === matExistente.id && t.topico.toLowerCase() === metaObj.topico.toLowerCase()
+        );
+        let idTopicoAlvo = topExistente ? topExistente.id : gerarId_('TOP');
+
+        if (!topExistente) {
+          await supabaseClient.from('topicos').insert({
+            id: idTopicoAlvo,
+            id_materia: matExistente.id,
+            materia: matExistente.nome,
+            topico: metaObj.topico,
+            status: 'Ativo',
+            rodada_atual: 1,
+            total_banco: 50,
+            resolvidas_rodada: 0,
+            restantes_rodada: 50,
+            acertos_total: 0,
+            erros_total: 0,
+            aproveitamento: 0,
+            conclusao_banco: 0,
+            prioridade_calculada: 'Prioridade 1 (Maxima - 0 Questoes)',
+            situacao: 'Primeira Bateria Pendente',
+            motivo_prioridade: `Teoria concluída na Semana ${metaObj.numeroSemana} -> Fazer 1ª bateria`,
+            modo_banco: 'Agregado',
+            ultima_data: hojeYMD,
+            ultima_obs: metaObj.leiSeca || '',
+            bloco: '1a Bateria Pos-Teoria'
+          });
+
+          await supabaseClient.from('revisoes').insert({
+            id: gerarId_('REV'),
+            id_sessao_origem: 'CRON_S' + metaObj.numeroSemana,
+            id_materia: matExistente.id,
+            materia: matExistente.nome,
+            id_topico: idTopicoAlvo,
+            topico: metaObj.topico,
+            data_origem: hojeYMD,
+            data_prevista_original: amanhaYMD,
+            data_prevista_atual: amanhaYMD,
+            etapa: 1,
+            total_etapas: 5,
+            status: 'Programada',
+            data_conclusao: '',
+            tipo_data_origem: 'Teoria_Estudada'
+          });
+        }
+
+        metaObj.integradoRevisao = true;
+        await persistirMetaIndividualSupabase_(metaObj);
+
+        const novoEstado = await recalcularERetornarEstado_({ idTopicoRecemAtualizado: idTopicoAlvo });
+        aplicarEstado(novoEstado);
+        notificar(`Meta concluída! "${metaObj.topico}" entrou na Fila de Revisões (Prioridade 1 p/ amanhã) e está pronto p/ Flashcards!`);
+      } catch (err) {
+        console.warn('Aviso ao integrar meta com revisão:', err.message);
+      }
+    }
+
+    function atalhoCriarFlashcardsDaMeta(idMeta) {
+      const m = CRON_METAS.find(x => x.id === idMeta);
+      if (!m) return;
+      irParaAba('flashcards');
+      const matObj = (ESTADO?.materias || []).find(x => x.nome.toLowerCase() === m.materia.toLowerCase());
+      if (matObj) {
+        document.getElementById('fcFiltroMateria').value = matObj.id;
+        aoMudarMateriaFiltroFC();
+        const topObj = (ESTADO?.topicos || []).find(t => t.idMateria === matObj.id && t.topico.toLowerCase() === m.topico.toLowerCase());
+        if (topObj) {
+          document.getElementById('fcFiltroTopico').value = topObj.id;
+          renderizarVisaoDeckFC();
+        }
+      }
+    }
+
+    async function persistirMetaIndividualSupabase_(m) {
+      if (!supabaseClient) return;
+      await supabaseClient.from('cronograma_metas').upsert({
+        id: m.id,
+        numero_semana: m.numeroSemana,
+        tipo_semana: m.tipoSemana,
+        numero_meta: m.numeroMeta,
+        materia: m.materia,
+        topico: m.topico,
+        paginas_total: m.paginasTotal,
+        total_partes: m.totalPartes,
+        partes_concluidas: m.partesConcluidas,
+        detalhes_partes: m.detalhesPartes,
+        lei_seca: m.leiSeca,
+        sumulas: m.sumulas,
+        status: m.status,
+        data_prevista: m.dataPrevista,
+        data_conclusao: m.dataConclusao,
+        integrado_revisao: m.integradoRevisao,
+        ordem_global: m.ordemGlobal
+      }, { onConflict: 'id' });
+    }
+
+    function abrirModalEditarMetaCronograma(idMeta) {
+      const m = CRON_METAS.find(x => x.id === idMeta);
+      if (!m) return;
+
+      document.getElementById('modalCronTitulo').textContent = `Alimentar Meta ${m.numeroMeta} — Semana ${String(m.numeroSemana).padStart(2, '0')}`;
+      document.getElementById('editCronId').value = m.id;
+      document.getElementById('editCronSemana').value = m.numeroSemana;
+      document.getElementById('editCronNumeroMeta').value = m.numeroMeta;
+      document.getElementById('editCronPaginas').value = m.paginasTotal || 45;
+      document.getElementById('editCronTotalPartes').value = m.totalPartes || 3;
+      document.getElementById('editCronMateria').value = m.materia;
+      document.getElementById('editCronTopico').value = m.topico;
+      document.getElementById('editCronLeiSeca').value = m.leiSeca || '';
+      document.getElementById('editCronSumulas').value = m.sumulas || '';
+
+      gerarPreviaDivisaoPartesModal(m.detalhesPartes);
+      document.getElementById('modalEditarMetaCronograma').classList.remove('hidden');
+    }
+
+    function abrirModalNovaMetaCronograma() {
+      const primeiraPend = CRON_METAS.find(x => x.status !== 'Concluído');
+      const semSug = primeiraPend ? primeiraPend.numeroSemana : 4;
+      const metasDaSem = CRON_METAS.filter(x => x.numeroSemana === semSug);
+
+      document.getElementById('modalCronTitulo').textContent = 'Adicionar Nova Meta no Cronograma';
+      document.getElementById('editCronId').value = '';
+      document.getElementById('editCronSemana').value = semSug;
+      document.getElementById('editCronNumeroMeta').value = metasDaSem.length + 1;
+      document.getElementById('editCronPaginas').value = 45;
+      document.getElementById('editCronTotalPartes').value = 3;
+      document.getElementById('editCronMateria').value = '';
+      document.getElementById('editCronTopico').value = '';
+      document.getElementById('editCronLeiSeca').value = '';
+      document.getElementById('editCronSumulas').value = '';
+
+      gerarPreviaDivisaoPartesModal();
+      document.getElementById('modalEditarMetaCronograma').classList.remove('hidden');
+    }
+
+    function fecharModalEditarMetaCronograma() {
+      document.getElementById('modalEditarMetaCronograma').classList.add('hidden');
+    }
+
+    function gerarPreviaDivisaoPartesModal(partesExistentes) {
+      const pagTotal = Math.max(0, Number(document.getElementById('editCronPaginas').value || 0));
+      const totPartes = Math.max(1, Number(document.getElementById('editCronTotalPartes').value || 3));
+      const box = document.getElementById('boxInputsPartesModal');
+
+      const divisao = (Array.isArray(partesExistentes) && partesExistentes.length === totPartes)
+        ? partesExistentes
+        : gerarDivisaoPadraoPartes_(pagTotal, totPartes, 0);
+
+      box.innerHTML = divisao.map((p, idx) => `
+        <div class="flex items-center gap-2">
+          <span class="px-2.5 py-1.5 rounded bg-slate-900 border border-slate-700 font-bold text-slate-300 w-24 text-center">
+            Parte ${idx + 1}/${totPartes}
+          </span>
+          <input type="text" id="inputDescParteModal_${idx}" value="${esc(p.descricao)}"
+                 class="flex-1 rounded-lg border px-3 py-1.5" placeholder="Ex: Pág. 1 a 15 [1h50] + Art. 1º a 10">
+        </div>
+      `).join('');
+    }
+
+    async function salvarEdicaoMetaCronograma(e) {
+      e.preventDefault();
+      const id = document.getElementById('editCronId').value.trim();
+      const numeroSemana = Math.max(1, Math.min(50, Number(document.getElementById('editCronSemana').value || 1)));
+      const numeroMeta = Math.max(1, Number(document.getElementById('editCronNumeroMeta').value || 1));
+      const paginasTotal = Math.max(0, Number(document.getElementById('editCronPaginas').value || 0));
+      const totalPartes = Math.max(1, Number(document.getElementById('editCronTotalPartes').value || 3));
+      const materia = document.getElementById('editCronMateria').value.trim();
+      const topico = document.getElementById('editCronTopico').value.trim();
+      const leiSeca = document.getElementById('editCronLeiSeca').value.trim();
+      const sumulas = document.getElementById('editCronSumulas').value.trim();
+
+      let metaAlvo = id ? CRON_METAS.find(x => x.id === id) : null;
+      const novasPartes = [];
+
+      for (let i = 0; i < totalPartes; i++) {
+        const desc = document.getElementById(`inputDescParteModal_${i}`)?.value.trim() || `Parte ${i + 1}/${totalPartes}`;
+        const jaConcluida = metaAlvo && metaAlvo.detalhesPartes[i] ? Boolean(metaAlvo.detalhesPartes[i].concluida) : false;
+        novasPartes.push({
+          parte: i + 1,
+          descricao: desc,
+          concluida: jaConcluida,
+          dataConclusaoParte: jaConcluida ? (metaAlvo.detalhesPartes[i]?.dataConclusaoParte || '') : ''
+        });
+      }
+
+      const concluidasCount = novasPartes.filter(p => p.concluida).length;
+      const status = concluidasCount >= totalPartes ? 'Concluído' : (concluidasCount > 0 ? 'Em Andamento' : 'Pendente');
+
+      if (metaAlvo) {
+        metaAlvo.numeroSemana = numeroSemana;
+        metaAlvo.numeroMeta = numeroMeta;
+        metaAlvo.paginasTotal = paginasTotal;
+        metaAlvo.totalPartes = totalPartes;
+        metaAlvo.partesConcluidas = concluidasCount;
+        metaAlvo.detalhesPartes = novasPartes;
+        metaAlvo.materia = materia;
+        metaAlvo.topico = topico;
+        metaAlvo.leiSeca = leiSeca;
+        metaAlvo.sumulas = sumulas;
+        metaAlvo.status = status;
+      } else {
+        metaAlvo = {
+          id: gerarId_('CRON'),
+          numeroSemana,
+          tipoSemana: numeroSemana % 5 === 0 ? 'REVISAO' : 'CONTEUDO',
+          numeroMeta,
+          materia,
+          topico,
+          paginasTotal,
+          totalPartes,
+          partesConcluidas: 0,
+          detalhesPartes: novasPartes,
+          leiSeca,
+          sumulas,
+          status: 'Pendente',
+          dataPrevista: ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date()),
+          dataConclusao: '',
+          integradoRevisao: false,
+          ordemGlobal: (numeroSemana * 100) + numeroMeta
+        };
+        CRON_METAS.push(metaAlvo);
+        CRON_METAS.sort((a, b) => a.ordemGlobal - b.ordemGlobal);
+      }
+
+      await persistirMetaIndividualSupabase_(metaAlvo);
+      fecharModalEditarMetaCronograma();
+      await recalcularDatasCronogramaDinamico(true);
+      notificar('Meta atualizada e cronograma recalculado!');
+    }
+
+    function exportarCronograma50SemanasExcel() {
+      if (!CRON_METAS || CRON_METAS.length === 0 || typeof XLSX === 'undefined') {
+        notificar('Aguarde o carregamento das 50 semanas para exportar.', true);
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      const rowsMetas = CRON_METAS.map(m => ({
+        'Bloco (5 Sem.)': `Bloco ${Math.ceil(m.numeroSemana / 5)}`,
+        'Semana': `Semana ${String(m.numeroSemana).padStart(2, '0')}`,
+        'Tipo da Semana': m.tipoSemana === 'REVISAO' ? 'Revisão Geral' : 'Conteúdo Novo',
+        'Meta': `Meta ${m.numeroMeta}`,
+        'Matéria': m.materia,
+        'Tópico / Assunto': m.topico,
+        'Páginas Doutrina': m.paginasTotal || 0,
+        'Divisão de Partes': `${m.partesConcluidas}/${m.totalPartes} partes`,
+        'Detalhamento das Partes': m.detalhesPartes.map(p => `[P${p.parte}: ${p.descricao}]`).join(' | '),
+        'Lei Seca': m.leiSeca || '—',
+        'Súmulas / Obs': m.sumulas || '—',
+        'Status Real': m.status,
+        'Data Prevista Recalculada': formatarDataBR(m.dataPrevista),
+        'Data de Conclusão': formatarDataBR(m.dataConclusao)
+      }));
+
+      const wsMetas = XLSX.utils.json_to_sheet(rowsMetas);
+      ajustarLarguraColunasExcel_(wsMetas, rowsMetas);
+      XLSX.utils.book_append_sheet(wb, wsMetas, 'Cronograma 50 Semanas');
+
+      const rowsBlocos = [];
+      for (let b = 1; b <= 10; b++) {
+        const sIni = (b - 1) * 5 + 1;
+        const sFim = b * 5;
+        const mBloco = CRON_METAS.filter(x => x.numeroSemana >= sIni && x.numeroSemana <= sFim);
+        const conc = mBloco.filter(x => x.status === 'Concluído').length;
+        const ultima = mBloco[mBloco.length - 1];
+        rowsBlocos.push({
+          'Bloco': `Bloco ${b}`,
+          'Intervalo de Semanas': `Semana ${String(sIni).padStart(2, '0')} até Semana ${String(sFim).padStart(2, '0')}`,
+          'Semana de Revisão do Bloco': `Semana ${String(sFim).padStart(2, '0')}`,
+          'Total de Metas': mBloco.length,
+          'Metas Concluídas': conc,
+          'Progresso (%)': mBloco.length > 0 ? `${((conc / mBloco.length) * 100).toFixed(1)}%` : '0%',
+          'Ritmo Configurado': `${CRON_CADENCIA_DIAS} dia(s)/meta`,
+          'Data Prevista de Término do Bloco': ultima ? formatarDataBR(ultima.dataPrevista || ultima.dataConclusao) : '—'
+        });
+      }
+
+      const wsBlocos = XLSX.utils.json_to_sheet(rowsBlocos);
+      ajustarLarguraColunasExcel_(wsBlocos, rowsBlocos);
+      XLSX.utils.book_append_sheet(wb, wsBlocos, 'Previsao Blocos 5 Semanas');
+
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : '2026';
+      XLSX.writeFile(wb, `Cronograma_50_Semanas_Delta_MP_${hojeYMD}.xlsx`);
+      notificar('Planilha Excel das 50 Semanas exportada com todas as datas recalculadas!');
+    }
+
+    /* ==========================================================================
+     * 10. MATRIZ COMPLETA DAS 50 SEMANAS (SEED AUTOMÁTICO NO SUPABASE)
+     * ========================================================================== */
+    const CRONOGRAMA_50_SEMANAS_SEED = [
+      // SEMANA 01
+      [1, 1, "Direito Penal", "Noções Iniciais e Princípios", 56, 2, 2, "Código Penal - Artigos 1º ao 12º", "Leitura das 4 súmulas na Doutrina (Pág. 3)"],
+      [1, 2, "Direito Processual Penal", "Noções Iniciais e Princípios", 48, 2, 2, "CPP - Artigos 1º a 13º (31 pág.)", "Sem súmulas pertinentes"],
+      [1, 3, "Direito Constitucional", "Direitos e Garantias Fundamentais", 72, 2, 2, "CF/88 - Artigos 1º a 4º (20 pág.)", "Leitura das 8 súmulas na Doutrina (Pág. 4)"],
+      [1, 4, "Leis Extravagantes", "Maria da Penha | Lei nº 11.340/06", 70, 2, 2, "CF/88 - Art. 5º (Dividir 1/3 e 2/3)", "Leitura das 5 súmulas na Doutrina (Pág. 4)"],
+      [1, 5, "Direito Administrativo", "Noções Iniciais e Princípios Administrativos", 42, 2, 2, "Lei nº 11.340/2006 - Art. 1º a 7º, 10 a 12-C e 18 a 24-A", "Leitura das 7 súmulas na Doutrina (Pág. 4)"],
+
+      // SEMANA 02
+      [2, 1, "Direito Constitucional", "Teoria Constitucional", 63, 2, 2, "Lei nº 12.016/2009 (Mandado de Segurança - 26 pág.)", ""],
+      [2, 2, "Direito Processual Penal", "Inquérito Policial", 65, 2, 2, "CPP - Artigos 13-A a 23", ""],
+      [2, 3, "Direito Constitucional", "Remédios Constitucionais", 60, 2, 2, "Lei nº 4.717/1965 (Ação Popular) e Lei nº 7.347/1985 (ACP)", ""],
+      [2, 4, "Direito Penal", "Lei Penal e sua Aplicação + Teoria do Crime (Parte I)", 76, 2, 2, "Código Penal - Artigos 13 a 28", ""],
+      [2, 5, "Direito Penal", "Teoria do Crime (Parte II)", 62, 2, 2, "Lei nº 13.300/2016 (Mandado de Injunção)", ""],
+
+      // SEMANA 03
+      [3, 1, "Direito Administrativo", "Entes da Administração", 68, 2, 2, "Lei nº 13.848/2019 (Agências Reguladoras - 27 pág.)", ""],
+      [3, 2, "Direito Processual Penal", "Ação Penal", 72, 2, 2, "CPP - Artigos 24 a 62", ""],
+      [3, 3, "Direito Penal", "Teoria do Crime (Parte III)", 64, 3, 3, "Lei nº 13.934/2019 + Lei nº 10.741/2003 (Art. 93 a 108)", ""],
+      [3, 4, "Leis Extravagantes", "Lei de Crimes Hediondos (Lei nº 8.072/1990)", 50, 2, 2, "CF/88 Art. 6º a 17 + Lei nº 8.072/1990 (21 pág.)", ""],
+      [3, 5, "Direito Constitucional", "Direitos Políticos + Nacionalidade + Estatuto do Desarmamento", 75, 3, 3, "Lei nº 10.826/2003 (Estatuto do Desarmamento - 31 pág.)", ""],
+
+      // SEMANA 04
+      [4, 1, "Direito Penal", "Concurso de Pessoas e Concurso de Crimes + Crimes no CDC", 64, 3, 3, "CP Art. 29 a 31 + Lei nº 8.078/1990 (Art. 61 a 80)", "Tempo total estimado: 2h38 por parte"],
+      [4, 2, "Direito Constitucional", "Organização do Estado + Lei Antiterrorismo", 74, 3, 3, "CF/88 Art. 18 a 33 + Lei nº 13.260/2016 (Art. 1º a 19)", "Tempo total estimado: 3h05 por parte"],
+      [4, 3, "Direito Administrativo", "Serviços Públicos + Estatuto da Pessoa Idosa", 61, 3, 0, "Lei nº 8.987/1995 (Art. 1º a 40) + Lei nº 10.741/2003 (Art. 93 a 110)", "Tempo total: 2h31 por parte"],
+      [4, 4, "Leis Extravagantes", "Crimes do ECA (Lei nº 8.069/1990)", 65, 3, 0, "Lei nº 8.069/1990 - Art. 103 a 105, 171 a 190-E, 225 a 244-C", "Tempo total: 2h45 por parte"],
+      [4, 5, "Leis Extravagantes", "Lei das Organizações Criminosas (Lei nº 12.850/2013)", 60, 3, 0, "Lei nº 12.850/2013 - Artigos 1º a 24", "Tempo total: 2h30 por parte"],
+
+      // SEMANA 05 - REVISÃO DO BLOCO 1
+      [5, 1, "Revisão Bloco 1", "Penal & Proc. Penal: Princípios, Lei Penal, Teoria do Crime (1 a 3), IP, Ação Penal e Concurso", 0, 1, 0, "Revisão TOPIF + Caderno de Erros", ""],
+      [5, 2, "Revisão Bloco 1", "Constitucional & Administrativo: Direitos Fundamentais, Teoria, Remédios, Nac/Pol, Org. Estado, Entes e Serviços", 0, 1, 0, "Revisão TOPIF + Caderno de Erros", ""],
+      [5, 3, "Revisão Bloco 1", "Leis Penais Especiais: Maria da Penha, Hediondos, Desarmamento, CDC, Antiterrorismo, Idoso, ECA e ORCRIM", 0, 1, 0, "Revisão TOPIF + Caderno de Erros", ""],
+
+      // SEMANA 06
+      [6, 1, "Direito Processual Penal", "Jurisdição e Competência", 0, 3, 0, "", ""],
+      [6, 2, "Direito Constitucional", "Administração Pública - Aspectos Constitucionais", 0, 3, 0, "", ""],
+      [6, 3, "Direito Administrativo", "Poderes da Administração", 0, 3, 0, "", ""],
+      [6, 4, "Leis Extravagantes", "Lei de Tortura - Lei nº 9.455/1997", 0, 3, 0, "", ""],
+      [6, 5, "Criminologia", "Conceito, Objeto, Classificação e Estatística Criminal", 0, 3, 0, "", ""],
+      [6, 6, "Direito Constitucional", "Poder e Processo Legislativo", 0, 3, 0, "", ""],
+      [6, 7, "Leis Extravagantes", "Lei de Crimes Ambientais - Lei nº 9.605/1998", 0, 3, 0, "", ""],
+
+      // SEMANA 07
+      [7, 1, "Direito Penal", "Teoria Geral da Pena", 0, 3, 0, "", ""],
+      [7, 2, "Leis Extravagantes", "Lei nº 14.540/2023 (Prevenção ao Assédio)", 0, 3, 0, "", ""],
+      [7, 3, "Direito Administrativo", "Atos Administrativos", 0, 3, 0, "", ""],
+      [7, 4, "Direito Administrativo", "Processo Administrativo Disciplinar (PAD)", 0, 3, 0, "", ""],
+      [7, 5, "Direito Processual Penal", "Questões Prejudiciais, Processos Incidentes, Sujeitos, Comunicação, Emendatio e Mutatio Libelli", 0, 3, 0, "", ""],
+      [7, 6, "Leis Extravagantes", "Lei de Drogas - Lei nº 11.343/2006", 0, 3, 0, "", ""],
+      [7, 7, "Medicina Legal", "Traumatologia Forense", 0, 3, 0, "", ""],
+
+      // SEMANA 08
+      [8, 1, "Direito Processual Penal", "Provas", 0, 3, 0, "", ""],
+      [8, 2, "Direito Constitucional", "Poder Executivo", 0, 3, 0, "", ""],
+      [8, 3, "Direito Constitucional", "Poder Judiciário", 0, 3, 0, "", ""],
+      [8, 4, "Direito Penal", "Ação Penal e Causas de Extinção da Punibilidade", 0, 3, 0, "", ""],
+      [8, 5, "Medicina Legal", "Tanatologia Forense", 0, 3, 0, "", ""],
+      [8, 6, "Leis Extravagantes", "Lei dos Crimes de Preconceito Racial (Lei nº 7.716/1989)", 0, 3, 0, "", ""],
+
+      // SEMANA 09
+      [9, 1, "Direito Administrativo", "Licitações (Lei nº 14.133/2021)", 0, 3, 0, "", ""],
+      [9, 2, "Leis Extravagantes", "Lei das Contravenções Penais - Decreto-Lei nº 3.688/1941", 0, 3, 0, "", ""],
+      [9, 3, "Direito Constitucional", "Controle de Constitucionalidade", 0, 3, 0, "", ""],
+      [9, 4, "Leis Extravagantes", "Código de Trânsito Brasileiro (CTB) - Lei nº 9.503/1997", 0, 3, 0, "", ""],
+      [9, 5, "Leis Extravagantes", "Lei de Abuso de Autoridade - Lei nº 13.869/2019", 0, 3, 0, "", ""],
+
+      // SEMANA 10 - REVISÃO DO BLOCO 2
+      [10, 1, "Revisão Bloco 2", "Penal, Processo Penal, Criminologia e Medicina Legal (Semanas 06 a 09)", 0, 1, 0, "Revisão TOPIF", ""],
+      [10, 2, "Revisão Bloco 2", "Constitucional e Administrativo: Adm. Pública, Poderes, Atos, PAD, Licitações e Controle", 0, 1, 0, "Revisão TOPIF", ""],
+      [10, 3, "Revisão Bloco 2", "Leis Especiais: Tortura, Ambientais, Drogas, Racismo, LCP, CTB e Abuso de Autoridade", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 11
+      [11, 1, "Direito Constitucional", "Funções Essenciais à Justiça", 0, 3, 0, "", ""],
+      [11, 2, "Direito Constitucional", "Estado de Defesa, Estado de Sítio e Segurança Pública", 0, 3, 0, "", ""],
+      [11, 3, "Direito Processual Penal", "Prisões", 0, 3, 0, "", ""],
+      [11, 4, "Leis Extravagantes", "Reestruturação do COAF (Lei nº 13.974/2020)", 0, 3, 0, "", ""],
+      [11, 5, "Direito Penal", "Crimes contra a Pessoa", 0, 3, 0, "", ""],
+
+      // SEMANA 12
+      [12, 1, "Direito Processual Penal", "Liberdade Provisória, Medidas Cautelares e Fiança", 0, 3, 0, "", ""],
+      [12, 2, "Direito Administrativo", "Contratos Administrativos", 0, 3, 0, "", ""],
+      [12, 3, "Leis Extravagantes", "Lei Geral do Esporte (Lei nº 14.597/2023)", 0, 3, 0, "", ""],
+      [12, 4, "Leis Extravagantes", "Lei de Interceptação Telefônica - Lei nº 9.296/1996", 0, 3, 0, "", ""],
+      [12, 5, "Criminologia", "História da Criminologia, Escola Clássica e Positivista", 0, 3, 0, "", ""],
+      [12, 6, "Direito Penal", "Crimes contra o Patrimônio", 0, 3, 0, "", ""],
+
+      // SEMANA 13
+      [13, 1, "Direito Administrativo", "Intervenção do Estado no Domínio Econômico e na Propriedade", 0, 3, 0, "", ""],
+      [13, 2, "Leis Extravagantes", "Estatuto da Pessoa com Deficiência - Lei nº 13.146/2015", 0, 3, 0, "", ""],
+      [13, 3, "Direito Penal", "Crimes contra a Propriedade Imaterial, Organização do Trabalho e Sentimento Religioso", 0, 3, 0, "", ""],
+      [13, 4, "Leis Extravagantes", "Lei da Propriedade Industrial e Lei de Crimes Falimentares (Lei nº 11.101/2005)", 0, 3, 0, "", ""],
+      [13, 5, "Direito Processual Penal", "Tribunal do Júri", 0, 3, 0, "", ""],
+      [13, 6, "Criminologia", "Sociologia Criminal", 0, 3, 0, "", ""],
+      [13, 7, "Direito Constitucional", "Ordem Social e Ordem Econômica e Financeira", 0, 3, 0, "", ""],
+
+      // SEMANA 14
+      [14, 1, "Direito Penal", "Crimes contra a Dignidade Sexual", 0, 3, 0, "", ""],
+      [14, 2, "Direito Processual Penal", "Procedimentos", 0, 3, 0, "", ""],
+      [14, 3, "Medicina Legal", "Sexologia Forense", 0, 3, 0, "", ""],
+      [14, 4, "Direito Constitucional", "Sistema Tributário Nacional, Ciência, Tecnologia, Família, Criança e Idoso", 0, 3, 0, "", ""],
+      [14, 5, "Leis Extravagantes", "Código Eleitoral (Lei nº 4.737/1965) e JECRIM (Lei nº 9.099/1995)", 0, 3, 0, "", ""],
+
+      // SEMANA 15 - REVISÃO DO BLOCO 3
+      [15, 1, "Revisão Bloco 3", "Penal & Processo Penal: Crimes contra a Pessoa, Patrimônio, Dignidade Sexual, Prisões, Cautelares e Júri", 0, 1, 0, "Revisão TOPIF", ""],
+      [15, 2, "Revisão Bloco 3", "Constitucional, Administrativo, Criminologia e Medicina Legal (Semanas 11 a 14)", 0, 1, 0, "Revisão TOPIF", ""],
+      [15, 3, "Revisão Bloco 3", "Leis Especiais: COAF, Esporte, Interceptação, PCD, Falimentares, Eleitoral e JECRIM", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 16
+      [16, 1, "Direito Penal", "Crimes contra a Família, Incolumidade Pública e Paz Pública", 0, 3, 0, "", ""],
+      [16, 2, "Criminologia", "Crime Organizado, Classificação dos Criminosos e Prevenção Criminal", 0, 3, 0, "", ""],
+      [16, 3, "Direito Processual Penal", "Nulidades, Recursos em Espécie e Ações de Impugnação", 0, 3, 0, "", ""],
+      [16, 4, "Leis Extravagantes", "Lei Henry Borel, Crimes contra a Ordem Tributária e Lavagem de Capitais (Lei nº 9.613/1998)", 0, 3, 0, "", ""],
+      [16, 5, "Direito Administrativo", "Bens Públicos", 0, 3, 0, "", ""],
+
+      // SEMANA 17
+      [17, 1, "Direito Penal", "Crimes contra a Fé Pública", 0, 3, 0, "", ""],
+      [17, 2, "Criminologia", "Instâncias de Controle, Reincidência, Prognóstico e Criminologia Feminista, Racial, Queer e Verde", 0, 3, 0, "", ""],
+      [17, 3, "Direito Administrativo", "Agentes Públicos", 0, 3, 0, "", ""],
+      [17, 4, "Leis Extravagantes", "Lei de Execução Penal (LEP) - Parte 1 e Parte 2", 0, 3, 0, "", ""],
+      [17, 5, "Medicina Legal", "Toxicologia Forense e Antropologia Forense", 0, 3, 0, "", ""],
+      [17, 6, "Direito Processual Penal", "Processo Penal Digital", 0, 3, 0, "", ""],
+
+      // SEMANA 18
+      [18, 1, "Direito Administrativo", "Responsabilidade Civil do Estado", 0, 3, 0, "", ""],
+      [18, 2, "Leis Extravagantes", "Lei do Genocídio e Lei da Escuta Protegida", 0, 3, 0, "", ""],
+      [18, 3, "Direito Penal", "Crimes contra a Administração Pública e Crimes de Licitação e Contratos", 0, 3, 0, "", ""],
+      [18, 4, "Criminologia", "Legitimação/Deslegitimação do Direito Penal, Direito Penal do Inimigo e Realismo Marginal", 0, 3, 0, "", ""],
+      [18, 5, "Medicina Legal", "Energias Físicas Não Mecânicas, Perícias/Documentos Médico-Legais e Asfixiologia", 0, 3, 0, "", ""],
+
+      // SEMANA 19
+      [19, 1, "Direito Administrativo", "Improbidade Administrativa e Controle da Administração Pública", 0, 3, 0, "", ""],
+      [19, 2, "Direito Penal", "Crimes contra as Finanças Públicas e contra o Estado Democrático de Direito", 0, 3, 0, "", ""],
+      [19, 3, "Leis Extravagantes", "Lei de Migração, Parcelamento do Solo Urbano e Lei nº 12.984/2014 (Discriminação HIV)", 0, 3, 0, "", ""],
+      [19, 4, "Medicina Legal", "Psiquiatria Forense", 0, 3, 0, "", ""],
+      [19, 5, "Direito Civil", "Lei do Inquilinato (Lei nº 8.245/1991)", 0, 3, 0, "", ""],
+
+      // SEMANA 20 - REVISÃO DO BLOCO 4
+      [20, 1, "Revisão Bloco 4", "Penal & Processo Penal: Família, Incolumidade, Paz, Fé, Adm. Pública, Nulidades e Recursos", 0, 1, 0, "Revisão TOPIF", ""],
+      [20, 2, "Revisão Bloco 4", "Administrativo, Criminologia e Medicina Legal (Semanas 16 a 19)", 0, 1, 0, "Revisão TOPIF", ""],
+      [20, 3, "Revisão Bloco 4", "Leis Especiais: Henry Borel, Tributária, Lavagem, LEP, Genocídio, Escuta e Migração", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 21
+      [21, 1, "Direito Processual Civil", "Princípios, Jurisdição, Ação e Competência", 0, 3, 0, "", ""],
+      [21, 2, "Direito do Consumidor", "Introdução ao Direito do Consumidor", 0, 3, 0, "", ""],
+      [21, 3, "Direitos Humanos", "Teoria Geral, Interpretação, Eficácia e Direitos Humanos na CF/88", 0, 3, 0, "", ""],
+      [21, 4, "Direito Ambiental", "Direito Ambiental Constitucional", 0, 3, 0, "", ""],
+      [21, 5, "Execução Penal", "Objetivos, Princípios e Jurisdição na Execução Penal", 0, 3, 0, "", ""],
+
+      // SEMANA 22
+      [22, 1, "Direito Civil", "Constitucionalização do Direito Civil e LINDB", 0, 3, 0, "", ""],
+      [22, 2, "Execução Penal", "Do Preso, do Trabalho Penitenciário e dos Órgãos da Execução Penal", 0, 3, 0, "", ""],
+      [22, 3, "Direito Ambiental", "Código Florestal, Lei da Mata Atlântica e Lei de Gestão Florestal", 0, 3, 0, "", ""],
+      [22, 4, "Direito Processual Civil", "Dos Sujeitos do Processo", 0, 3, 0, "", ""],
+      [22, 5, "Direitos Humanos", "Controle de Convencionalidade e Intervenção Federal para Garantia dos DH", 0, 3, 0, "", ""],
+
+      // SEMANA 23
+      [23, 1, "Direito Civil", "Fatos Jurídicos, Negócio Jurídico, Prescrição e Decadência", 0, 3, 0, "", ""],
+      [23, 2, "Direito Processual Civil", "Dos Atos Processuais e da Formação, Suspensão e Extinção do Processo", 0, 3, 0, "", ""],
+      [23, 3, "Princípios Institucionais do MP", "Introdução aos Princípios Institucionais do MP", 0, 3, 0, "", ""],
+      [23, 4, "Direito Eleitoral", "Conceitos, Princípios e Justiça Eleitoral", 0, 3, 0, "", ""],
+      [23, 5, "Estatuto da Criança e do Adolescente", "Evolução, Princípios e Depoimento sem Dano", 0, 3, 0, "", ""],
+      [23, 6, "Direitos Humanos", "Federalização dos Crimes contra DH e Programas Nacionais de DH", 0, 3, 0, "", ""],
+      [23, 7, "Direito Tributário e Financeiro", "Legislação Tributária: Competência, Fontes, Vigência, Aplicação e Interpretação", 0, 3, 0, "", ""],
+
+      // SEMANA 24
+      [24, 1, "Direito Tributário e Financeiro", "Conceito e Classificação dos Tributos", 0, 3, 0, "", ""],
+      [24, 2, "Direitos Humanos", "Direito Internacional dos Direitos Humanos", 0, 3, 0, "", ""],
+      [24, 3, "Tutela Coletiva", "Acesso à Justiça e Microssistemas de Tutela Coletiva", 0, 3, 0, "", ""],
+      [24, 4, "Estatuto da Criança e do Adolescente", "Direitos Fundamentais no ECA", 0, 3, 0, "", ""],
+      [24, 5, "Execução Penal", "Sistema Disciplinar na Execução Penal", 0, 3, 0, "", ""],
+      [24, 6, "Princípios Institucionais do MP", "Procedimentos de Investigação no MP (PIC)", 0, 3, 0, "", ""],
+
+      // SEMANA 25 - REVISÃO DO BLOCO 5 (MARCO DE 50% DO CURSO)
+      [25, 1, "Revisão Bloco 5 (50%)", "Civil, Processo Civil e Consumidor (Semanas 21 a 24)", 0, 1, 0, "Revisão TOPIF", ""],
+      [25, 2, "Revisão Bloco 5 (50%)", "Direitos Humanos, Ambiental e Execução Penal (Semanas 21 a 24)", 0, 1, 0, "Revisão TOPIF", ""],
+      [25, 3, "Revisão Bloco 5 (50%)", "Tributário, Eleitoral, ECA, Tutela Coletiva e MP (Semanas 21 a 24)", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 26
+      [26, 1, "Direito Empresarial", "Empresário", 0, 3, 0, "", ""],
+      [26, 2, "Princípios Institucionais do MP", "Conselho Nacional do Ministério Público (CNMP)", 0, 3, 0, "", ""],
+      [26, 3, "Direito Eleitoral", "Elegibilidade, Inelegibilidade e Código Eleitoral", 0, 3, 0, "", ""],
+      [26, 4, "Direito Eleitoral", "Propaganda Eleitoral", 0, 3, 0, "", ""],
+      [26, 5, "Execução Penal", "Direitos da Execução e Progressão de Regime", 0, 3, 0, "", ""],
+
+      // SEMANA 27
+      [27, 1, "Direito Civil", "Obrigações I", 0, 3, 0, "", ""],
+      [27, 2, "Direito do Consumidor", "Direitos Básicos e Responsabilidade Civil no CDC", 0, 3, 0, "", ""],
+      [27, 3, "Direito Ambiental", "Saneamento Básico", 0, 3, 0, "", ""],
+      [27, 4, "Direito Eleitoral", "Partidos Políticos", 0, 3, 0, "", ""],
+
+      // SEMANA 28
+      [28, 1, "Direito Processual Civil", "Tutelas Provisórias", 0, 3, 0, "", ""],
+      [28, 2, "Direito Ambiental", "Recursos Hídricos e Responsabilidade Ambiental", 0, 3, 0, "", ""],
+      [28, 3, "Direitos Humanos", "Integridade Física/Mental, Grupos Vulneráveis, Minorias e Defensores de DH", 0, 3, 0, "", ""],
+      [28, 4, "Direito Tributário e Financeiro", "Limitações ao Poder de Tributar e Competência Tributária", 0, 3, 0, "", ""],
+      [28, 5, "Direito Civil", "Dos Bens", 0, 3, 0, "", ""],
+      [28, 6, "Direito do Consumidor", "Práticas Comerciais e Lei do Cadastro Positivo", 0, 3, 0, "", ""],
+
+      // SEMANA 29
+      [29, 1, "Direito Tributário e Financeiro", "Obrigação Tributária, Fato Gerador, Sujeitos, Responsabilidade e Denúncia Espontânea", 0, 3, 0, "", ""],
+      [29, 2, "Direito Ambiental", "Política Nacional do Meio Ambiente (PNMA), Biossegurança e Biodiversidade", 0, 3, 0, "", ""],
+      [29, 3, "Direito Empresarial", "Sociedades", 0, 3, 0, "", ""],
+
+      // SEMANA 30 - REVISÃO DO BLOCO 6
+      [30, 1, "Revisão Bloco 6", "Civil, Processo Civil, Empresarial e Consumidor (Semanas 26 a 29)", 0, 1, 0, "Revisão TOPIF", ""],
+      [30, 2, "Revisão Bloco 6", "Ambiental, Tributário, Eleitoral, DH, Execução Penal e MP (Semanas 26 a 29)", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 31
+      [31, 1, "Direito Civil", "Obrigações - Parte II", 0, 3, 0, "", ""],
+      [31, 2, "Direito Processual Civil", "Processo de Conhecimento", 0, 3, 0, "", ""],
+      [31, 3, "Direito Empresarial", "Títulos de Crédito", 0, 3, 0, "", ""],
+      [31, 4, "Direito Tributário e Financeiro", "Crédito Tributário", 0, 3, 0, "", ""],
+
+      // SEMANA 32
+      [32, 1, "Direito Civil", "Teoria Geral dos Contratos", 0, 3, 0, "", ""],
+      [32, 2, "Direito do Consumidor", "Práticas Contratuais e Defesa do Consumidor em Juízo", 0, 3, 0, "", ""],
+      [32, 3, "Direito à Saúde", "Direito Sanitário e Direito à Saúde", 0, 3, 0, "", ""],
+      [32, 4, "Direito Processual Civil", "Sentença e Coisa Julgada", 0, 3, 0, "", ""],
+
+      // SEMANA 33
+      [33, 1, "Direito Civil", "Contratos em Espécie e Responsabilidade Civil", 0, 3, 0, "", ""],
+      [33, 2, "Direito Empresarial", "Direito Falimentar e Recuperação Judicial", 0, 3, 0, "", ""],
+      [33, 3, "Direitos Humanos", "Direitos da Criança, PCD, Idosos, População LGBTQIAPN+ e Pessoas Reclusas", 0, 3, 0, "", ""],
+
+      // SEMANA 34
+      [34, 1, "Direito Civil", "Direito das Coisas (Direitos Reais)", 0, 3, 0, "", ""],
+      [34, 2, "Direito Processual Civil", "Procedimentos Especiais e Procedimentos de Jurisdição Voluntária", 0, 3, 0, "", ""],
+
+      // SEMANA 35 - REVISÃO DO BLOCO 7
+      [35, 1, "Revisão Bloco 7", "Civil (Obrigações II, Contratos, Resp. Civil, Reais) e Processo Civil", 0, 1, 0, "Revisão TOPIF", ""],
+      [35, 2, "Revisão Bloco 7", "Empresarial, Tributário, Consumidor, Direito à Saúde e Direitos Humanos", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 36
+      [36, 1, "Direito Civil", "Direito de Família - Entidades Familiares", 0, 3, 0, "", ""],
+      [36, 2, "Direito Processual Civil", "Teoria Geral das Provas e Provas em Espécie", 0, 3, 0, "", ""],
+      [36, 3, "Direitos Humanos", "Indígenas, Refugiados, População em Situação de Rua, Migrantes, Quilombolas e Vítimas", 0, 3, 0, "", ""],
+      [36, 4, "Direito Empresarial", "Propriedade Industrial", 0, 3, 0, "", ""],
+      [36, 5, "Estatuto da Criança e do Adolescente", "Guarda, Tutela e Adoção", 0, 3, 0, "", ""],
+
+      // SEMANA 37
+      [37, 1, "Direito Empresarial", "Ações Cambiais", 0, 3, 0, "", ""],
+      [37, 2, "Direito do Consumidor", "Contratos Bancários", 0, 3, 0, "", ""],
+      [37, 3, "Direito Tributário e Financeiro", "Administração Tributária", 0, 3, 0, "", ""],
+      [37, 4, "Estatuto da Criança e do Adolescente", "Poder Familiar", 0, 3, 0, "", ""],
+      [37, 5, "Execução Penal", "Livramento Condicional", 0, 3, 0, "", ""],
+      [37, 6, "Direito Civil", "Direito de Família - Casamento", 0, 3, 0, "", ""],
+
+      // SEMANA 38
+      [38, 1, "Direito da Pessoa Idosa", "Estatuto da Pessoa Idosa - Parte Geral e Proteção Integral", 0, 3, 0, "", ""],
+      [38, 2, "Direito Civil", "Direito de Família - Dissolução da Sociedade Conjugal", 0, 3, 0, "", ""],
+      [38, 3, "Direito Tributário e Financeiro", "Execução Fiscal e Processo Judicial Tributário", 0, 3, 0, "", ""],
+
+      // SEMANA 39
+      [39, 1, "Direito Civil", "Direito de Família - União Estável e Regime de Bens", 0, 3, 0, "", ""],
+      [39, 2, "Direito Processual Civil", "Processos nos Tribunais e Meios de Impugnação das Decisões Judiciais", 0, 3, 0, "", ""],
+      [39, 3, "Tutela Coletiva", "Legitimidade na Tutela Coletiva", 0, 3, 0, "", ""],
+
+      // SEMANA 40 - REVISÃO DO BLOCO 8
+      [40, 1, "Revisão Bloco 8", "Direito de Família, Processo Civil e Tutela Coletiva (Semanas 36 a 39)", 0, 1, 0, "Revisão TOPIF", ""],
+      [40, 2, "Revisão Bloco 8", "ECA, Idoso, Tributário, Empresarial, Consumidor, Execução Penal e DH", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 41
+      [41, 1, "Tutela Coletiva", "Aspectos Processuais, Ação Coletiva, Competência, Litisconsórcio e Intervenção de Terceiros", 0, 3, 0, "", ""],
+      [41, 2, "Direito do Consumidor", "Planos de Saúde e Serviços Públicos Essenciais", 0, 3, 0, "", ""],
+      [41, 3, "Direito Civil", "Direito de Família - Relações de Parentesco", 0, 3, 0, "", ""],
+
+      // SEMANA 42
+      [42, 1, "Tutela Coletiva", "Sentença Coletiva e Meios Adequados de Solução de Conflitos", 0, 3, 0, "", ""],
+      [42, 2, "Estatuto da Criança e do Adolescente", "Medidas de Proteção, Acesso à Justiça e Ato Infracional", 0, 3, 0, "", ""],
+      [42, 3, "Direito Civil", "Direito de Família - Tutela, Curatela e Tomada de Decisão Apoiada", 0, 3, 0, "", ""],
+
+      // SEMANA 43
+      [43, 1, "Direito Civil", "Direito de Família - Alimentos", 0, 3, 0, "", ""],
+      [43, 2, "Estatuto da Criança e do Adolescente", "Medidas Socioeducativas, SINASE, Infrações Administrativas, LOAS e LDB", 0, 3, 0, "", ""],
+
+      // SEMANA 44
+      [44, 1, "Direito Civil", "Direito das Sucessões", 0, 3, 0, "", ""],
+      [44, 2, "Direito Civil", "Lei da Alienação Parental", 0, 3, 0, "", ""],
+
+      // SEMANA 45 - REVISÃO DO BLOCO 9
+      [45, 1, "Revisão Bloco 9", "Tutela Coletiva, ECA, Consumidor, Família e Sucessões (Semanas 41 a 44)", 0, 1, 0, "Revisão TOPIF", ""],
+
+      // SEMANA 46
+      [46, 1, "Direito Internacional Público", "Introdução, Sujeitos, Imunidades, Nacionalidade, Estrangeiro e Cooperação", 0, 3, 0, "", ""],
+      [46, 2, "Direito Urbanístico", "Conceitos e Aspectos Gerais do Direito Urbanístico", 0, 3, 0, "", ""],
+      [46, 3, "Direito Tributário e Financeiro", "Orçamento, Receita, Despesa e Crédito Público", 0, 3, 0, "", ""],
+      [46, 4, "Direito Previdenciário", "Seguridade Social e Previdência Complementar", 0, 3, 0, "", ""],
+
+      // SEMANA 47
+      [47, 1, "Direito Tributário e Financeiro", "Despesa e Receita Pública e Fiscalização Financeira e Orçamentária", 0, 3, 0, "", ""],
+      [47, 2, "Direito Internacional Público", "Mercosul", 0, 3, 0, "", ""],
+
+      // SEMANA 48
+      [48, 1, "Direito Urbanístico", "Estatuto da Cidade (Lei nº 10.257/2001)", 0, 3, 0, "", ""],
+      [48, 2, "Direito Previdenciário", "Beneficiários, Empregadores, Contribuições, Prescrição/Decadência e Crimes Previdenciários", 0, 3, 0, "", ""],
+      [48, 3, "Direito Tributário e Financeiro", "Lei de Responsabilidade Fiscal (LRF - LC nº 101/2000)", 0, 3, 0, "", ""],
+
+      // SEMANA 49
+      [49, 1, "Direito Previdenciário", "Acidente de Trabalho", 0, 3, 0, "", ""],
+      [49, 2, "Direito Internacional Público", "Crimes Limitadores, Homologação de Sentença Estrangeira, Cooperação e Conflitos Internacionais", 0, 3, 0, "", ""],
+      [49, 3, "Direito Urbanístico", "Direito à Moradia", 0, 3, 0, "", ""],
+
+      // SEMANA 50 - REVISÃO DO BLOCO 10 (CONCLUSÃO DO CURSO)
+      [50, 1, "Revisão Bloco 10 (Final)", "Direito Internacional Público, Financeiro, Previdenciário e Urbanístico (Semanas 46 a 49)", 0, 1, 0, "Revisão Final TOPIF", ""]
+    ];
+
+    async function inicializarSeed50SemanasSupabase() {
+      if (!supabaseClient) return;
+      try {
+        const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+        const registrosSeed = CRONOGRAMA_50_SEMANAS_SEED.map((item, idx) => {
+          const [semana, meta, materia, topico, paginas, partes, concluidas, leiSeca, sumulas] = item;
+          const isConc = concluidas >= partes;
+          const detalhes = gerarDivisaoPadraoPartes_(paginas, partes, concluidas);
+          return {
+            id: `CRON_S${String(semana).padStart(2, '0')}_M${String(meta).padStart(2, '0')}`,
+            numero_semana: semana,
+            tipo_semana: semana % 5 === 0 ? 'REVISAO' : 'CONTEUDO',
+            numero_meta: meta,
+            materia,
+            topico,
+            paginas_total: paginas,
+            total_partes: partes,
+            partes_concluidas: concluidas,
+            detalhes_partes: detalhes,
+            lei_seca: leiSeca || '',
+            sumulas: sumulas || '',
+            status: isConc ? 'Concluído' : (concluidas > 0 ? 'Em Andamento' : 'Pendente'),
+            data_prevista: hojeYMD,
+            data_conclusao: isConc ? hojeYMD : '',
+            integrado_revisao: isConc,
+            ordem_global: idx + 1
+          };
+        });
+
+        const { error } = await supabaseClient.from('cronograma_metas').upsert(registrosSeed, { onConflict: 'id' });
+        if (error) throw error;
+
+        await carregarCronogramaSupabase();
+        notificar('Planejamento das 50 Semanas inicializado com sucesso!');
+      } catch (err) {
+        console.error('Erro ao inicializar seed das 50 semanas:', err.message);
+      }
+    }
+  </script>
+  
 </body>
 </html>
