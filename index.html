@@ -3591,6 +3591,11 @@
       if (nomeAba === 'estatisticas' && ESTADO) {
         renderizarEstatisticas();
       }
+      if (nomeAba === 'cronograma') {
+        if (typeof carregarCronogramaSupabase === 'function') {
+          carregarCronogramaSupabase();
+        }
+      }
     }
 
     async function carregarSistema() {
@@ -6946,9 +6951,9 @@
     }
   </script>
 
-  <script>
+<script>
     /* ==========================================================================
-     * 9. MOTOR DO CRONOGRAMA DINÂMICO DE 50 SEMANAS (EXTENSIVA DELTA & MP)
+     * 9. MOTOR DO CRONOGRAMA DINÂMICO DE 50 SEMANAS (RESILIENTE + AUTO-SEED)
      * ========================================================================== */
     let CRON_METAS = [];
     let CRON_BLOCO_FILTRO = 0;
@@ -6962,30 +6967,70 @@
       carregarCronogramaSupabase();
     };
 
+    function carregarSeedLocalNaMemoria_() {
+      const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      CRON_METAS = CRONOGRAMA_50_SEMANAS_SEED.map((item, idx) => {
+        const [semana, meta, materia, topico, paginas, partes, concluidas, leiSeca, sumulas] = item;
+        const isConc = concluidas >= partes;
+        const detalhes = gerarDivisaoPadraoPartes_(paginas, partes, concluidas);
+        return {
+          id: `CRON_S${String(semana).padStart(2, '0')}_M${String(meta).padStart(2, '0')}`,
+          numeroSemana: semana,
+          tipoSemana: semana % 5 === 0 ? 'REVISAO' : 'CONTEUDO',
+          numeroMeta: meta,
+          materia,
+          topico,
+          paginasTotal: paginas,
+          totalPartes: partes,
+          partesConcluidas: concluidas,
+          detalhesPartes: detalhes,
+          leiSeca: leiSeca || '',
+          sumulas: sumulas || '',
+          status: isConc ? 'Concluído' : (concluidas > 0 ? 'Em Andamento' : 'Pendente'),
+          dataPrevista: hojeYMD,
+          dataConclusao: isConc ? hojeYMD : '',
+          integradoRevisao: isConc,
+          ordemGlobal: idx + 1
+        };
+      });
+    }
+
     async function carregarCronogramaSupabase() {
+      // 1. Se estiver vazio na memória, carrega o Seed local imediatamente para não travar a tela
+      if (!CRON_METAS || CRON_METAS.length === 0) {
+        carregarSeedLocalNaMemoria_();
+        await recalcularDatasCronogramaDinamico(false);
+        popularSelectFiltroSemanasCron_();
+        renderizarDashboardCronograma();
+        renderizarListaSemanasCronograma();
+      }
+
+      // 2. Se houver cliente Supabase, sincroniza com o banco na nuvem
       if (!supabaseClient) return;
+
       try {
         const { data, error } = await supabaseClient
           .from('cronograma_metas')
           .select('*')
           .order('ordem_global', { ascending: true });
 
-        if (error) throw error;
-
-        if (!data || data.length === 0) {
-          if (typeof inicializarSeed50SemanasSupabase === 'function') {
-            await inicializarSeed50SemanasSupabase();
-            return;
-          }
+        if (error) {
+          console.warn('Tabela cronograma_metas ainda não sincronizada no Supabase:', error.message);
+          return;
         }
 
-        CRON_METAS = (data || []).map(normalizarMetaCronograma_);
+        if (!data || data.length === 0) {
+          await inicializarSeed50SemanasSupabase();
+          return;
+        }
+
+        CRON_METAS = data.map(normalizarMetaCronograma_);
         await recalcularDatasCronogramaDinamico(false);
         popularSelectFiltroSemanasCron_();
         renderizarDashboardCronograma();
         renderizarListaSemanasCronograma();
       } catch (err) {
-        console.warn('Aviso ao carregar cronograma de 50 semanas:', err.message);
+        console.warn('Aviso ao sincronizar cronograma:', err.message);
       }
     }
 
@@ -7061,7 +7106,7 @@
     async function recalcularDatasCronogramaDinamico(persistirNoBanco = false) {
       if (!CRON_METAS || CRON_METAS.length === 0) return;
 
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
       let cursorDiasAcumulados = 0;
       const atualizacoesBanco = [];
 
@@ -7113,11 +7158,11 @@
         }
       });
 
-      if (persistirNoBanco && atualizacoesBanco.length > 0 && supabaseClient) {
+      if (persistirNoBanco && atualizacoesBanco.length > 0 && typeof supabaseClient !== 'undefined' && supabaseClient) {
         try {
           await supabaseClient.from('cronograma_metas').upsert(atualizacoesBanco, { onConflict: 'id' });
         } catch (e) {
-          console.warn('Erro ao salvar novas datas:', e.message);
+          console.warn('Aviso ao salvar novas datas:', e.message);
         }
       }
 
@@ -7128,7 +7173,7 @@
     function renderizarDashboardCronograma() {
       if (!CRON_METAS || CRON_METAS.length === 0) return;
 
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
       const totalMetas = CRON_METAS.length;
       const concluidas = CRON_METAS.filter(m => m.status === 'Concluído');
       const pendentes = CRON_METAS.filter(m => m.status !== 'Concluído');
@@ -7147,20 +7192,27 @@
         badgeBloco.textContent = `Bloco ${blocoAtualNum} (Semanas ${String(semIniBloco).padStart(2, '0')} a ${String(semFimBloco).padStart(2, '0')})`;
       }
 
-      document.getElementById('cronTextoSemanaEMetaAtual').textContent =
-        `Semana ${String(semanaAtualNum).padStart(2, '0')} de 50 • Meta ${metaAtual.numeroMeta}`;
-      document.getElementById('cronTextoTopicoMetaAtual').textContent =
-        `${metaAtual.materia} — ${metaAtual.topico}`;
-      document.getElementById('cronLabelDataMetaAtual').textContent =
-        metaAtual.status === 'Concluído' ? 'Curso Concluído!' : `Prevista: ${formatarDataBR(metaAtual.dataPrevista)}`;
+      const elSemMeta = document.getElementById('cronTextoSemanaEMetaAtual');
+      if (elSemMeta) elSemMeta.textContent = `Semana ${String(semanaAtualNum).padStart(2, '0')} de 50 • Meta ${metaAtual.numeroMeta}`;
+
+      const elTopicoAtual = document.getElementById('cronTextoTopicoMetaAtual');
+      if (elTopicoAtual) elTopicoAtual.textContent = `${metaAtual.materia} — ${metaAtual.topico}`;
+
+      const elDataMetaAtual = document.getElementById('cronLabelDataMetaAtual');
+      if (elDataMetaAtual) elDataMetaAtual.textContent = metaAtual.status === 'Concluído' ? 'Curso Concluído!' : `Prevista: ${formatarDataBR(metaAtual.dataPrevista)}`;
 
       const somaPartesTotal = CRON_METAS.reduce((acc, m) => acc + m.totalPartes, 0);
       const somaPartesFeitas = CRON_METAS.reduce((acc, m) => acc + m.partesConcluidas, 0);
       const percGlobal = somaPartesTotal > 0 ? ((somaPartesFeitas / somaPartesTotal) * 100).toFixed(1) : '0.0';
 
-      document.getElementById('cronTxtMetasConcluidas').textContent = `${concluidas.length} / ${totalMetas} metas`;
-      document.getElementById('cronTxtPercentualGlobal').textContent = `${percGlobal}% Concluído`;
-      document.getElementById('cronBarraProgressoGlobal').style.width = `${percGlobal}%`;
+      const elMetasConc = document.getElementById('cronTxtMetasConcluidas');
+      if (elMetasConc) elMetasConc.textContent = `${concluidas.length} / ${totalMetas} metas`;
+
+      const elPercGlobal = document.getElementById('cronTxtPercentualGlobal');
+      if (elPercGlobal) elPercGlobal.textContent = `${percGlobal}% Concluído`;
+
+      const elBarraGlobal = document.getElementById('cronBarraProgressoGlobal');
+      if (elBarraGlobal) elBarraGlobal.style.width = `${percGlobal}%`;
 
       let semanas100Porcento = 0;
       for (let s = 1; s <= 50; s++) {
@@ -7172,51 +7224,60 @@
         return acc + Math.round(m.paginasTotal * (m.partesConcluidas / Math.max(1, m.totalPartes)));
       }, 0);
 
-      document.getElementById('cronTxtSemanasConcluidas').textContent = `Semanas finalizadas: ${semanas100Porcento} de 50`;
-      document.getElementById('cronTxtPaginasLidasTotal').textContent = `Páginas de doutrina lidas: ${paginasLidas} pág.`;
+      const elSemConc = document.getElementById('cronTxtSemanasConcluidas');
+      if (elSemConc) elSemConc.textContent = `Semanas finalizadas: ${semanas100Porcento} de 50`;
 
+      const elPagLidas = document.getElementById('cronTxtPaginasLidasTotal');
+      if (elPagLidas) elPagLidas.textContent = `Páginas de doutrina lidas: ${paginasLidas} pág.`;
+
+      // 1. Contagem Regressiva: Meta Atual
       const partesRestMeta = Math.max(0, metaAtual.totalPartes - metaAtual.partesConcluidas);
       const diasMetaAtual = Math.max(1, Math.ceil((partesRestMeta / Math.max(1, metaAtual.totalPartes)) * CRON_CADENCIA_DIAS));
-      document.getElementById('cronRegMetaAtual').textContent =
-        partesRestMeta === 0 ? 'Concluída!' : `Falta(m) ${partesRestMeta} parte(s)`;
-      document.getElementById('cronRegMetaAtualSub').textContent =
-        `~${diasMetaAtual} dia(s) • Conclusão: ${formatarDataBR(somarDiasYMD_(hojeYMD, diasMetaAtual))}`;
+      const elRegMeta = document.getElementById('cronRegMetaAtual');
+      if (elRegMeta) elRegMeta.textContent = partesRestMeta === 0 ? 'Concluída!' : `Falta(m) ${partesRestMeta} parte(s)`;
+      const elRegMetaSub = document.getElementById('cronRegMetaAtualSub');
+      if (elRegMetaSub) elRegMetaSub.textContent = `~${diasMetaAtual} dia(s) • Conclusão: ${formatarDataBR(somarDiasYMD_(hojeYMD, diasMetaAtual))}`;
 
+      // 2. Contagem Regressiva: Semana Atual
       const metasRestSemana = CRON_METAS.filter(m => m.numeroSemana === semanaAtualNum && m.status !== 'Concluído');
       const ultimaDaSemana = metasRestSemana.length > 0 ? metasRestSemana[metasRestSemana.length - 1] : metaAtual;
       const diasFimSemana = Math.max(0, diferencaDias_(hojeYMD, ultimaDaSemana.dataPrevista));
-      document.getElementById('cronRegSemanaAtual').textContent =
-        `Falta(m) ${metasRestSemana.length} meta(s)`;
-      document.getElementById('cronRegSemanaAtualSub').textContent =
-        `~${diasFimSemana} dia(s) • Fecha em ${formatarDataBR(ultimaDaSemana.dataPrevista)}`;
+      const elRegSem = document.getElementById('cronRegSemanaAtual');
+      if (elRegSem) elRegSem.textContent = `Falta(m) ${metasRestSemana.length} meta(s)`;
+      const elRegSemSub = document.getElementById('cronRegSemanaAtualSub');
+      if (elRegSemSub) elRegSemSub.textContent = `~${diasFimSemana} dia(s) • Fecha em ${formatarDataBR(ultimaDaSemana.dataPrevista)}`;
 
+      // 3. Contagem Regressiva: Próxima Semana de Revisão
       const proxSemRevisao = Math.min(50, Math.ceil(semanaAtualNum / 5) * 5);
       const metasAteRevisao = pendentes.filter(m => m.numeroSemana < proxSemRevisao);
       const primeiraMetaRevisao = CRON_METAS.find(m => m.numeroSemana === proxSemRevisao);
       const dataIniRevisao = primeiraMetaRevisao ? primeiraMetaRevisao.dataPrevista : hojeYMD;
       const diasAteRevisao = Math.max(0, diferencaDias_(hojeYMD, dataIniRevisao));
-      document.getElementById('cronRegProxRevisao').textContent =
-        semanaAtualNum === proxSemRevisao ? `Na Semana ${proxSemRevisao} agora!` : `Semana ${String(proxSemRevisao).padStart(2, '0')} (${metasAteRevisao.length} metas)`;
-      document.getElementById('cronRegProxRevisaoSub').textContent =
-        `Faltam ~${diasAteRevisao} dias (${formatarDataBR(dataIniRevisao)})`;
+      const elRegRev = document.getElementById('cronRegProxRevisao');
+      if (elRegRev) elRegRev.textContent = semanaAtualNum === proxSemRevisao ? `Na Semana ${proxSemRevisao} agora!` : `Semana ${String(proxSemRevisao).padStart(2, '0')} (${metasAteRevisao.length} metas)`;
+      const elRegRevSub = document.getElementById('cronRegProxRevisaoSub');
+      if (elRegRevSub) elRegRevSub.textContent = `Faltam ~${diasAteRevisao} dias (${formatarDataBR(dataIniRevisao)})`;
 
+      // 4. Contagem Regressiva: Metade do Curso (Semana 25)
       const pendentesAteMetade = pendentes.filter(m => m.numeroSemana <= 25);
       const ultimaMetaSem25 = CRON_METAS.filter(m => m.numeroSemana <= 25).slice(-1)[0];
       const dataMetade = ultimaMetaSem25 ? ultimaMetaSem25.dataPrevista : hojeYMD;
       const diasAteMetade = Math.max(0, diferencaDias_(hojeYMD, dataMetade));
-      document.getElementById('cronRegMetadeCurso').textContent =
-        pendentesAteMetade.length === 0 ? '50% já atingido!' : `Faltam ${pendentesAteMetade.length} metas`;
-      document.getElementById('cronRegMetadeCursoSub').textContent =
-        pendentesAteMetade.length === 0 ? 'Marco superado' : `~${diasAteMetade} dias • Em ${formatarDataBR(dataMetade)}`;
+      const elRegMetade = document.getElementById('cronRegMetadeCurso');
+      if (elRegMetade) elRegMetade.textContent = pendentesAteMetade.length === 0 ? '50% já atingido!' : `Faltam ${pendentesAteMetade.length} metas`;
+      const elRegMetadeSub = document.getElementById('cronRegMetadeCursoSub');
+      if (elRegMetadeSub) elRegMetadeSub.textContent = pendentesAteMetade.length === 0 ? 'Marco superado' : `~${diasAteMetade} dias • Em ${formatarDataBR(dataMetade)}`;
 
+      // 5. Contagem Regressiva: Conclusão do Curso (Semana 50)
       const ultimaMetaCurso = CRON_METAS[CRON_METAS.length - 1];
       const dataFimCurso = ultimaMetaCurso ? ultimaMetaCurso.dataPrevista : hojeYMD;
       const diasAteFimCurso = Math.max(0, diferencaDias_(hojeYMD, dataFimCurso));
-      document.getElementById('cronRegFimCurso').textContent =
-        pendentes.length === 0 ? '100% Concluído!' : `Faltam ${pendentes.length} metas`;
-      document.getElementById('cronRegFimCursoSub').textContent =
-        `~${diasAteFimCurso} dias • Em ${formatarDataBR(dataFimCurso)}`;
+      const elRegFim = document.getElementById('cronRegFimCurso');
+      if (elRegFim) elRegFim.textContent = pendentes.length === 0 ? '100% Concluído!' : `Faltam ${pendentes.length} metas`;
+      const elRegFimSub = document.getElementById('cronRegFimCursoSub');
+      if (elRegFimSub) elRegFimSub.textContent = `~${diasAteFimCurso} dias • Em ${formatarDataBR(dataFimCurso)}`;
 
+      // Renderiza a Régua dos 10 Blocos
       const contBlocos = document.getElementById('cronGridBlocos5Semanas');
       if (contBlocos) {
         let htmlBlocos = '';
@@ -7451,7 +7512,7 @@
       const m = CRON_METAS.find(x => x.id === idMeta);
       if (!m || !m.detalhesPartes[idxParte]) return;
 
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
       m.detalhesPartes[idxParte].concluida = Boolean(marcado);
       m.detalhesPartes[idxParte].dataConclusaoParte = marcado ? hojeYMD : '';
 
@@ -7479,7 +7540,7 @@
     async function concluirMetaInteiraCronograma(idMeta) {
       const m = CRON_METAS.find(x => x.id === idMeta);
       if (!m) return;
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
 
       m.detalhesPartes.forEach(p => {
         p.concluida = true;
@@ -7753,7 +7814,7 @@
           leiSeca,
           sumulas,
           status: 'Pendente',
-          dataPrevista: ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date()),
+          dataPrevista: (typeof ESTADO !== 'undefined' && ESTADO) ? ESTADO.hojeYMD : formatarDataYMD_(new Date()),
           dataConclusao: '',
           integradoRevisao: false,
           ordemGlobal: (numeroSemana * 100) + numeroMeta
@@ -7820,7 +7881,7 @@
       ajustarLarguraColunasExcel_(wsBlocos, rowsBlocos);
       XLSX.utils.book_append_sheet(wb, wsBlocos, 'Previsao Blocos 5 Semanas');
 
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : '2026';
+      const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO) ? ESTADO.hojeYMD : '2026';
       XLSX.writeFile(wb, `Cronograma_50_Semanas_Delta_MP_${hojeYMD}.xlsx`);
       notificar('Planilha Excel das 50 Semanas exportada com todas as datas recalculadas!');
     }
@@ -8138,7 +8199,7 @@
     async function inicializarSeed50SemanasSupabase() {
       if (!supabaseClient) return;
       try {
-        const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+        const hojeYMD = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
         const registrosSeed = CRONOGRAMA_50_SEMANAS_SEED.map((item, idx) => {
           const [semana, meta, materia, topico, paginas, partes, concluidas, leiSeca, sumulas] = item;
           const isConc = concluidas >= partes;
@@ -8170,7 +8231,7 @@
         await carregarCronogramaSupabase();
         notificar('Planejamento das 50 Semanas inicializado com sucesso!');
       } catch (err) {
-        console.error('Erro ao inicializar seed das 50 semanas:', err.message);
+        console.error('Aviso ao inicializar seed no Supabase:', err.message);
       }
     }
   </script>
