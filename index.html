@@ -2,7 +2,7 @@
 <html lang="pt-BR" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Gestão de Revisão por Questões | Supabase Cloud</title>
 
   <!-- Tailwind CSS CDN -->
@@ -27,10 +27,11 @@
     body {
       font-family: 'Inter', sans-serif;
       transition: background-color 0.2s ease, color 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* ==========================================================================
-     * GERENCIADOR GLOBAL DE TEMA (DARK / LIGHT MODE NATIVO NAS 8 ABAS)
+     * 1. GERENCIADOR DE TEMA CLARO ERGONÔMICO (ALTO CONTRASTE E LEGIBILIDADE)
      * ========================================================================== */
     html.dark body {
       background-color: #020617; /* slate-950 */
@@ -41,17 +42,17 @@
       color: #0f172a !important; /* slate-900 */
     }
 
-    /* Sobrescritas Inteligentes de Superfícies p/ Light Mode Global */
+    /* Superfícies Adaptativas */
     html:not(.dark) header {
-      background-color: rgba(255, 255, 255, 0.95) !important;
-      border-color: #e2e8f0 !important;
+      background-color: rgba(255, 255, 255, 0.98) !important;
+      border-color: #cbd5e1 !important;
       color: #0f172a !important;
     }
     html:not(.dark) .bg-slate-950,
     html:not(.dark) .bg-slate-950\/80,
     html:not(.dark) .bg-slate-950\/70,
     html:not(.dark) .bg-slate-950\/60 {
-      background-color: #f1f5f9 !important; /* slate-100 */
+      background-color: #f1f5f9 !important;
     }
     html:not(.dark) .bg-slate-900,
     html:not(.dark) .bg-slate-900\/95,
@@ -61,62 +62,66 @@
     html:not(.dark) .bg-slate-800,
     html:not(.dark) .bg-slate-800\/50,
     html:not(.dark) .bg-slate-800\/40 {
-      background-color: #f1f5f9 !important;
-      color: #1e293b !important;
+      background-color: #e2e8f0 !important;
+      color: #0f172a !important;
     }
     html:not(.dark) .border-slate-800,
     html:not(.dark) .border-slate-800\/80,
     html:not(.dark) .border-slate-700 {
-      border-color: #e2e8f0 !important; /* slate-200 */
+      border-color: #cbd5e1 !important; /* slate-300 */
     }
     html:not(.dark) .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
-      border-color: #e2e8f0 !important;
+      border-color: #cbd5e1 !important;
     }
 
-    /* Tipografia Adaptativa em Light Mode (Preservando Botões Coloridos) */
+    /* Tipografia de Alto Contraste */
     html:not(.dark) h1,
     html:not(.dark) h2,
     html:not(.dark) h3,
-    html:not(.dark) .text-slate-100,
-    html:not(.dark) .text-slate-200 {
-      color: #0f172a !important;
-    }
+    html:not(.dark) h4,
     html:not(.dark) .text-white:not(button):not(.bg-indigo-600):not(.bg-emerald-600):not(.bg-emerald-700):not(.bg-rose-600):not(.bg-teal-600):not(.bg-amber-500):not(.tab-btn-active):not(.subtab-active) {
       color: #0f172a !important;
     }
+    html:not(.dark) .text-slate-100,
+    html:not(.dark) .text-slate-200 {
+      color: #1e293b !important; /* slate-800 */
+    }
     html:not(.dark) .text-slate-300,
     html:not(.dark) .text-slate-400 {
-      color: #475569 !important; /* slate-600 */
+      color: #334155 !important; /* slate-700 - Contraste WCAG Seguro */
+    }
+    html:not(.dark) .text-slate-500 {
+      color: #475569 !important;
     }
 
-    /* Ajustes de Badges Suaves em Light Mode */
+    /* Badges com Cores Nítidas no Modo Claro */
     html:not(.dark) .bg-indigo-950,
     html:not(.dark) .bg-indigo-950\/90,
     html:not(.dark) .bg-indigo-950\/60,
     html:not(.dark) .bg-indigo-950\/50,
     html:not(.dark) .bg-indigo-950\/40,
     html:not(.dark) .bg-indigo-950\/30 {
-      background-color: #eef2ff !important;
-      border-color: #c7d2fe !important;
-      color: #3730a3 !important;
+      background-color: #e0e7ff !important;
+      border-color: #818cf8 !important;
+      color: #1e1b4b !important;
     }
     html:not(.dark) .text-indigo-200,
     html:not(.dark) .text-indigo-300,
     html:not(.dark) .text-indigo-400 {
-      color: #4338ca !important;
+      color: #3730a3 !important;
     }
     html:not(.dark) .bg-emerald-950,
     html:not(.dark) .bg-emerald-950\/50,
     html:not(.dark) .bg-emerald-950\/30,
     html:not(.dark) .bg-emerald-950\/20 {
-      background-color: #ecfdf5 !important;
-      border-color: #a7f3d0 !important;
-      color: #065f46 !important;
+      background-color: #d1fae5 !important;
+      border-color: #34d399 !important;
+      color: #064e3b !important;
     }
     html:not(.dark) .text-emerald-200,
     html:not(.dark) .text-emerald-300,
     html:not(.dark) .text-emerald-400 {
-      color: #047857 !important;
+      color: #065f46 !important;
     }
     html:not(.dark) .bg-rose-950,
     html:not(.dark) .bg-rose-950\/60,
@@ -124,48 +129,48 @@
     html:not(.dark) .bg-rose-950\/40,
     html:not(.dark) .bg-rose-950\/30,
     html:not(.dark) .bg-rose-950\/20 {
-      background-color: #fff1f2 !important;
-      border-color: #fecdd3 !important;
-      color: #9f1239 !important;
+      background-color: #ffe4e6 !important;
+      border-color: #fb7185 !important;
+      color: #881337 !important;
     }
     html:not(.dark) .text-rose-200,
     html:not(.dark) .text-rose-300,
     html:not(.dark) .text-rose-400 {
-      color: #be123c !important;
+      color: #9f1239 !important;
     }
     html:not(.dark) .bg-amber-950,
     html:not(.dark) .bg-amber-950\/60 {
-      background-color: #fffbeb !important;
-      border-color: #fde68a !important;
-      color: #92400e !important;
+      background-color: #fef3c7 !important;
+      border-color: #f59e0b !important;
+      color: #78350f !important;
     }
     html:not(.dark) .text-amber-200,
     html:not(.dark) .text-amber-300,
     html:not(.dark) .text-amber-400 {
-      color: #b45309 !important;
+      color: #92400e !important;
     }
     html:not(.dark) .bg-teal-950,
     html:not(.dark) .bg-teal-950\/40 {
-      background-color: #f0fdfa !important;
-      border-color: #99f6e4 !important;
-      color: #115e59 !important;
+      background-color: #ccfbf1 !important;
+      border-color: #2dd4bf !important;
+      color: #134e4a !important;
     }
     html:not(.dark) .text-teal-300 {
-      color: #0f766e !important;
+      color: #115e59 !important;
     }
 
-    /* Botões de Abas e Sub-abas */
+    /* Abas Ativas / Inativas */
     .tab-btn-active {
       background-color: #4f46e5 !important;
       color: #ffffff !important;
-      font-weight: 600;
+      font-weight: 700;
       box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     .tab-btn-inactive {
       color: #94a3b8;
     }
     html:not(.dark) .tab-btn-inactive {
-      color: #475569;
+      color: #334155;
     }
     .tab-btn-inactive:hover {
       background-color: #1e293b;
@@ -187,7 +192,7 @@
     }
     html:not(.dark) .subtab-inactive {
       background-color: #f1f5f9;
-      color: #475569;
+      color: #334155;
       border: 1px solid #cbd5e1;
     }
     .subtab-inactive:hover {
@@ -199,12 +204,7 @@
       color: #0f172a;
     }
 
-    .dragging {
-      opacity: 0.45;
-      border: 2px dashed #6366f1;
-    }
-
-    /* Inputs e Selects Nativos Reativos ao Tema */
+    /* Inputs e Controles */
     html.dark input[type="text"],
     html.dark input[type="number"],
     html.dark input[type="date"],
@@ -225,7 +225,7 @@
     html:not(.dark) textarea {
       background-color: #ffffff !important;
       color: #0f172a !important;
-      border-color: #cbd5e1 !important;
+      border-color: #94a3b8 !important;
     }
     input:focus, select:focus, textarea:focus {
       outline: none !important;
@@ -233,7 +233,7 @@
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25) !important;
     }
 
-    /* Destaques Cloze Deletion (Lei Seca) */
+    /* Máscaras de Cloze (Lei Seca) */
     .fc-cloze-blank {
       display: inline-block;
       padding: 0.12rem 0.65rem;
@@ -266,17 +266,42 @@
       border-color: #059669;
     }
 
-    /* Modo Tela Cheia Imersivo (Fullscreen API) */
+    /* Destaques de Erro e Correção */
+    .fc-destaque-erro {
+      background-color: #ffe4e6;
+      color: #b91c1c;
+      font-weight: 800;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+      text-decoration: line-through;
+    }
+    html.dark .fc-destaque-erro {
+      background-color: #4c0519;
+      color: #fca5a5;
+    }
+    .fc-destaque-correto {
+      background-color: #dcfce7;
+      color: #15803d;
+      font-weight: 800;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
+    }
+    html.dark .fc-destaque-correto {
+      background-color: #064e3b;
+      color: #86efac;
+    }
+
+    /* ==========================================================================
+     * 2. SOLUÇÃO FULLSCREEN UNIVERSAL (INCLUINDO IPHONE / SAFARI IOS)
+     * ========================================================================== */
     #fcSessaoPlayer:fullscreen {
       width: 100vw;
       height: 100vh;
       overflow-y: auto;
-      padding: 2rem;
+      padding: 1.5rem;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-    }
-    html.dark #fcSessaoPlayer:fullscreen {
       background-color: #020617;
       color: #f8fafc;
     }
@@ -285,11 +310,34 @@
       color: #0f172a;
     }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+    /* Pseudo Fullscreen para iPhone/iOS onde requestFullscreen é bloqueado pelo Safari */
+    .fc-pseudo-fullscreen {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: -webkit-fill-available !important;
+      z-index: 99999 !important;
+      overflow-y: auto !important;
+      padding: 1rem !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
     }
+    html.dark .fc-pseudo-fullscreen {
+      background-color: #020617 !important;
+      color: #f8fafc !important;
+    }
+    html:not(.dark) .fc-pseudo-fullscreen {
+      background-color: #f8fafc !important;
+      color: #0f172a !important;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
     html.dark ::-webkit-scrollbar-track { background: #0f172a; }
     html.dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     html:not(.dark) ::-webkit-scrollbar-track { background: #f1f5f9; }
@@ -474,7 +522,6 @@
 
     <!-- ABA 1: PAINEL PRINCIPAL -->
     <section id="aba-painel" class="space-y-5">
-
       <div id="alertasPainel" class="hidden rounded-xl bg-amber-950/60 border border-amber-700/80 p-3.5 text-xs text-amber-200 space-y-1"></div>
 
       <!-- 3 CARDS SUPERIORES DO PAINEL -->
@@ -516,7 +563,7 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <!-- COLUNA ESQUERDA COM SUB-ABAS -->
+        <!-- COLUNA ESQUERDA -->
         <div class="lg:col-span-7 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-1.5 text-xs">
@@ -528,19 +575,17 @@
               </button>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="acionarReorganizarFilaUnica()" id="btnReorganizarHojePainel" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold shadow-xs transition" title="Encaixa atrasadas hoje respeitando o limite máximo de tópicos por dia">
+              <button onclick="acionarReorganizarFilaUnica()" id="btnReorganizarHojePainel" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-bold shadow-xs transition" title="Encaixa atrasadas hoje respeitando o limite diário">
                 Reorganizar Fila Diária
               </button>
               <button onclick="abrirModalTeoriaHoje()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold">+ Teoria Hoje</button>
             </div>
           </div>
 
-          <!-- CONTEUDO SUB-ABA 1: HOJE -->
           <div id="subpainel-esq-hoje" class="p-4 space-y-3">
             <div id="listaHojePainel" class="space-y-3"></div>
           </div>
 
-          <!-- CONTEUDO SUB-ABA 2: PROXIMO DIA -->
           <div id="subpainel-esq-amanha" class="hidden p-4 space-y-3">
             <p class="text-[11px] text-indigo-200 bg-indigo-950/50 border border-indigo-800/60 rounded-lg px-3 py-2">
               Tópicos programados para o próximo dia de estudo. Caso queira antecipar algum para hoje, clique em <strong>Puxar p/ Hoje</strong>.
@@ -549,7 +594,7 @@
           </div>
         </div>
 
-        <!-- COLUNA DIREITA COM SUB-ABAS -->
+        <!-- COLUNA DIREITA -->
         <div class="lg:col-span-5 bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden h-fit">
           <div class="px-4 py-3 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-1.5 text-xs">
             <div class="flex flex-wrap items-center gap-1">
@@ -605,7 +650,6 @@
         <span class="text-[11px] text-slate-400">A progressão de etapa considera exclusivamente o aproveitamento da sessão atual (&ge; 80%)</span>
       </div>
 
-      <!-- SUB-ABA 1: FORMULARIO -->
       <div id="subaba-reg-form" class="max-w-2xl mx-auto bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
           <div>
@@ -679,7 +723,6 @@
         </form>
       </div>
 
-      <!-- SUB-ABA 2: HISTORICO -->
       <div id="subaba-reg-historico" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -719,7 +762,6 @@
         <span class="text-[11px] text-slate-400">Enquanto um tópico tiver 0 questões respondidas, permanece na Prioridade 1</span>
       </div>
 
-      <!-- SUB-ABA CADASTROS 1: TOPICOS -->
       <div id="subaba-cad-topicos" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div class="lg:col-span-4 bg-slate-900 rounded-xl border border-slate-800 shadow-lg p-5 space-y-4 text-xs h-fit">
           <h2 id="tituloFormTopico" class="text-sm font-bold text-white">Cadastrar / Editar Tópico</h2>
@@ -771,7 +813,6 @@
         </div>
       </div>
 
-      <!-- SUB-ABA CADASTROS 2: MATERIAS -->
       <div id="subaba-cad-materias" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div class="lg:col-span-4 bg-slate-900 rounded-xl border border-slate-800 shadow-lg p-5 space-y-4 text-xs h-fit">
           <h2 id="tituloFormMateria" class="text-sm font-bold text-white">Cadastrar / Editar Matéria</h2>
@@ -827,7 +868,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
-          <button onclick="acionarReorganizarFilaUnica()" id="btnUnicoReorganizarCiclo" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow transition" title="Encaixa atrasadas hoje até o limite diário e preenche dias com menos matérias">
+          <button onclick="acionarReorganizarFilaUnica()" id="btnUnicoReorganizarCiclo" class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold shadow transition" title="Encaixa atrasadas hoje até o limite diário">
             Reorganizar Fila Diária (Alinhar Meta)
           </button>
           <button onclick="abrirModalTeoriaHoje()" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition">
@@ -836,7 +877,6 @@
         </div>
       </div>
 
-      <!-- CONTROLES DE FILTRO -->
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div class="flex flex-wrap items-center gap-1.5">
           <span class="font-semibold text-slate-400 mr-1">Período:</span>
@@ -889,7 +929,6 @@
         </div>
       </div>
 
-      <!-- BARRA DE SUB-ABAS INTERNAS DA ABA REVISOES -->
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs shadow-lg">
         <div class="flex flex-wrap items-center gap-1.5">
           <button type="button" onclick="alternarSubAbaRevisoes('hoje')" id="subbtn-rev-hoje" class="px-3.5 py-2 rounded-lg transition subtab-active">
@@ -913,7 +952,6 @@
         </div>
       </div>
 
-      <!-- SUB-ABA REVISOES 1: TOPICOS PROGRAMADOS PARA HOJE -->
       <div id="subaba-rev-hoje" class="bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -924,7 +962,6 @@
         <div id="listaRevisoesDia" class="p-4 space-y-3 text-xs"></div>
       </div>
 
-      <!-- SUB-ABA REVISOES 2: LISTA COMPLETA DE REVISOES PROGRAMADAS -->
       <div id="subaba-rev-completa" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-800 bg-slate-950 text-white flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -974,7 +1011,6 @@
         </div>
       </div>
 
-      <!-- SUB-ABA REVISOES 3: RESUMO DA DISTRIBUICAO POR DATA -->
       <div id="subaba-rev-calendario" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
           <div>
@@ -985,7 +1021,6 @@
         <div id="containerDistribuicaoDatasRevisoes" class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs"></div>
       </div>
 
-      <!-- SUB-ABA REVISOES 4: HISTORICO DE REVISOES CONCLUIDAS -->
       <div id="subaba-rev-historico" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60">
           <h2 class="text-sm font-bold text-white">Histórico de Revisões Concluídas (Preservado)</h2>
@@ -1071,7 +1106,6 @@
         </div>
       </div>
 
-      <!-- BARRA DE SUB-ABAS DA ABA ESTATISTICAS -->
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex items-center gap-1.5">
           <button type="button" onclick="alternarSubAbaEstatisticas('graficos')" id="subbtn-est-graficos" class="px-3.5 py-1.5 rounded-lg transition subtab-active">
@@ -1086,7 +1120,6 @@
         </button>
       </div>
 
-      <!-- SUB-ABA ESTATISTICAS 1: GRAFICOS -->
       <div id="subaba-est-graficos" class="space-y-5">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div class="lg:col-span-4 bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-lg flex flex-col justify-between">
@@ -1114,7 +1147,6 @@
         </div>
       </div>
 
-      <!-- SUB-ABA ESTATISTICAS 2: RELATORIO COMPARATIVO DE SESSOES -->
       <div id="subaba-est-relatorio" class="hidden bg-slate-900 rounded-xl border border-slate-800 shadow-lg overflow-hidden">
         <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
           <div>
@@ -1142,12 +1174,12 @@
     </section>
 
     <!-- ============================================================================
-         ABA 7: CENTRAL DE REVISÃO ATIVA E FLASHCARDS (3 TIPOS + FULLSCREEN + CSV)
+         ABA 7: CENTRAL DE REVISÃO ATIVA E FLASHCARDS (3 MODOS EXCLUSIVOS)
          ============================================================================ -->
     <section id="aba-flashcards" class="hidden space-y-5">
       <div id="containerDeckFlashcards" class="bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden">
 
-        <!-- CABEÇALHO EXECUTIVO DA CENTRAL DE FLASHCARDS -->
+        <!-- CABEÇALHO DA CENTRAL DE FLASHCARDS -->
         <div class="bg-slate-900/60 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div>
             <div class="flex flex-wrap items-center gap-2">
@@ -1160,7 +1192,7 @@
             </div>
             <h2 class="text-lg font-extrabold text-white mt-1">Central de Revisão Ativa &amp; Estudo Reverso</h2>
             <p class="text-xs text-slate-400">
-              Subordinada à Fila Única do Gestor de Questões (Corte de 80% no TEC) • 1. Lei Seca (Cloze) | 2. PDF Base (C/E) | 3. Caderno de Erros
+              Subordinada à Fila Única do Gestor de Questões (Corte de 80% no TEC) • 1. Lei Seca | 2. PDF Base (C/E) | 3. Caderno de Erros
             </p>
           </div>
 
@@ -1177,9 +1209,8 @@
           </div>
         </div>
 
-        <!-- BARRA DE FILTROS, EXPORTADOR CSV CIRÚRGICO E ATALHOS DO DIA -->
+        <!-- FILTROS, EXPORTADOR CIRÚRGICO E ATALHOS -->
         <div id="fcPainelSelecao" class="p-6 space-y-6">
-          <!-- Sugestão Automática Baseada na Fila de Hoje do Gestor de Questões -->
           <div class="bg-indigo-950/40 border border-indigo-800/70 rounded-xl p-4 space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-300">
@@ -1192,7 +1223,6 @@
             <div id="fcListaAtalhosHoje" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
           </div>
 
-          <!-- Seletor Manual de Matéria / Tópico / Categoria Funcional -->
           <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-5 shadow-xs space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs">
               <div class="md:col-span-3">
@@ -1223,12 +1253,12 @@
               </div>
             </div>
 
-            <!-- BARRA DE CONTAGEM TRIPARTIDA + EXPORTADOR CSV CIRÚRGICO POR TÓPICO/TIPO -->
+            <!-- CONTADORES E EXPORTADOR CSV -->
             <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="text-[11px] font-bold text-slate-400 uppercase mr-1">Divisão do Filtro:</span>
                 <span id="fcCountLeiSeca" class="px-2.5 py-1 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[11px]">
-                  📜 Lei Seca (Cloze): 0
+                  📜 Lei Seca: 0
                 </span>
                 <span id="fcCountPdfBase" class="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[11px]">
                   ⚖️ PDF Base (C/E): 0
@@ -1241,7 +1271,6 @@
                 </span>
               </div>
 
-              <!-- Exportador CSV Cirúrgico para Alimentação Diferencial de IA -->
               <div class="flex flex-wrap items-center gap-1.5">
                 <span class="text-[11px] font-bold text-slate-400">Exportar CSV p/ IA:</span>
                 <select id="fcSelectCategoriaExportCSV" class="rounded-lg border px-2.5 py-1.5 text-[11px] font-bold">
@@ -1250,13 +1279,13 @@
                   <option value="PADRAO">[ PDF Base ]</option>
                   <option value="MULTIPLA">[ Caderno de Erros ]</option>
                 </select>
-                <button type="button" onclick="exportarCSVCirurgicoFlashcards()" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px] shadow flex items-center gap-1 transition" title="Baixa o CSV filtrado do tópico atual para evitar cartões repetidos em prompts futuros">
+                <button type="button" onclick="exportarCSVCirurgicoFlashcards()" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px] shadow flex items-center gap-1 transition" title="Baixa o CSV filtrado para gerar novas questões sem duplicidade">
                   <span>📤 Baixar CSV Cirúrgico</span>
                 </button>
               </div>
             </div>
 
-            <!-- Lista Compacta de Cartões do Filtro Atual -->
+            <!-- Lista de Cartões -->
             <div class="border-t border-slate-800 pt-4">
               <div class="flex flex-wrap items-center justify-between gap-2 mb-2 text-xs">
                 <span id="fcResumoFiltroTxt" class="font-bold text-slate-200">Cartões localizados: 0</span>
@@ -1268,10 +1297,9 @@
         </div>
 
         <!-- ======================================================================
-             PLAYER DE SESSÃO INTENSIVA EM 2 FASES + FULLSCREEN + BARRA PREDITIVA
+             PLAYER DE SESSÃO INTENSIVA (2 FASES + IPHONE FULLSCREEN COMPATÍVEL)
              ====================================================================== -->
-        <div id="fcSessaoPlayer" class="hidden p-6 bg-slate-950 space-y-5">
-          <!-- Topbar do Player com Fase, Tempo Preditivo, Cronômetro e Controle Fullscreen -->
+        <div id="fcSessaoPlayer" class="hidden p-4 md:p-6 bg-slate-950 space-y-5">
           <div class="max-w-4xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div class="flex items-center gap-3">
@@ -1281,13 +1309,12 @@
                 <div>
                   <div id="fcTituloTopicoSessao" class="text-sm font-extrabold text-white">Tópico</div>
                   <div id="fcSubtituloProgresso" class="text-[11px] text-slate-400 font-semibold">
-                    Fila restante: 0 | Dominados Fase 1: 0 | Loops de erro: 0
+                    Fila restante: 0 | Dominados Fase 1: 0 | Loops: 0
                   </div>
                 </div>
               </div>
 
               <div class="flex flex-wrap items-center gap-2.5">
-                <!-- Métrica Preditiva de Tempo Restante -->
                 <div class="text-right bg-indigo-950/60 px-3.5 py-1.5 rounded-xl border border-indigo-800/80">
                   <div class="text-[10px] font-bold uppercase text-indigo-300">Previsão de Conclusão</div>
                   <div id="fcTempoRestanteEstimado" class="text-xs font-extrabold text-indigo-200">
@@ -1295,7 +1322,6 @@
                   </div>
                 </div>
 
-                <!-- Cronômetro e Velocidade Média -->
                 <div class="text-right bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800">
                   <div class="text-[10px] font-bold uppercase text-slate-400">Sessão | Média/Card</div>
                   <div class="text-sm font-mono font-extrabold text-white">
@@ -1305,9 +1331,10 @@
                   </div>
                 </div>
 
-                <!-- Botão Alternar Tela Cheia (Fullscreen API) -->
-                <button type="button" onclick="alternarModoTelaCheiaFC()" id="btnFullscreenFC" class="px-3 py-2 rounded-lg border border-indigo-700 bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 text-xs font-bold transition" title="Ativar/Sair da Tela Cheia [Tecla F]">
-                  ⛶ Tela Cheia
+                <!-- Botão Universal de Tela Cheia (Nativo + iPhone Safari Fallback) -->
+                <button type="button" onclick="alternarModoTelaCheiaFC()" id="btnFullscreenFC" class="px-3 py-2 rounded-lg border border-indigo-700 bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 text-xs font-bold transition flex items-center gap-1.5">
+                  <span id="iconFullscreenBtn">⛶</span>
+                  <span id="textFullscreenBtn">Tela Cheia</span>
                 </button>
 
                 <button type="button" onclick="encerrarSessaoFCManual()" class="px-3 py-2 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition">
@@ -1316,10 +1343,10 @@
               </div>
             </div>
 
-            <!-- Barra Dinâmica de Evolução da Sessão até o Fim da Fase 2 -->
+            <!-- Barra Dinâmica de Evolução -->
             <div class="space-y-1 pt-1">
               <div class="flex items-center justify-between text-[11px] font-bold">
-                <span id="fcTextoProgressoBarra" class="text-slate-300">Progresso Global da Sessão (Fase 1 + Fase 2): 0%</span>
+                <span id="fcTextoProgressoBarra" class="text-slate-300">Progresso Global da Sessão: 0%</span>
                 <span id="fcPercentualBarra" class="text-indigo-400 font-extrabold">0%</span>
               </div>
               <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
@@ -1328,9 +1355,8 @@
             </div>
           </div>
 
-          <!-- Área Central do Cartão -->
-          <div class="max-w-4xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-6 md:p-8 space-y-6 min-h-[380px] flex flex-col justify-between">
-            <!-- Topo do Card: Badges de Categoria Funcional, Tags e Identificação "NOVO" -->
+          <!-- Área do Cartão Ativo -->
+          <div class="max-w-4xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 md:p-8 space-y-6 min-h-[380px] flex flex-col justify-between">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
               <div class="flex flex-wrap items-center gap-2">
                 <span id="fcCardBadgeTipo" class="px-2.5 py-1 rounded-md bg-indigo-950 text-indigo-300 border border-indigo-800 font-extrabold text-[11px]">
@@ -1342,45 +1368,44 @@
               <span id="fcCardTags" class="text-[11px] text-slate-400 font-medium"></span>
             </div>
 
-            <!-- Corpo Principal (Enunciado / Cloze / Opções Múltipla Escolha) -->
             <div class="space-y-5 my-auto py-2">
               <div id="fcCardFrente" class="text-base md:text-lg font-bold text-white leading-relaxed"></div>
 
-              <!-- Container exclusivo para Múltipla Escolha (Caderno de Erros - Fisher-Yates) -->
+              <!-- Container de Múltipla Escolha -->
               <div id="fcContainerOpcoesMultipla" class="hidden space-y-2.5"></div>
 
-              <!-- Caixa de Feedback Estruturado Imediato (Certo/Errado do PDF Base ou Estudo Reverso da Múltipla Escolha) -->
-              <div id="fcBoxFeedbackAlternativa" class="hidden rounded-xl p-4 border text-xs space-y-2"></div>
+              <!-- Container de Feedback Estruturado por Modalidade -->
+              <div id="fcBoxFeedbackEstruturado" class="hidden rounded-xl p-4 border text-xs space-y-3"></div>
 
-              <!-- Verso do Cartão (Fundamentação / Dispositivo Legal) -->
-              <div id="fcCardVersoContainer" class="hidden pt-4 border-t border-slate-800 space-y-3">
-                <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-400">Fundamentação / Dispositivo Legal / Gabarito</div>
+              <!-- Verso Exclusivo de Lei Seca (Endereço Legal + Breve Explicação) -->
+              <div id="fcCardVersoContainer" class="hidden pt-4 border-t border-slate-800 space-y-2">
+                <div class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-400">Dispositivo Legal &amp; Fundamentação</div>
                 <div id="fcCardVersoTexto" class="text-sm text-slate-200 leading-relaxed bg-slate-950 p-4 rounded-xl border border-slate-800 whitespace-pre-line"></div>
               </div>
             </div>
 
-            <!-- Rodapé de Controles do Player -->
+            <!-- Controles do Rodapé -->
             <div class="pt-4 border-t border-slate-800 space-y-3">
-              <!-- CONTROLE TIPO 1: Botão Mostrar Resposta (Exclusivo para Lei Seca / Cloze) -->
+              <!-- MODALIDADE 1: Mostrar Resposta (Lei Seca) -->
               <div id="fcBarraVirarCard" class="hidden flex justify-center">
                 <button type="button" onclick="revelarVersoCardAtualFC()" class="w-full md:w-auto min-w-[280px] py-3.5 px-6 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm shadow-md transition">
                   Revelar Lacuna da Lei Seca <span class="text-xs opacity-80 ml-1">[Espaço]</span>
                 </button>
               </div>
 
-              <!-- CONTROLE TIPO 2: Botões Ativos [ Certo ] e [ Errado ] (Exclusivo para PDF Base) -->
+              <!-- MODALIDADE 2: Botões Verde (Certo) e Vermelho (Errado) para PDF Base -->
               <div id="fcBarraCertoErradoPdfBase" class="hidden grid grid-cols-2 gap-4 max-w-lg mx-auto">
                 <button type="button" onclick="julgarCardPdfBaseFC('CERTO')" class="py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
                   <span>✔ [ Certo ]</span>
-                  <span class="text-[11px] opacity-80 font-mono">(Tecla C)</span>
+                  <span class="text-[11px] opacity-80 font-mono hidden sm:inline">(Tecla C)</span>
                 </button>
                 <button type="button" onclick="julgarCardPdfBaseFC('ERRADO')" class="py-3.5 px-5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
                   <span>✖ [ Errado ]</span>
-                  <span class="text-[11px] opacity-80 font-mono">(Tecla E)</span>
+                  <span class="text-[11px] opacity-80 font-mono hidden sm:inline">(Tecla E)</span>
                 </button>
               </div>
 
-              <!-- Botões de Decisão / Avanço da Sessão (Abertos após revelar Cloze, julgar PDF Base ou acertar Caderno de Erros) -->
+              <!-- Botões de Decisão e Avanço (Abertos após responder) -->
               <div id="fcBarraAvaliacaoCard" class="hidden grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
                 <button type="button" onclick="avaliarCardSessaoFC('ERREI')" class="py-3 px-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold shadow-xs transition">
                   1. Errei (+3 pos)
@@ -1399,9 +1424,7 @@
           </div>
         </div>
 
-        <!-- ======================================================================
-             PAINEL EXECUTIVO DE DIAGNÓSTICO FINAL (PÓS-FASE 2)
-             ====================================================================== -->
+        <!-- PAINEL EXECUTIVO DE DIAGNÓSTICO FINAL (PÓS-FASE 2) -->
         <div id="fcPainelDiagnosticoFinal" class="hidden p-6 bg-slate-950 space-y-6">
           <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl shadow-lg p-6 md:p-8 space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
@@ -1437,7 +1460,7 @@
             </div>
 
             <div class="space-y-2">
-              <h4 class="text-xs font-extrabold uppercase text-slate-300">Cartões Críticos (Maior Reincidência de Erros na Sessão)</h4>
+              <h4 class="text-xs font-extrabold uppercase text-slate-300">Cartões Críticos (Maior Reincidência na Sessão)</h4>
               <div id="fcDiagListaCriticos" class="space-y-2 text-xs"></div>
             </div>
 
@@ -1451,17 +1474,14 @@
             </div>
           </div>
         </div>
-
       </div>
 
-      <!-- ========================================================================
-           MODAL 1: IMPORTADOR EM LOTE VIA TEXTO BRUTO CSV (SEPARADOR ';')
-           ======================================================================== -->
+      <!-- MODAL CSV -->
       <div id="modalImportarCSVFlashcards" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-700 overflow-hidden">
           <div class="px-6 py-4 bg-slate-950 border-b border-slate-800 text-white flex items-center justify-between">
             <div>
-              <h3 class="text-sm font-bold">Importador em Lote de Flashcards (CSV com ponto e vírgula ';')</h3>
+              <h3 class="text-sm font-bold">Importador em Lote de Flashcards (CSV com separador ';')</h3>
               <p class="text-[11px] text-slate-400 mt-0.5">
                 Suporta: 1. CLOZE (Lei Seca), 2. PADRAO (PDF Base Certo/Errado) e 3. MULTIPLA (Caderno de Erros)
               </p>
@@ -1476,9 +1496,9 @@
                 id_materia;id_topico;tipo;frente;verso;tags;opcoes
               </code>
               <ul class="list-disc pl-5 text-[11px] text-slate-400 space-y-0.5">
-                <li><strong>tipo = CLOZE (Lei Seca):</strong> Use <code>{{c1::termo legal}}</code> na coluna <code>frente</code>.</li>
-                <li><strong>tipo = PADRAO (PDF Base Certo/Errado):</strong> Proposição assertiva na <code>frente</code> e inicie o <code>verso</code> com <code>CERTO.</code> ou <code>ERRADO.</code> seguido da fundamentação.</li>
-                <li><strong>tipo = MULTIPLA (Caderno de Erros):</strong> Array JSON em <code>opcoes</code> contendo 4 ou 5 alternativas com <code>[{"texto":"...","correta":true,"diagnostico":"...","artigo":"...","bizu":"..."}]</code>.</li>
+                <li><strong>CLOZE (Lei Seca):</strong> Use <code>{{c1::termo}}</code> na <code>frente</code> e dispositivo/resumo no <code>verso</code>.</li>
+                <li><strong>PADRAO (PDF Base C/E):</strong> No <code>verso</code>, use o formato estruturado: <code>Gabarito: ERRADO | Explicação: ... | Endereço: Art. X | Frase Corrigida: ...</code>.</li>
+                <li><strong>MULTIPLA (Caderno de Erros):</strong> Array JSON em <code>opcoes</code> contendo <code>[{"texto":"...","correta":true,"diagnostico":"...","artigo":"...","termo_erro":"..."}]</code>.</li>
               </ul>
             </div>
 
@@ -1486,10 +1506,10 @@
               <div class="flex items-center justify-between mb-1">
                 <label class="font-bold text-slate-300">Cole abaixo as linhas em formato CSV *</label>
                 <button type="button" onclick="inserirExemploCSVFlashcards()" class="text-indigo-400 hover:underline font-bold text-[11px]">
-                  Inserir exemplo dos 3 Tipos Funcionais
+                  Inserir modelo de exemplo
                 </button>
               </div>
-              <textarea id="fcInputCSVBruto" rows="8" required placeholder="Direito Penal;Teoria do Crime;CLOZE;No erro de tipo essencial inevitável exclui-se o {{c1::dolo}} e a {{c2::culpa}}.;Art. 20, caput, do CP.;CP,Lei Seca;[]" class="w-full rounded-xl border p-3 font-mono text-[11px]"></textarea>
+              <textarea id="fcInputCSVBruto" rows="8" required class="w-full rounded-xl border p-3 font-mono text-[11px]"></textarea>
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
@@ -1502,15 +1522,13 @@
         </div>
       </div>
 
-      <!-- ========================================================================
-           MODAL 2: CRIADOR INDIVIDUAL DE CARTÃO (SUPORTE AOS 3 TIPOS FUNCIONAIS)
-           ======================================================================== -->
+      <!-- MODAL NOVO CARD INDIVIDUAL -->
       <div id="modalNovoFlashcard" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[92vh] flex flex-col">
           <div class="px-6 py-4 bg-indigo-950 border-b border-indigo-800 text-white flex items-center justify-between">
             <div>
               <h3 class="text-sm font-bold">Cadastrar Novo Flashcard Tático</h3>
-              <p class="text-[11px] text-indigo-300">Escolha entre Lei Seca (Cloze), PDF Base (Certo/Errado) ou Caderno de Erros (Múltipla)</p>
+              <p class="text-[11px] text-indigo-300">1. Lei Seca (Cloze) | 2. PDF Base (Certo/Errado) | 3. Caderno de Erros</p>
             </div>
             <button type="button" onclick="fecharModalNovoFlashcard()" class="text-indigo-300 hover:text-white text-xs font-bold">Fechar</button>
           </div>
@@ -1535,29 +1553,39 @@
               </div>
             </div>
 
-            <!-- Seletor de Gabarito Oficial quando for PDF Base (Certo ou Errado) -->
-            <div id="fcBoxGabaritoCertoErradoModal" class="hidden p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
-              <span class="font-bold text-slate-200">Gabarito da Proposição Assertiva (PDF Base): *</span>
-              <select id="fcNovoGabaritoCE" class="rounded-lg border px-3 py-1.5 font-extrabold">
-                <option value="ERRADO">✖ ERRADO</option>
-                <option value="CERTO">✔ CERTO</option>
-              </select>
+            <!-- Campos Específicos para PDF Base (Certo ou Errado) -->
+            <div id="fcBoxCamposPdfBaseModal" class="hidden p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-200">Gabarito Oficial da Assertiva: *</span>
+                <select id="fcNovoGabaritoCE" class="rounded-lg border px-3 py-1 font-extrabold">
+                  <option value="ERRADO">✖ ERRADO</option>
+                  <option value="CERTO">✔ CERTO</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Endereço Normativo (Artigo / Dispositivo Legal):</label>
+                <input type="text" id="fcNovoEnderecoCE" placeholder="Ex: Art. 5º, XI, da CF/88" class="w-full rounded-lg border px-3 py-1.5">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-300 mb-1">Frase Corrigida (Destacando a Expressão que Induz ao Erro):</label>
+                <input type="text" id="fcNovoFraseCorrigidaCE" placeholder="Ex: O mandado judicial só pode ser cumprido durante o [DIA]." class="w-full rounded-lg border px-3 py-1.5">
+              </div>
             </div>
 
             <div>
-              <label id="lblFcNovoFrente" class="block font-bold text-slate-300 mb-1">Frente / Dispositivo Legal com Exclusão Estrita (Use {{c1::termo}}) *</label>
-              <textarea id="fcNovoFrente" rows="3" required placeholder="Ex: Art. 5º, XI - a casa é asilo inviolável do indivíduo, ninguém nela podendo penetrar sem o consentimento do morador, salvo em caso de {{c1::flagrante delito}} ou {{c2::desastre}}, ou para prestar socorro, ou, {{c3::durante o dia}}, por determinação judicial." class="w-full rounded-lg border p-2.5"></textarea>
+              <label id="lblFcNovoFrente" class="block font-bold text-slate-300 mb-1">Frente / Enunciado *</label>
+              <textarea id="fcNovoFrente" rows="3" required class="w-full rounded-lg border p-2.5"></textarea>
             </div>
 
             <div>
-              <label class="block font-bold text-slate-300 mb-1">Verso / Fundamentação / Artigo ou Jurisprudência *</label>
-              <textarea id="fcNovoVerso" rows="2" required placeholder="Ex: Art. 5º, inciso XI, da CF/88." class="w-full rounded-lg border p-2.5"></textarea>
+              <label id="lblFcNovoVerso" class="block font-bold text-slate-300 mb-1">Verso / Explicação *</label>
+              <textarea id="fcNovoVerso" rows="2" required class="w-full rounded-lg border p-2.5"></textarea>
             </div>
 
             <div id="fcBoxOpcoesNovoModal" class="hidden space-y-2 border-t border-slate-800 pt-3">
               <div class="flex items-center justify-between">
-                <label class="font-bold text-slate-200">JSON de Alternativas Agrupadas do Caderno de Erros (Diagnóstico + Artigo + Bizu)</label>
-                <button type="button" onclick="preencherTemplateJSONMultipla()" class="text-indigo-400 font-bold hover:underline text-[11px]">Carregar Modelo Denso (4 Opções)</button>
+                <label class="font-bold text-slate-200">JSON de Alternativas Explicadas (Com Destaque do Erro)</label>
+                <button type="button" onclick="preencherTemplateJSONMultipla()" class="text-indigo-400 font-bold hover:underline text-[11px]">Carregar Modelo JSON</button>
               </div>
               <textarea id="fcNovoOpcoesJSON" rows="6" class="w-full rounded-lg border p-2.5 font-mono text-[11px]"></textarea>
             </div>
@@ -1589,7 +1617,6 @@
         </div>
       </div>
 
-      <!-- SUB-ABA CONFIG 1: FORMULARIO DE PARAMETROS -->
       <div id="subaba-cfg-parametros">
         <form id="formConfig" onsubmit="submeterConfiguracoes(event)" class="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs">
           <div class="bg-slate-900 rounded-xl border border-slate-800 p-5 space-y-4 shadow-lg">
@@ -1668,7 +1695,6 @@
         </form>
       </div>
 
-      <!-- SUB-ABA CONFIG 2: EXPLICACOES DAS REGRAS DE FLUXO E PRIORIDADES -->
       <div id="subaba-cfg-regras" class="hidden bg-slate-900 rounded-xl border border-slate-800 p-5 shadow-lg space-y-4">
         <div class="border-b border-slate-800 pb-3">
           <h2 class="text-sm font-bold text-white">Regras de Fluxo, Critério de Progressão por Sessão e Hierarquia de Prioridades</h2>
@@ -1712,7 +1738,7 @@
               <span class="w-3 h-3 rounded-full bg-teal-500 inline-block"></span>
             </div>
             <p class="text-slate-300 leading-relaxed">
-              Após concluir a 5ª etapa com aproveitamento na sessão maior ou igual a 80%, o tópico entra em Consolidação com revisões a cada 15 dias. Ao concluir tarefas no dia a dia, os demais tópicos mantêm suas datas fixas sem se embaralhar. Quando desejar reagrupar atrasados ou preencher vagas, basta clicar em Reorganizar Fila Diária.
+              Após concluir a 5ª etapa com aproveitamento na sessão maior ou igual a 80%, o tópico entra em Consolidação com revisões a cada 15 dias. Ao concluir tarefas no dia a dia, os demais tópicos mantêm suas datas fixas sem se embaralhar.
             </p>
           </div>
         </div>
@@ -1720,8 +1746,7 @@
     </section>
 
   </main>
-
-<script>
+  <script>
     /* ==========================================================================
      * 1. CONFIGURAÇÃO SUPABASE (SA-EAST-1) E GERENCIADOR GLOBAL DE TEMA
      * ========================================================================== */
@@ -1760,7 +1785,7 @@
 
       if (typeof Chart !== 'undefined') {
         Chart.defaults.color = isDark ? '#94a3b8' : '#334155';
-        Chart.defaults.borderColor = isDark ? '#1e293b' : '#e2e8f0';
+        Chart.defaults.borderColor = isDark ? '#1e293b' : '#cbd5e1';
         const abaEst = document.getElementById('aba-estatisticas');
         if (ESTADO && abaEst && !abaEst.classList.contains('hidden')) {
           renderizarEstatisticas();
@@ -3409,7 +3434,7 @@
     }
 
     /* ==========================================================================
-     * 6. AÇÕES E OPERAÇÕES CRUD NO SUPABASE (ABAS 1 A 6 E 8)
+     * 6. AÇÕES E OPERAÇÕES CRUD NO SUPABASE
      * ========================================================================== */
     function abrirModalTeoriaHoje(idMateriaPre, idTopicoPre) {
       document.getElementById('modalTeoriaHoje').classList.remove('hidden');
@@ -4587,7 +4612,7 @@
             <button onclick="moverMateria(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-30 px-2 py-1 border border-slate-700 rounded"' : 'class="px-2 py-1 border border-slate-700 rounded hover:bg-slate-800 font-bold text-slate-200"'}>Subir</button>
             <button onclick="moverMateria(${idx}, 1)" ${idx === ESTADO.materias.length - 1 ? 'disabled class="opacity-30 px-2 py-1 border border-slate-700 rounded"' : 'class="px-2 py-1 border border-slate-700 rounded hover:bg-slate-800 font-bold text-slate-200"'}>Descer</button>
             <button onclick="preencherFormMateria('${m.id}')" class="px-2.5 py-1 rounded border border-slate-700 hover:bg-slate-800 font-semibold text-slate-200">Editar</button>
-            <button onclick="alternarAtivacaoMateria('${m.id}')" class="px-2.5 py-1 rounded border border-slate-700 hover:bg-slate-800 text-slate-400">
+            <button onclick="alternarAtivacaoMateria('${m.id}')" class="px-2.5 py-1 rounded border border-slate-800 text-slate-400">
               ${m.status === 'Ativo' ? 'Desativar' : 'Reativar'}
             </button>
           </div>
@@ -5397,15 +5422,16 @@
       if (timerToast) clearTimeout(timerToast);
       timerToast = setTimeout(() => el.classList.add('hidden'), 4500);
     }
-
-/* ==========================================================================
-     * 8. MOTOR DE FLASHCARDS (3 TIPOS FUNCIONAIS + CSV CIRÚRGICO + FULLSCREEN)
+</script>
+<script>
+    /* ==========================================================================
+     * 8. MOTOR DE FLASHCARDS (3 TIPOS ESTRITOS + IPHONE FULLSCREEN + CSV)
      * ========================================================================== */
     let FC_DECK = [];
     let FC_SESSAO = null;
     let FC_TIMER_INTERVAL = null;
+    let FC_EM_TELA_CHEIA = false;
 
-    // Hook automático na função aplicarEstado já existente na aplicação
     const _aplicarEstadoOriginalFC = window.aplicarEstado;
     window.aplicarEstado = function(dados) {
       if (_aplicarEstadoOriginalFC) _aplicarEstadoOriginalFC(dados);
@@ -5492,7 +5518,53 @@
       }
     }
 
-    // Normaliza as 3 categorias: CLOZE (Lei Seca), PADRAO (PDF Base C/E) e MULTIPLA (Caderno de Erros)
+    // Extrai Explicação, Endereço e Frase Corrigida para questões de Certo ou Errado (PDF Base)
+    function extrairDadosEstruturadosCertoErrado_(frenteStr, versoStr, tagsStr) {
+      let gabaritoCE = 'CERTO';
+      if (/^(ERRADO|INCORRETO|FALSO)\b/i.test(versoStr) || /\bGABARITO\s*:\s*(ERRADO|E)\b/i.test(versoStr) || /\bERRADO\b/i.test(tagsStr)) {
+        gabaritoCE = 'ERRADO';
+      }
+
+      let explicacao = versoStr;
+      let endereco = '';
+      let fraseCorrigida = '';
+
+      if (versoStr.includes('|')) {
+        const partes = versoStr.split('|').map(p => p.trim());
+        partes.forEach(p => {
+          if (/^gabarito\s*:/i.test(p)) {
+            const val = p.replace(/^gabarito\s*:\s*/i, '').trim().toUpperCase();
+            if (val.startsWith('E')) gabaritoCE = 'ERRADO';
+            if (val.startsWith('C')) gabaritoCE = 'CERTO';
+          } else if (/^explica[cç][aã]o\s*:/i.test(p)) {
+            explicacao = p.replace(/^explica[cç][aã]o\s*:\s*/i, '').trim();
+          } else if (/^(endere[cç]o|artigo|dispositivo)\s*:/i.test(p)) {
+            endereco = p.replace(/^(endere[cç]o|artigo|dispositivo)\s*:\s*/i, '').trim();
+          } else if (/^frase\s*corrigida\s*:/i.test(p)) {
+            fraseCorrigida = p.replace(/^frase\s*corrigida\s*:\s*/i, '').trim();
+          }
+        });
+      } else {
+        explicacao = versoStr.replace(/^(CERTO|ERRADO|CORRETO|INCORRETO)[\.\:\-\s]*/i, '').trim();
+        const matchArt = versoStr.match(/(\b(Art\.?|Artigo|Súmula|Lei|CF\/88|CP|CPP|CPC|CTN|CLT)[^.;\n]*)/i);
+        endereco = matchArt ? matchArt[1].trim() : 'Consulte a fundamentação teórica e legal do tópico.';
+        if (gabaritoCE === 'CERTO') {
+          fraseCorrigida = frenteStr + ' [Afirmação já está integralmente correta]';
+        } else {
+          fraseCorrigida = explicacao || 'Consulte a correção direta na explicação acima.';
+        }
+      }
+
+      if (!endereco) endereco = 'Dispositivo legal / jurisprudencial indicado na explicação.';
+      if (!fraseCorrigida) {
+        fraseCorrigida = gabaritoCE === 'CERTO'
+          ? `${frenteStr} [Afirmação originalmente correta]`
+          : explicacao;
+      }
+
+      return { gabaritoCE, explicacao, endereco, fraseCorrigida };
+    }
+
     function normalizarRegistroFlashcard_(row) {
       let opcoesArr = [];
       if (Array.isArray(row.opcoes)) {
@@ -5510,15 +5582,11 @@
         tipo = 'PADRAO';
       }
 
+      const frenteStr = String(row.frente || '').trim();
       const versoStr = String(row.verso || '').trim();
       const tagsStr = String(row.tags || '').trim();
-      let gabaritoCE = 'CERTO';
-      if (/^(ERRADO|INCORRETO|FALSO)\b/i.test(versoStr) || /\bGABARITO\s*:\s*E(RRADO)?\b/i.test(versoStr) || /\bERRADO\b/i.test(tagsStr)) {
-        gabaritoCE = 'ERRADO';
-      } else if (/^(CERTO|CORRETO|VERDADEIRO)\b/i.test(versoStr) || /\bGABARITO\s*:\s*C(ERTO)?\b/i.test(versoStr)) {
-        gabaritoCE = 'CERTO';
-      }
 
+      const dadosCE = extrairDadosEstruturadosCertoErrado_(frenteStr, versoStr, tagsStr);
       const isNovo = row.is_novo !== undefined ? Boolean(row.is_novo) : !Boolean(row.ultima_avaliacao);
 
       return {
@@ -5526,8 +5594,11 @@
         idMateria: String(row.id_materia || ''),
         idTopico: String(row.id_topico || ''),
         tipo,
-        gabaritoCE,
-        frente: String(row.frente || ''),
+        gabaritoCE: dadosCE.gabaritoCE,
+        explicacaoCE: dadosCE.explicacao,
+        enderecoCE: dadosCE.endereco,
+        fraseCorrigidaCE: dadosCE.fraseCorrigida,
+        frente: frenteStr,
         verso: versoStr,
         tags: tagsStr,
         opcoes: opcoesArr,
@@ -5544,6 +5615,34 @@
       if (tipo === 'CLOZE') return '1. LEI SECA (CLOZE)';
       if (tipo === 'MULTIPLA') return '3. CADERNO DE ERROS (MÚLTIPLA)';
       return '2. PDF BASE (CERTO / ERRADO)';
+    }
+
+    // Formata destaque visual quando palavras estão entre colchetes [termo] ou asteriscos **termo**
+    function formatarDestaquesTexto_(texto, classeDestaque) {
+      const seguro = esc(texto || '');
+      return seguro
+        .replace(/\[([^\]]+)\]/g, `<span class="${classeDestaque}">$1</span>`)
+        .replace(/\*\*([^*]+)\*\*/g, `<span class="${classeDestaque}">$1</span>`);
+    }
+
+    // Destaca no texto da alternativa a expressão que a torna incorreta
+    function destacarExpressaoIncorretaAlternativa_(textoAlternativa, termoErro) {
+      let seguro = esc(textoAlternativa || '');
+      if (termoErro && String(termoErro).trim()) {
+        const alvo = esc(String(termoErro).trim());
+        const regex = new RegExp(`(${alvo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        if (regex.test(seguro)) {
+          return seguro.replace(regex, `<span class="fc-destaque-erro">$1</span>`);
+        }
+      }
+      // Caso o próprio texto tenha marcações [erro] ou palavras absolutas típicas
+      if (/\[([^\]]+)\]/.test(seguro)) {
+        return seguro.replace(/\[([^\]]+)\]/g, `<span class="fc-destaque-erro">$1</span>`);
+      }
+      return seguro.replace(
+        /\b(nunca|jamais|sempre|apenas|exclusivamente|qualquer hora do dia ou da noite|prescindindo|indispensável|vedado em qualquer hipótese|não isenta|cumulativamente)\b/gi,
+        `<span class="fc-destaque-erro">$1</span>`
+      );
     }
 
     function renderizarAtalhosTopicosHojeFC() {
@@ -5629,7 +5728,7 @@
       const elLei = document.getElementById('fcCountLeiSeca');
       const elPdf = document.getElementById('fcCountPdfBase');
       const elErros = document.getElementById('fcCountCadernoErros');
-      if (elLei) elLei.textContent = `📜 Lei Seca (Cloze): ${qtdLeiSeca}`;
+      if (elLei) elLei.textContent = `📜 Lei Seca: ${qtdLeiSeca}`;
       if (elPdf) elPdf.textContent = `⚖️ PDF Base (C/E): ${qtdPdfBase}`;
       if (elErros) elErros.textContent = `🎯 Caderno de Erros: ${qtdCadErros}`;
 
@@ -5638,7 +5737,7 @@
       const minPrevistos = filtrados.length > 0 ? Math.max(1, Math.ceil((filtrados.length * 2 * velMedia) / 60)) : 0;
 
       const elEst = document.getElementById('fcEstimativaPreviaDeck');
-      if (elEst) elEst.textContent = `⏱️ Tempo estimado (2 Fases): ~${minPrevistos} min (${velMedia.toFixed(0)}s/card)`;
+      if (elEst) elEst.textContent = `⏱️ Tempo estimado: ~${minPrevistos} min (${velMedia.toFixed(0)}s/card)`;
 
       const txtResumo = document.getElementById('fcResumoFiltroTxt');
       const cont = document.getElementById('fcTabelaPreviewDeck');
@@ -5679,7 +5778,7 @@
     }
 
     /* ==========================================================================
-     * EXPORTADOR CSV CIRÚRGICO POR TÓPICO E CATEGORIA (PARA RETROALIMENTAR IA)
+     * EXPORTADOR CSV CIRÚRGICO POR TÓPICO E CATEGORIA
      * ========================================================================== */
     function limparCampoCSVExport_(str) {
       return String(str || '')
@@ -5746,30 +5845,55 @@
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      notificar(`CSV Cirúrgico exportado (${lista.length} cartões - Filtro: ${catExport}). Pronto para enviar à IA!`);
+      notificar(`CSV Cirúrgico exportado (${lista.length} cartões - Filtro: ${catExport}).`);
     }
 
     /* ==========================================================================
-     * MODO TELA CHEIA IMERSIVO (FULLSCREEN API DO NAVEGADOR)
+     * MODO TELA CHEIA UNIVERSAL (COMPATÍVEL COM IPHONE / IOS E DESKTOP)
      * ========================================================================== */
     function ativarModoTelaCheiaFC_() {
       const playerEl = document.getElementById('fcSessaoPlayer');
+      const headerEl = document.getElementById('appHeaderPrincipal');
       if (!playerEl) return;
-      if (!document.fullscreenElement && playerEl.requestFullscreen) {
-        playerEl.requestFullscreen().catch(() => {});
+
+      FC_EM_TELA_CHEIA = true;
+      playerEl.classList.add('fc-pseudo-fullscreen');
+      if (headerEl) headerEl.classList.add('hidden');
+      document.body.style.overflow = 'hidden';
+
+      // Tenta também a API nativa para navegadores Desktop/Android
+      const reqFS = playerEl.requestFullscreen || playerEl.webkitRequestFullscreen || playerEl.msRequestFullscreen;
+      if (reqFS && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        try {
+          const prom = reqFS.call(playerEl);
+          if (prom && prom.catch) prom.catch(() => {});
+        } catch (e) {}
       }
       atualizarBotaoFullscreenUI_();
     }
 
     function sairModoTelaCheiaFC_() {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
+      const playerEl = document.getElementById('fcSessaoPlayer');
+      const headerEl = document.getElementById('appHeaderPrincipal');
+
+      FC_EM_TELA_CHEIA = false;
+      if (playerEl) playerEl.classList.remove('fc-pseudo-fullscreen');
+      if (headerEl) headerEl.classList.remove('hidden');
+      document.body.style.overflow = '';
+
+      const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+      if (exitFS && (document.fullscreenElement || document.webkitFullscreenElement)) {
+        try {
+          const prom = exitFS.call(document);
+          if (prom && prom.catch) prom.catch(() => {});
+        } catch (e) {}
       }
       atualizarBotaoFullscreenUI_();
     }
 
     function alternarModoTelaCheiaFC() {
-      if (!document.fullscreenElement) {
+      const ativo = FC_EM_TELA_CHEIA || Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      if (!ativo) {
         ativarModoTelaCheiaFC_();
       } else {
         sairModoTelaCheiaFC_();
@@ -5777,13 +5901,18 @@
     }
 
     function atualizarBotaoFullscreenUI_() {
-      const btn = document.getElementById('btnFullscreenFC');
-      if (!btn) return;
-      const emTelaCheia = Boolean(document.fullscreenElement);
-      btn.textContent = emTelaCheia ? '🗗 Sair da Tela Cheia' : '⛶ Tela Cheia';
+      const txt = document.getElementById('textFullscreenBtn');
+      const ico = document.getElementById('iconFullscreenBtn');
+      const ativo = FC_EM_TELA_CHEIA || Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      if (ico) ico.textContent = ativo ? '🗗' : '⛶';
+      if (txt) txt.textContent = ativo ? 'Reduzir Tela' : 'Tela Cheia';
     }
 
-    document.addEventListener('fullscreenchange', atualizarBotaoFullscreenUI_);
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && !FC_EM_TELA_CHEIA) {
+        atualizarBotaoFullscreenUI_();
+      }
+    });
 
     /* ==========================================================================
      * ALGORITMO FISHER-YATES (ANTI-VÍCIO DE POSIÇÃO)
@@ -5820,16 +5949,14 @@
         questoesSugeridasTEC: topObj ? Math.max(10, topObj.minQuestoesMateria || 15) : 15,
         totalCardsUnicos: cardsBase.length,
         velocidadeHistoricaSeg: obterVelocidadeMediaTopicoSeg_(idTop),
-        fase: 1, // 1 = Domínio Circular (+3), 2 = Varredura de Confirmação Final
+        fase: 1,
         filaFase1: embaralharFisherYates_(cardsBase.map(c => ({ ...c }))),
         filaEsperaFase2: [],
         filaFase2: [],
         cardAtual: null,
         versoRevelado: false,
         julgouCertoErradoAtual: false,
-        acertouCertoErradoAtual: false,
         opcoesAtivasMultipla: [],
-        acertouMultiplaAtual: false,
         errosPorCard: {},
         ultimaAvaliacaoPorCard: {},
         loopsProvocados: 0,
@@ -5851,7 +5978,7 @@
     function atualizarBarraProgressoETempoPreditivoFC_() {
       if (!FC_SESSAO) return;
       const N = Math.max(1, FC_SESSAO.totalCardsUnicos);
-      const totalEtapasMeta = N * 2; // Fase 1 (N) + Fase 2 (N)
+      const totalEtapasMeta = N * 2;
 
       let concluidos = 0;
       let passadasRestantes = 0;
@@ -5875,7 +6002,6 @@
         txtBarra.textContent = `Progresso da Sessão (${concluidos}/${totalEtapasMeta} validações até concluir Fase 2)`;
       }
 
-      // Cálculo Preditivo Dinâmico (Combina velocidade histórica do tópico com a velocidade da sessão atual)
       const velSessao = FC_SESSAO.respostasComputadas >= 2
         ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas)
         : FC_SESSAO.velocidadeHistoricaSeg;
@@ -5913,7 +6039,7 @@
       if (FC_SESSAO.fase === 1 && FC_SESSAO.filaFase1.length === 0) {
         FC_SESSAO.fase = 2;
         FC_SESSAO.filaFase2 = FC_SESSAO.filaEsperaFase2.slice();
-        notificar('Fase 1 dominada! Iniciando Fase 2: Varredura Sequencial de Confirmação.');
+        notificar('Fase 1 dominada! Iniciando Fase 2: Varredura de Confirmação.');
       }
 
       if (FC_SESSAO.fase === 2 && FC_SESSAO.filaFase2.length === 0) {
@@ -5925,8 +6051,6 @@
       FC_SESSAO.cardAtual = filaAtiva[0];
       FC_SESSAO.versoRevelado = false;
       FC_SESSAO.julgouCertoErradoAtual = false;
-      FC_SESSAO.acertouCertoErradoAtual = false;
-      FC_SESSAO.acertouMultiplaAtual = false;
 
       atualizarHeaderProgressoPlayerFC_();
       atualizarBarraProgressoETempoPreditivoFC_();
@@ -5977,7 +6101,7 @@
       if (errosCard > 0) badgeReinc.textContent = `Reincidência: ${errosCard} erro(s) nesta sessão`;
 
       document.getElementById('fcCardTags').textContent = c.tags ? `Tags: ${c.tags}` : '';
-      document.getElementById('fcBoxFeedbackAlternativa').classList.add('hidden');
+      document.getElementById('fcBoxFeedbackEstruturado').classList.add('hidden');
       document.getElementById('fcCardVersoContainer').classList.add('hidden');
 
       const elFrente = document.getElementById('fcCardFrente');
@@ -5991,70 +6115,114 @@
       barraAval.classList.add('hidden');
 
       if (c.tipo === 'CLOZE') {
-        // 1. LEI SECA (Exclusão Estrita Cloze Deletion)
+        // 1. LEI SECA: Apenas omissão + endereço legal e breve explicação no verso
         elFrente.innerHTML = formatarTextoCloze_(c.frente, false);
         contMultipla.classList.add('hidden');
         barraVirarCloze.classList.remove('hidden');
       } else if (c.tipo === 'MULTIPLA') {
-        // 3. CADERNO DE ERROS (Múltipla Escolha Agrupada + Fisher-Yates)
+        // 3. MÚLTIPLA ESCOLHA: Embaralhamento Fisher-Yates
         elFrente.textContent = c.frente;
         contMultipla.classList.remove('hidden');
         FC_SESSAO.opcoesAtivasMultipla = embaralharFisherYates_(
-          (c.opcoes || []).map((op, idxOrig) => ({ ...op, _idOrig: idxOrig, descartada: false }))
+          (c.opcoes || []).map((op, idxOrig) => ({ ...op, _idOrig: idxOrig }))
         );
         renderizarOpcoesMultiplaAtivasFC_();
       } else {
-        // 2. PDF BASE (Certo ou Errado Operacional com 2 botões ativos)
+        // 2. CERTO OU ERRADO (PDF BASE): Botões Verde (Certo) e Vermelho (Errado)
         elFrente.textContent = c.frente;
         contMultipla.classList.add('hidden');
         barraCertoErrado.classList.remove('hidden');
       }
     }
 
-    // Julgamento operacional imediato para cartões do Tipo 2: PDF Base ([ Certo ] vs [ Errado ])
+    /* ==========================================================================
+     * MODALIDADE 1: LEI SECA (ENDEREÇO LEGAL + BREVE EXPLICAÇÃO, SEM ALTERNATIVAS)
+     * ========================================================================== */
+    function revelarVersoCardAtualFC() {
+      if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      const c = FC_SESSAO.cardAtual;
+      FC_SESSAO.versoRevelado = true;
+
+      if (c.tipo === 'CLOZE') {
+        document.getElementById('fcCardFrente').innerHTML = formatarTextoCloze_(c.frente, true);
+      }
+
+      document.getElementById('fcCardVersoTexto').textContent = c.verso;
+      document.getElementById('fcCardVersoContainer').classList.remove('hidden');
+      document.getElementById('fcBarraVirarCard').classList.add('hidden');
+      document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
+    }
+
+    /* ==========================================================================
+     * MODALIDADE 2: CERTO OU ERRADO (EXPLICAÇÃO + ENDEREÇO + FRASE CORRIGIDA)
+     * ========================================================================== */
     function julgarCardPdfBaseFC(escolhaUsuario) {
       if (!FC_SESSAO || !FC_SESSAO.cardAtual || FC_SESSAO.julgouCertoErradoAtual) return;
       const c = FC_SESSAO.cardAtual;
       FC_SESSAO.julgouCertoErradoAtual = true;
       FC_SESSAO.versoRevelado = true;
 
-      const gabaritoReal = c.gabaritoCE || 'CERTO';
+      const dadosCE = extrairDadosEstruturadosCertoErrado_(c.frente, c.verso, c.tags);
+      const gabaritoReal = dadosCE.gabaritoCE;
       const acertou = escolhaUsuario === gabaritoReal;
-      FC_SESSAO.acertouCertoErradoAtual = acertou;
 
       if (!acertou) {
         FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
       }
 
-      const boxFeedback = document.getElementById('fcBoxFeedbackAlternativa');
+      const boxFeedback = document.getElementById('fcBoxFeedbackEstruturado');
       boxFeedback.classList.remove('hidden');
 
-      if (acertou) {
-        boxFeedback.className = 'rounded-xl p-4 border bg-emerald-950/60 border-emerald-700 text-emerald-200 text-xs space-y-1';
-        boxFeedback.innerHTML = `
-          <div class="font-extrabold text-emerald-300 uppercase">✅ Julgamento Correto! Você marcou [${escolhaUsuario}] — Gabarito Oficial: ${gabaritoReal}</div>
-          <div>Confira a fundamentação doutrinária/jurisprudencial abaixo e avance nos botões do player.</div>
-        `;
-      } else {
-        boxFeedback.className = 'rounded-xl p-4 border bg-rose-950/60 border-rose-700 text-rose-200 text-xs space-y-1';
-        boxFeedback.innerHTML = `
-          <div class="font-extrabold text-rose-300 uppercase">❌ Erro de Julgamento! Você marcou [${escolhaUsuario}], mas o gabarito é [${gabaritoReal}]</div>
-          <div>Atenção à pegadinha assertiva na fundamentação abaixo. Recomendado avaliar como "1. Errei (+3 pos)".</div>
-        `;
-      }
+      const classeCorTopo = acertou
+        ? 'bg-emerald-950/50 border-emerald-700 text-emerald-200'
+        : 'bg-rose-950/50 border-rose-700 text-rose-200';
 
-      document.getElementById('fcCardVersoTexto').textContent = c.verso;
-      document.getElementById('fcCardVersoContainer').classList.remove('hidden');
+      const fraseCorrigidaHTML = formatarDestaquesTexto_(
+        dadosCE.fraseCorrigida,
+        gabaritoReal === 'ERRADO' ? 'fc-destaque-correto' : 'fc-destaque-correto'
+      );
+
+      boxFeedback.className = `rounded-xl p-4 border text-xs space-y-3 ${classeCorTopo}`;
+      boxFeedback.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/60 pb-2">
+          <span class="font-extrabold text-sm uppercase">
+            ${acertou ? '✅ Resposta Correta!' : '❌ Resposta Incorreta!'} (Você marcou: ${escolhaUsuario})
+          </span>
+          <span class="px-2.5 py-0.5 rounded font-extrabold text-[11px] ${gabaritoReal === 'CERTO' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">
+            Gabarito Oficial: ${gabaritoReal}
+          </span>
+        </div>
+
+        <div class="space-y-2 text-slate-200 leading-relaxed">
+          <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+            <span class="font-extrabold uppercase text-[10px] text-indigo-400 block mb-0.5">1. Explicação:</span>
+            <span>${esc(dadosCE.explicacao)}</span>
+          </div>
+
+          <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+            <span class="font-extrabold uppercase text-[10px] text-indigo-400 block mb-0.5">2. Endereço (Dispositivo Legal):</span>
+            <span class="font-semibold">${esc(dadosCE.endereco)}</span>
+          </div>
+
+          <div class="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800">
+            <span class="font-extrabold uppercase text-[10px] text-emerald-400 block mb-0.5">3. Frase Corrigida (Destaque do Ponto de Atenção):</span>
+            <span class="font-medium">${fraseCorrigidaHTML}</span>
+          </div>
+        </div>
+      `;
+
       document.getElementById('fcBarraCertoErradoPdfBase').classList.add('hidden');
       document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
     }
 
+    /* ==========================================================================
+     * MODALIDADE 3: MÚLTIPLA ESCOLHA (EXPLICAÇÃO DE TODAS AS ALTERNATIVAS + DESTAQUE DO ERRO)
+     * ========================================================================== */
     function renderizarOpcoesMultiplaAtivasFC_() {
       const cont = document.getElementById('fcContainerOpcoesMultipla');
       const letras = ['A', 'B', 'C', 'D', 'E'];
-      const disponiveis = FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada);
 
-      cont.innerHTML = disponiveis.map((op, idx) => {
+      cont.innerHTML = FC_SESSAO.opcoesAtivasMultipla.map((op, idx) => {
         const letra = letras[idx] || String(idx + 1);
         return `
           <button type="button"
@@ -6070,56 +6238,75 @@
     }
 
     function selecionarAlternativaMultiplaFC(idOrig) {
-      if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      if (!FC_SESSAO || !FC_SESSAO.cardAtual || FC_SESSAO.versoRevelado) return;
       const c = FC_SESSAO.cardAtual;
       const opClicada = FC_SESSAO.opcoesAtivasMultipla.find(o => o._idOrig === idOrig);
       if (!opClicada) return;
 
-      const boxFeedback = document.getElementById('fcBoxFeedbackAlternativa');
-      boxFeedback.classList.remove('hidden');
-
-      if (opClicada.correta) {
-        FC_SESSAO.acertouMultiplaAtual = true;
-        FC_SESSAO.versoRevelado = true;
-        boxFeedback.className = 'rounded-xl p-4 border bg-emerald-950/60 border-emerald-700 text-emerald-200 text-xs space-y-1.5';
-        boxFeedback.innerHTML = `
-          <div class="font-extrabold text-emerald-300 uppercase">✅ Alternativa Correta! Estudo Reverso Concluído:</div>
-          <div><strong>Diagnóstico do Acerto:</strong> ${esc(opClicada.diagnostico || 'Afirmação integralmente correta.')}</div>
-          <div><strong>Artigo / Jurisprudência:</strong> <span class="font-semibold">${esc(opClicada.artigo || c.verso)}</span></div>
-          <div><strong>Bizu / Mnemônico:</strong> <span class="font-semibold text-indigo-300">${esc(opClicada.bizu || '—')}</span></div>
-        `;
-        document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
-      } else {
-        FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
-        opClicada.descartada = true;
-
-        boxFeedback.className = 'rounded-xl p-4 border bg-rose-950/60 border-rose-700 text-rose-200 text-xs space-y-1.5';
-        boxFeedback.innerHTML = `
-          <div class="font-extrabold text-rose-300 uppercase">❌ Distrator Incorreto — Estudo Reverso Imediato (Alternativas restantes reembaralhadas!):</div>
-          <div><strong>Diagnóstico do Erro:</strong> ${esc(opClicada.diagnostico || 'Distrator incorreto.')}</div>
-          <div><strong>Artigo / Jurisprudência:</strong> <span class="font-semibold">${esc(opClicada.artigo || c.verso)}</span></div>
-          <div><strong>Bizu / Alerta de Pegadinha:</strong> <span class="font-semibold text-amber-300">${esc(opClicada.bizu || 'Atenção à literalidade!')}</span></div>
-        `;
-
-        const restantes = embaralharFisherYates_(FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada));
-        const descartadas = FC_SESSAO.opcoesAtivasMultipla.filter(o => o.descartada);
-        FC_SESSAO.opcoesAtivasMultipla = restantes.concat(descartadas);
-        renderizarOpcoesMultiplaAtivasFC_();
-      }
-    }
-
-    function revelarVersoCardAtualFC() {
-      if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
-      const c = FC_SESSAO.cardAtual;
       FC_SESSAO.versoRevelado = true;
-
-      if (c.tipo === 'CLOZE') {
-        document.getElementById('fcCardFrente').innerHTML = formatarTextoCloze_(c.frente, true);
+      const acertou = Boolean(opClicada.correta);
+      if (!acertou) {
+        FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
       }
 
-      document.getElementById('fcCardVersoTexto').textContent = c.verso;
-      document.getElementById('fcCardVersoContainer').classList.remove('hidden');
-      document.getElementById('fcBarraVirarCard').classList.add('hidden');
+      const letras = ['A', 'B', 'C', 'D', 'E'];
+
+      // Atualiza visualmente os botões das alternativas e exibe o raio-x de CADA uma
+      const contOpcoes = document.getElementById('fcContainerOpcoesMultipla');
+      contOpcoes.innerHTML = FC_SESSAO.opcoesAtivasMultipla.map((op, idx) => {
+        const letra = letras[idx] || String(idx + 1);
+        const foiEscolhida = op._idOrig === idOrig;
+        const isCorreta = Boolean(op.correta);
+
+        const bordaClasse = isCorreta
+          ? 'border-emerald-600 bg-emerald-950/30'
+          : (foiEscolhida ? 'border-rose-600 bg-rose-950/40' : 'border-slate-800 bg-slate-950/80');
+
+        const badgeStatus = isCorreta
+          ? `<span class="px-2 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[10px] uppercase">✔ Correta ${foiEscolhida ? '(Sua Escolha)' : ''}</span>`
+          : `<span class="px-2 py-0.5 rounded ${foiEscolhida ? 'bg-rose-600 text-white' : 'bg-slate-800 text-rose-400 border border-rose-800'} font-extrabold text-[10px] uppercase">✖ Incorreta ${foiEscolhida ? '(Sua Escolha)' : ''}</span>`;
+
+        // Nas alternativas erradas, destaca a palavra ou expressão que torna a afirmação incorreta
+        const textoFormatado = isCorreta
+          ? `<span class="text-slate-100 font-bold">${esc(op.texto)}</span>`
+          : destacarExpressaoIncorretaAlternativa_(op.texto, op.termo_erro || op.destaque_erro);
+
+        return `
+          <div class="p-4 rounded-xl border ${bordaClasse} space-y-2 text-xs">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg ${isCorreta ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'} font-extrabold text-xs flex items-center justify-center shrink-0">
+                  ${letra}
+                </span>
+                ${badgeStatus}
+              </div>
+              <span class="text-[11px] font-bold text-indigo-400">${esc(op.artigo || c.verso)}</span>
+            </div>
+
+            <div class="text-xs md:text-sm leading-relaxed pt-1">${textoFormatado}</div>
+
+            <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1 text-[11px]">
+              <div>
+                <strong class="${isCorreta ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${isCorreta ? 'Por que está CORRETA:' : 'Por que está INCORRETA:'}
+                </strong>
+                <span class="text-slate-200"> ${esc(op.diagnostico || (isCorreta ? 'Reproduz fielmente o entendimento legal/jurisprudencial.' : 'Contém erro expresso no trecho destacado.'))}</span>
+              </div>
+              ${op.bizu ? `<div><strong class="text-indigo-400">Bizu / Ponto-Chave:</strong> <span class="text-slate-300">${esc(op.bizu)}</span></div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const boxFeedback = document.getElementById('fcBoxFeedbackEstruturado');
+      boxFeedback.classList.remove('hidden');
+      boxFeedback.className = `rounded-xl p-3.5 border text-xs font-bold ${
+        acertou ? 'bg-emerald-950/60 border-emerald-700 text-emerald-200' : 'bg-rose-950/60 border-rose-700 text-rose-200'
+      }`;
+      boxFeedback.innerHTML = acertou
+        ? `✅ Você acertou a questão! Confira acima a análise individual de cada alternativa e o destaque dos erros nas incorretas.`
+        : `❌ Você selecionou uma alternativa incorreta. Analise acima a justificativa de todas as opções e os termos incorretos grifados antes de avançar.`;
+
       document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
     }
 
@@ -6154,7 +6341,7 @@
       carregarProximoCardSessaoFC_();
     }
 
-    // Atalhos de Teclado Operacionais ([Espaço], [C]/[E] p/ PDF Base, [1]-[4] e [F] p/ Tela Cheia)
+    // Atalhos de Teclado
     window.addEventListener('keydown', (ev) => {
       const abaFC = document.getElementById('aba-flashcards');
       const playerFC = document.getElementById('fcSessaoPlayer');
@@ -6184,10 +6371,9 @@
           const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'BOM', 4: 'FACIL' };
           avaliarCardSessaoFC(mapa[num]);
         } else if (FC_SESSAO.cardAtual?.tipo === 'MULTIPLA') {
-          const disponiveis = FC_SESSAO.opcoesAtivasMultipla.filter(o => !o.descartada);
-          if (disponiveis[num - 1]) {
+          if (FC_SESSAO.opcoesAtivasMultipla[num - 1]) {
             ev.preventDefault();
-            selecionarAlternativaMultiplaFC(disponiveis[num - 1]._idOrig);
+            selecionarAlternativaMultiplaFC(FC_SESSAO.opcoesAtivasMultipla[num - 1]._idOrig);
           }
         }
       }
@@ -6276,7 +6462,7 @@
     }
 
     /* ==========================================================================
-     * IMPORTADOR EM LOTE VIA CSV (SEPARADOR ';') + CRIADOR INDIVIDUAL (3 TIPOS)
+     * IMPORTADOR CSV E CRIADOR INDIVIDUAL DE CARTÃO (RESPEITANDO CADA FORMATO)
      * ========================================================================== */
     function abrirModalImportarCSV() {
       document.getElementById('modalImportarCSVFlashcards').classList.remove('hidden');
@@ -6292,24 +6478,26 @@
         {
           texto: "A casa é asilo inviolável, podendo nela ingressar por determinação judicial a qualquer hora do dia ou da noite.",
           correta: false,
-          diagnostico: "Mandado judicial só pode ser cumprido durante o DIA.",
+          termo_erro: "a qualquer hora do dia ou da noite",
+          diagnostico: "O cumprimento de mandado judicial restringe-se exclusivamente ao período diurno.",
           artigo: "Art. 5º, XI, da CF/88",
-          bizu: "Ordem judicial = SÓ DE DIA. Flagrante/Desastre/Socorro = DIA ou NOITE."
+          bizu: "Ordem judicial = SÓ DE DIA."
         },
         {
           texto: "A casa é asilo inviolável, salvo em caso de flagrante delito ou desastre, ou para prestar socorro, ou, durante o dia, por determinação judicial.",
           correta: true,
+          termo_erro: "",
           diagnostico: "Reproduz com exatidão as 4 hipóteses constitucionais de exceção à inviolabilidade domiciliar.",
           artigo: "Art. 5º, XI, da CF/88",
-          bizu: "FDS de Dia e Noite (Flagrante, Desastre, Socorro) + Juiz só de Dia."
+          bizu: "Flagrante, Desastre e Socorro (Dia/Noite) + Determinação Judicial (Só de Dia)."
         }
       ]);
 
       const linhas = [
         `id_materia;id_topico;tipo;frente;verso;tags;opcoes`,
-        `${matPadrao};${topPadrao};CLOZE;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum, praticado {{c2::antes}} da naturalização, ou de comprovado envolvimento em {{c3::tráfico ilícito de entorpecentes}}.;Art. 5º, LI, da CF/88.;Lei Seca,CF88;[]`,
-        `${matPadrao};${topPadrao};PADRAO;É livre a manifestação do pensamento, sendo permitido o anonimato em denúncias eleitorais.;ERRADO. A Constituição veda expressamente o anonimato (Art. 5º, IV, CF/88).;PDF Base,CF88;[]`,
-        `${matPadrao};${topPadrao};MULTIPLA;Assinale a alternativa correta acerca da inviolabilidade domiciliar (Revisão Agrupada TEC):;Art. 5º, XI, CF/88;Caderno de Erros,Domicílio;${opcoesExemplo}`
+        `${matPadrao};${topPadrao};CLOZE;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum, praticado {{c2::antes}} da naturalização, ou de comprovado envolvimento em {{c3::tráfico ilícito de entorpecentes}}.;Art. 5º, LI, da CF/88 — Brasileiro nato nunca é extraditado; o naturalizado só por crime comum anterior ou tráfico de drogas.;Lei Seca,CF88;[]`,
+        `${matPadrao};${topPadrao};PADRAO;É livre a manifestação do pensamento, sendo permitido o anonimato em denúncias eleitorais.;Gabarito: ERRADO | Explicação: A Constituição Federal garante a livre manifestação do pensamento, mas veda de forma expressa o anonimato para permitir a responsabilização por eventuais danos. | Endereço: Art. 5º, inciso IV, da CF/88 | Frase Corrigida: É livre a manifestação do pensamento, sendo [vedado o anonimato].;PDF Base,CF88;[]`,
+        `${matPadrao};${topPadrao};MULTIPLA;Assinale a alternativa correta acerca da inviolabilidade domiciliar:;Art. 5º, XI, CF/88;Caderno de Erros,Domicílio;${opcoesExemplo}`
       ];
       document.getElementById('fcInputCSVBruto').value = linhas.join('\n');
     }
@@ -6416,52 +6604,42 @@
     function alternarCamposModalidadeNovoFC() {
       const tipo = document.getElementById('fcNovoTipo').value;
       const boxOpcoes = document.getElementById('fcBoxOpcoesNovoModal');
-      const boxGabaritoCE = document.getElementById('fcBoxGabaritoCertoErradoModal');
+      const boxPdfBase = document.getElementById('fcBoxCamposPdfBaseModal');
       const lblFrente = document.getElementById('lblFcNovoFrente');
+      const lblVerso = document.getElementById('lblFcNovoVerso');
 
       boxOpcoes.classList.toggle('hidden', tipo !== 'MULTIPLA');
-      boxGabaritoCE.classList.toggle('hidden', tipo !== 'PADRAO');
+      boxPdfBase.classList.toggle('hidden', tipo !== 'PADRAO');
 
-      if (lblFrente) {
-        if (tipo === 'CLOZE') {
-          lblFrente.textContent = '1. Lei Seca — Texto Legal com Exclusão Estrita (Use {{c1::termo}}) *';
-        } else if (tipo === 'PADRAO') {
-          lblFrente.textContent = '2. PDF Base — Proposição Assertiva para Julgamento [Certo] ou [Errado] *';
-        } else {
-          lblFrente.textContent = '3. Caderno de Erros — Comando da Questão Agrupada *';
-        }
+      if (tipo === 'CLOZE') {
+        lblFrente.textContent = '1. Lei Seca — Texto Legal com Omissão (Use {{c1::termo}}) *';
+        lblVerso.textContent = 'Endereço do Dispositivo Legal e Breve Explicação do Artigo *';
+      } else if (tipo === 'PADRAO') {
+        lblFrente.textContent = '2. PDF Base — Afirmação para Julgamento [Certo] ou [Errado] *';
+        lblVerso.textContent = 'Explicação (Breve Justificativa da Resposta) *';
+      } else {
+        lblFrente.textContent = '3. Caderno de Erros — Enunciado da Questão de Múltipla Escolha *';
+        lblVerso.textContent = 'Referência Geral / Artigo Base da Questão *';
       }
     }
 
     function preencherTemplateJSONMultipla() {
       document.getElementById('fcNovoOpcoesJSON').value = JSON.stringify([
         {
-          texto: "Alternativa Correta consolidada aqui",
+          texto: "Alternativa Correta aqui",
           correta: true,
-          diagnostico: "Explicação direta do acerto jurídico",
-          artigo: "Art. X da Lei Y / Súmula Z",
-          bizu: "Mnemônico rápido de fixação"
+          termo_erro: "",
+          diagnostico: "Justificativa clara explicando por que esta alternativa está correta",
+          artigo: "Art. X da Lei Y",
+          bizu: "Resumo rápido"
         },
         {
-          texto: "Distrator 1 (Pegadinha real errada na bateria do TEC)",
+          texto: "Alternativa Incorreta contendo [expressão errada] no texto",
           correta: false,
-          diagnostico: "Diagnóstico exato do erro",
-          artigo: "Art. X, §1º, da Lei Y",
-          bizu: "Atenção à inversão de prazo/competência"
-        },
-        {
-          texto: "Distrator 2 (Pegadinha real errada na bateria do TEC)",
-          correta: false,
-          diagnostico: "Diagnóstico exato do erro",
-          artigo: "Art. W da Lei Y",
-          bizu: "Cuidado com 'salvo' vs 'inclusive'"
-        },
-        {
-          texto: "Distrator 3 (Pegadinha real errada na bateria do TEC)",
-          correta: false,
-          diagnostico: "Diagnóstico exato do erro",
-          artigo: "Jurisprudência STF/STJ",
-          bizu: "Regra geral vs exceção"
+          termo_erro: "expressão errada",
+          diagnostico: "Justificativa explicando por que o trecho destacado torna a opção incorreta",
+          artigo: "Art. X, § 1º, da Lei Y",
+          bizu: "Atenção à literalidade"
         }
       ], null, 2);
     }
@@ -6483,9 +6661,9 @@
 
       if (tipo === 'PADRAO') {
         const gabCE = document.getElementById('fcNovoGabaritoCE').value;
-        if (!/^(CERTO|ERRADO)\b/i.test(verso)) {
-          verso = `${gabCE}. ${verso}`;
-        }
+        const endCE = document.getElementById('fcNovoEnderecoCE').value.trim() || 'Ver dispositivo legal na explicação';
+        const fraseCE = document.getElementById('fcNovoFraseCorrigidaCE').value.trim() || (gabCE === 'CERTO' ? frente : verso);
+        verso = `Gabarito: ${gabCE} | Explicação: ${verso} | Endereço: ${endCE} | Frase Corrigida: ${fraseCE}`;
       }
 
       let opcoes = [];
@@ -6494,7 +6672,7 @@
           opcoes = JSON.parse(rawJson);
           if (!Array.isArray(opcoes) || opcoes.length < 2) throw new Error();
         } catch (err) {
-          notificar('Informe um array JSON válido com pelo menos 2 alternativas para o Caderno de Erros.', true);
+          notificar('Informe um array JSON válido com pelo menos 2 alternativas para Múltipla Escolha.', true);
           return;
         }
       }
