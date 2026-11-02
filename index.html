@@ -128,6 +128,7 @@
     html:not(.dark) .bg-emerald-950\/50,
     html:not(.dark) .bg-emerald-950\/40,
     html:not(.dark) .bg-emerald-950\/30,
+    html:not(.dark) .bg-emerald-950\/25,
     html:not(.dark) .bg-emerald-950\/20 {
       background-color: #e3f1eb !important;
       border-color: #9acbb7 !important;
@@ -630,25 +631,23 @@
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex flex-wrap items-center gap-1.5">
           <button type="button" onclick="irParaSubAbaOrganizacao('cronograma')" id="subnav-org-cronograma" class="px-3 py-1.5 rounded-lg transition subtab-active">
-            1. Estudo do Dia e Cronograma (Páginas por Tópico)
+            Estudo do Dia e Cronograma (Distribuição Diária por Assunto)
           </button>
           <button type="button" onclick="irParaSubAbaOrganizacao('cadastros')" id="subnav-org-cadastros" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-            2. Base de Matérias e Tópicos
+            Base de Matérias e Tópicos
           </button>
           <button type="button" onclick="irParaSubAbaOrganizacao('config')" id="subnav-org-config" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-            3. Configurações Avançadas de Estudo
+            Configurações Avançadas de Estudo
           </button>
         </div>
-        <span class="text-[11px] text-slate-400 hidden lg:inline">Planejamento detalhado por tópico, páginas individuais e parâmetros de metodologia</span>
+        <span class="text-[11px] text-slate-400 hidden lg:inline">Cálculo automático da cota diária de leitura por assunto e acompanhamento de progresso</span>
       </div>
 
       <!-- SUB-SEÇÃO 1.1: CRONOGRAMA E PAINEL EXECUTIVO DO DIA -->
       <section id="aba-cronograma" class="space-y-4">
 
         <!-- ====================================================================
-             BLOCO 1 (DESTAQUE IMEDIATO): PROGRAMAÇÃO DE ESTUDO DO DIA
-             1. Total de páginas do dia | 2. Matéria do dia | 3. Tópicos estudados
-             4. Páginas de cada tópico | 5. Lei seca do dia | 6. Metas | 7. Divisão por dia
+             PAINEL DE EXECUÇÃO DIÁRIA: DISTRIBUIÇÃO AUTOMÁTICA DE PÁGINAS POR ASSUNTO
              ==================================================================== -->
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-sm space-y-3.5">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
@@ -664,7 +663,7 @@
                   Em Andamento
                 </span>
               </div>
-              <h2 class="text-base font-extrabold text-white mt-1">Programação do Dia e Distribuição Individual de Páginas</h2>
+              <h2 class="text-base font-extrabold text-white mt-1">Meta de Leitura de Hoje e Progresso Individual por Assunto</h2>
             </div>
 
             <!-- Controles de Cadência e Exportação -->
@@ -690,56 +689,58 @@
             </div>
           </div>
 
-          <!-- 7 INDICADORES PRIMÁRIOS DO DIA (HIERARQUIA VISUAL IMEDIATA) -->
+          <!-- PAINEL DE 3 COLUNAS DO DIA (SEM NUMERAÇÃO AMBÍGUA E COM BARRAS DE PROGRESSO POR ASSUNTO) -->
           <div id="cronPainelResumoDoDia" class="grid grid-cols-1 lg:grid-cols-12 gap-3">
-            <!-- Coluna 1: Total de Páginas do Dia + Matéria + Meta/Parte/Dia -->
-            <div class="lg:col-span-4 bg-slate-950 rounded-xl border border-slate-800 p-3.5 flex flex-col justify-between space-y-2.5">
+            <!-- Coluna 1: Meta de Páginas do Dia + Matéria do Dia -->
+            <div class="lg:col-span-3 bg-slate-950 rounded-xl border border-slate-800 p-3.5 flex flex-col justify-between space-y-2.5">
               <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-[10px] font-extrabold uppercase text-indigo-400">1. Volume Total de Leitura Hoje</span>
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[10px] font-extrabold uppercase text-indigo-400">Meta de Leitura Hoje</span>
                   <span id="cronDiaMetaIdentificador" class="px-2 py-0.5 rounded bg-indigo-600 text-white font-extrabold text-[10px]">
                     META 3 — PARTE 1 — DIA 01
                   </span>
                 </div>
-                <div class="mt-1 flex items-baseline gap-2">
+                <div class="mt-1.5 flex items-baseline gap-2">
                   <span id="cronDiaTotalPaginas" class="text-2xl font-extrabold text-white">0 páginas</span>
-                  <span id="cronDiaIntervaloPaginas" class="text-xs font-bold text-emerald-400"></span>
                 </div>
+                <div id="cronDiaIntervaloPaginas" class="text-[11px] font-semibold text-emerald-400 mt-0.5"></div>
               </div>
 
-              <div class="pt-2 border-t border-slate-800 space-y-1">
-                <span class="text-[10px] font-extrabold uppercase text-slate-400 block">2. Matéria e Localização Atual</span>
-                <div id="cronTextoSemanaEMetaAtual" class="text-xs font-extrabold text-indigo-300">Semana 04 • Meta 3</div>
+              <div class="pt-2.5 border-t border-slate-800 space-y-1">
+                <span class="text-[10px] font-extrabold uppercase text-slate-400 block">Matéria e Semana em Curso</span>
                 <div id="cronTextoTopicoMetaAtual" class="text-sm font-extrabold text-white">Direito Administrativo</div>
+                <div id="cronTextoSemanaEMetaAtual" class="text-[11px] font-bold text-indigo-300">Semana 04 • Meta 3</div>
               </div>
             </div>
 
-            <!-- Coluna 2: Tópicos que serão estudados + Quantidade de páginas de CADA tópico -->
-            <div class="lg:col-span-4 bg-slate-950 rounded-xl border border-slate-800 p-3.5 flex flex-col justify-between space-y-2">
+            <!-- Coluna 2 (Central Ampliada): Distribuição Diária Automática de Páginas por Assunto + Barra de Progresso -->
+            <div class="lg:col-span-5 bg-slate-950 rounded-xl border border-slate-800 p-3.5 flex flex-col justify-between space-y-2.5">
               <div>
-                <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
-                  <span class="text-[10px] font-extrabold uppercase text-emerald-400">3 e 4. Tópicos e Páginas por Assunto</span>
-                  <span id="cronDiaTotalMetaPaginasBadge" class="text-[10px] font-bold text-slate-400">Total da Meta: 0 pág.</span>
+                <div class="flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-800 pb-1.5">
+                  <span class="text-[10px] font-extrabold uppercase text-emerald-400">Distribuição Diária e Progresso por Assunto</span>
+                  <span id="cronDiaTotalMetaPaginasBadge" class="px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-bold">
+                    0 Assuntos | Total da Meta: 0 pág.
+                  </span>
                 </div>
-                <div id="cronDiaListaTopicosIndividualizados" class="mt-2 space-y-1.5 text-xs"></div>
+                <div id="cronDiaListaTopicosIndividualizados" class="mt-2 space-y-2 text-xs"></div>
               </div>
               <div class="pt-1.5 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Necesita ajustar páginas por tópico?</span>
-                <button type="button" id="btnEditarMetaDoDiaAtalho" class="font-bold text-indigo-400 hover:underline">Editar Tópicos/Páginas</button>
+                <span class="text-slate-400">A soma das metas do dia equivale exatamente à leitura de hoje</span>
+                <button type="button" id="btnEditarMetaDoDiaAtalho" class="font-bold text-indigo-400 hover:underline shrink-0 ml-2">Ajustar Páginas</button>
               </div>
             </div>
 
-            <!-- Coluna 3: Lei Seca do Dia + Súmulas + Ação Rápida de Conclusão da Parte do Dia -->
+            <!-- Coluna 3: Lei Seca do Dia + Súmulas + Botão de Conclusão do Dia -->
             <div class="lg:col-span-4 bg-slate-950 rounded-xl border border-slate-800 p-3.5 flex flex-col justify-between space-y-2.5">
               <div class="space-y-2">
                 <div>
-                  <span class="text-[10px] font-extrabold uppercase text-amber-400 block">5. Lei Seca do Dia</span>
+                  <span class="text-[10px] font-extrabold uppercase text-amber-400 block">Lei Seca do Dia</span>
                   <div id="cronDiaLeiSecaTexto" class="text-xs font-semibold text-slate-200 mt-0.5 leading-snug">
                     Nenhum dispositivo informado.
                   </div>
                 </div>
                 <div class="pt-1.5 border-t border-slate-800">
-                  <span class="text-[10px] font-extrabold uppercase text-slate-400 block">6. Súmulas e Observações da Meta</span>
+                  <span class="text-[10px] font-extrabold uppercase text-slate-400 block">Súmulas e Observações da Meta</span>
                   <div id="cronDiaSumulasTexto" class="text-[11px] text-slate-300 mt-0.5">
                     Sem observações adicionais.
                   </div>
@@ -754,12 +755,12 @@
             </div>
           </div>
 
-          <!-- 7. DIVISÃO CLARA DOS CONTEÚDOS POR DIA DA SEMANA ATUAL (META X — PARTE Y — DIA Z) -->
+          <!-- DIVISÃO DIÁRIA DAS METAS DA SEMANA EM CURSO (META X — PARTE Y — DIA Z) -->
           <div class="bg-slate-950 rounded-xl border border-slate-800 p-3.5 space-y-2.5">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
               <div>
-                <h3 class="text-xs font-extrabold uppercase text-white">7. Divisão Diária das Metas da Semana em Curso</h3>
-                <p class="text-[11px] text-slate-400">Identificação explícita de Meta, Parte, Dia de Execução, Conteúdo e Páginas previstas</p>
+                <h3 class="text-xs font-extrabold uppercase text-white">Divisão Diária das Metas da Semana em Curso</h3>
+                <p class="text-[11px] text-slate-400">Cada cartão mostra exatamente quantas páginas ler de cada assunto naquele dia específico</p>
               </div>
               <div class="flex items-center gap-3 text-[11px]">
                 <span class="text-slate-300">Progresso Geral: <strong id="cronTxtMetasConcluidas" class="text-emerald-400">0/0</strong> (<strong id="cronTxtPercentualGlobal">0%</strong>)</span>
@@ -780,27 +781,27 @@
           <!-- Indicadores Compactos de Contagem Regressiva -->
           <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
             <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span class="text-[10px] font-bold uppercase text-indigo-400 block">1. Meta Atual</span>
+              <span class="text-[10px] font-bold uppercase text-indigo-400 block">Meta Atual</span>
               <div id="cronRegMetaAtual" class="text-sm font-extrabold text-white mt-0.5">—</div>
               <p id="cronRegMetaAtualSub" class="text-[10px] text-slate-400">—</p>
             </div>
             <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span class="text-[10px] font-bold uppercase text-emerald-400 block">2. Semana Atual</span>
+              <span class="text-[10px] font-bold uppercase text-emerald-400 block">Semana Atual</span>
               <div id="cronRegSemanaAtual" class="text-sm font-extrabold text-white mt-0.5">—</div>
               <p id="cronRegSemanaAtualSub" class="text-[10px] text-slate-400">—</p>
             </div>
             <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span class="text-[10px] font-bold uppercase text-amber-400 block">3. Próx. Revisão</span>
+              <span class="text-[10px] font-bold uppercase text-amber-400 block">Próx. Revisão</span>
               <div id="cronRegProxRevisao" class="text-sm font-extrabold text-white mt-0.5">—</div>
               <p id="cronRegProxRevisaoSub" class="text-[10px] text-slate-400">—</p>
             </div>
             <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span class="text-[10px] font-bold uppercase text-teal-400 block">4. Metade (S25)</span>
+              <span class="text-[10px] font-bold uppercase text-teal-400 block">Metade (S25)</span>
               <div id="cronRegMetadeCurso" class="text-sm font-extrabold text-white mt-0.5">—</div>
               <p id="cronRegMetadeCursoSub" class="text-[10px] text-slate-400">—</p>
             </div>
             <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span class="text-[10px] font-bold uppercase text-indigo-300 block">5. Fim (50 Sem.)</span>
+              <span class="text-[10px] font-bold uppercase text-indigo-300 block">Fim (50 Sem.)</span>
               <div id="cronRegFimCurso" class="text-sm font-extrabold text-indigo-400 mt-0.5">—</div>
               <p id="cronRegFimCursoSub" class="text-[10px] text-slate-400">—</p>
             </div>
@@ -851,8 +852,8 @@
           <div class="bg-slate-900 text-slate-100 rounded-xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[92vh] flex flex-col">
             <div class="px-5 py-3.5 bg-indigo-950 border-b border-indigo-800 text-white flex items-center justify-between">
               <div>
-                <h3 id="modalCronTitulo" class="text-xs font-extrabold uppercase">Configurar Tópicos, Páginas Individuais e Partes da Meta</h3>
-                <p class="text-[11px] text-indigo-300">Informe a quantidade de páginas de cada tópico e a divisão diária em partes</p>
+                <h3 id="modalCronTitulo" class="text-xs font-extrabold uppercase">Configurar Assuntos, Páginas Individuais e Partes da Meta</h3>
+                <p class="text-[11px] text-indigo-300">O sistema distribuirá automaticamente as páginas de cada assunto entre os dias da meta</p>
               </div>
               <button type="button" onclick="fecharModalEditarMetaCronograma()" class="text-indigo-300 hover:text-white text-xs font-bold">Fechar</button>
             </div>
@@ -895,17 +896,17 @@
                 </div>
               </div>
 
-              <!-- PÁGINAS INDIVIDUAIS POR TÓPICO DENTRO DA META -->
+              <!-- PÁGINAS INDIVIDUAIS POR ASSUNTO DENTRO DA META -->
               <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="font-extrabold text-emerald-400 uppercase text-[10px]">
-                    Quantidade de Páginas por Tópico Individual (1 tópico por linha no formato: Nome do Tópico: X páginas)
+                    Páginas Totais de Cada Assunto (1 assunto por linha no formato: Nome do Assunto: X páginas)
                   </span>
                   <button type="button" onclick="sincronizarSomaPaginasPelosTopicosModal()" class="text-[11px] font-bold text-indigo-400 hover:underline">
-                    Calcular Soma Total Automaticamente
+                    Recalcular Soma e Divisão Diária
                   </button>
                 </div>
-                <textarea id="editCronSubtopicosPaginas" rows="3" oninput="sincronizarSomaPaginasPelosTopicosModal()" placeholder="Ex:&#10;Serviços Públicos: 25 páginas&#10;Estatuto da Pessoa Idosa: 20 páginas&#10;Lei de Acesso à Informação: 16 páginas" class="w-full rounded-lg border p-2.5 font-medium text-xs"></textarea>
+                <textarea id="editCronSubtopicosPaginas" rows="3" oninput="sincronizarSomaPaginasPelosTopicosModal()" placeholder="Ex:&#10;Serviços Públicos: 39 páginas&#10;Estatuto da Pessoa Idosa: 22 páginas" class="w-full rounded-lg border p-2.5 font-medium text-xs"></textarea>
               </div>
 
               <div>
@@ -937,10 +938,10 @@
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-1.5">
             <button type="button" onclick="alternarSubAbaCadastros('topicos')" id="subbtn-cad-topicos" class="px-3 py-1.5 rounded-lg transition subtab-active">
-              1. Gerenciar Tópicos
+              Gerenciar Tópicos
             </button>
             <button type="button" onclick="alternarSubAbaCadastros('materias')" id="subbtn-cad-materias" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-              2. Gerenciar e Ordenar Matérias
+              Gerenciar e Ordenar Matérias
             </button>
           </div>
           <span class="text-[11px] text-slate-400">Base estrutural para classificação das Baterias de Questões e Cartões</span>
@@ -1036,21 +1037,18 @@
         </div>
       </section>
 
-      <!-- ======================================================================
-           SUB-SEÇÃO 1.3: CENTRAL DE CONFIGURAÇÕES AVANÇADAS DE ESTUDO E METODOLOGIA
-           ====================================================================== -->
+      <!-- SUB-SEÇÃO 1.3: CENTRAL DE CONFIGURAÇÕES AVANÇADAS DE ESTUDO E METODOLOGIA -->
       <section id="aba-config" class="hidden space-y-4">
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex flex-wrap items-center gap-1.5">
             <button type="button" onclick="alternarSubAbaConfig('parametros')" id="subbtn-cfg-parametros" class="px-3.5 py-1.5 rounded-lg transition subtab-active">
-              1. Configurações Avançadas da Metodologia
+              Configurações Avançadas da Metodologia
             </button>
             <button type="button" onclick="alternarSubAbaConfig('regras')" id="subbtn-cfg-regras" class="px-3.5 py-1.5 rounded-lg transition subtab-inactive">
-              2. Documentação dos Fluxos e Regras Ativas
+              Documentação dos Fluxos e Regras Ativas
             </button>
           </div>
 
-          <!-- Presets Rápidos de Estratégia de Preparação -->
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="text-[11px] font-bold text-slate-400">Aplicar Perfil de Estratégia:</span>
             <button type="button" onclick="aplicarPresetMetodologia('LONGO_PRAZO')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-[11px]">
@@ -1271,20 +1269,12 @@
         <div id="subaba-cfg-regras" class="hidden bg-slate-900 rounded-xl border border-slate-800 p-4 space-y-3 text-xs">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div class="p-3.5 rounded-xl bg-indigo-950/40 border border-indigo-800/70 space-y-1">
-              <div class="font-bold text-indigo-300">1. Rotina Diária Integrada (Dia vs. Noite)</div>
+              <div class="font-bold text-indigo-300">Rotina Diária Integrada (Dia vs. Noite)</div>
               <p class="text-slate-300">Durante o dia, execute o aquecimento fracionado em blocos menores com rotação configurável de erros. À noite, execute a bateria de questões práticas e registre o resultado para agendar a próxima revisão espaçada.</p>
             </div>
             <div class="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/70 space-y-1">
-              <div class="font-bold text-emerald-300">2. Independência entre Blocos e Intervalo de Retorno</div>
-              <p class="text-slate-300">O total de cartões do filtro pode ser dividido livremente em N blocos (ex: 2, 3, 5, 6 blocos). Dentro de cada bloco, qualquer cartão errado ou não compreendido retorna exatamente após K cartões respondidos (ex: 3, 5, 7, 10), de forma independente.</p>
-            </div>
-            <div class="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/70 space-y-1">
-              <div class="font-bold text-rose-300">3. Critério de Domínio do Bloco</div>
-              <p class="text-slate-300">Um bloco só é considerado concluído quando todos os cartões que o compõem atingem o número de acertos de domínio configurado, garantindo que nenhum cartão errado fique para trás.</p>
-            </div>
-            <div class="p-3.5 rounded-xl bg-teal-950/40 border border-teal-800/70 space-y-1">
-              <div class="font-bold text-teal-300">4. Prazo-Limite e Proximidade de Prova</div>
-              <p class="text-slate-300">Quando uma data-limite de revisão está configurada, os intervalos calculados respeitam esse teto para que todos os conteúdos sejam revistos antes da prova.</p>
+              <div class="font-bold text-emerald-300">Distribuição Diária Automática de Páginas por Assunto</div>
+              <p class="text-slate-300">Quando uma meta possui dois ou mais assuntos (ex: Serviços Públicos com 39 pág. e Estatuto da Pessoa Idosa com 22 pág.), o sistema distribui proporcionalmente quantas páginas de cada assunto devem ser lidas em cada dia e atualiza as barras de progresso automaticamente.</p>
             </div>
           </div>
         </div>
@@ -1298,19 +1288,19 @@
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex flex-wrap items-center gap-1.5">
           <button type="button" onclick="irParaSubAbaQuestoes('painel')" id="subnav-que-painel" class="px-3 py-1.5 rounded-lg transition subtab-active">
-            1. Fila de Hoje e Resumo
+            Fila de Hoje e Resumo
           </button>
           <button type="button" onclick="irParaSubAbaQuestoes('registrar')" id="subnav-que-registrar" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-            2. Registrar Bateria Resolvida
+            Registrar Bateria Resolvida
           </button>
           <button type="button" onclick="irParaSubAbaQuestoes('revisoes')" id="subnav-que-revisoes" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-            3. Controle Geral de Revisões
+            Controle Geral de Revisões
           </button>
           <button type="button" onclick="irParaSubAbaQuestoes('ciclo')" id="subnav-que-ciclo" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-            4. Agenda por Data
+            Agenda por Data
           </button>
           <button type="button" onclick="irParaSubAbaQuestoes('estatisticas')" id="subnav-que-estatisticas" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-            5. Desempenho e Gráficos
+            Desempenho e Gráficos
           </button>
         </div>
         <button type="button" onclick="acionarReorganizarFilaUnica()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] transition">
@@ -1436,10 +1426,10 @@
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-1.5">
             <button type="button" onclick="alternarSubAbaRegistrar('form')" id="subbtn-reg-form" class="px-3 py-1.5 rounded-lg transition subtab-active">
-              1. Lançar Resolução de Questões
+              Lançar Resolução de Questões
             </button>
             <button type="button" onclick="alternarSubAbaRegistrar('historico')" id="subbtn-reg-historico" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-              2. Histórico de Baterias Resolvidas
+              Histórico de Baterias Resolvidas
             </button>
           </div>
           <span class="text-[11px] text-slate-400">Execução noturna: teste seu desempenho e agende a próxima revisão</span>
@@ -1565,16 +1555,16 @@
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex flex-wrap items-center gap-1.5">
             <button type="button" onclick="alternarSubAbaRevisoes('hoje')" id="subbtn-rev-hoje" class="px-3 py-1.5 rounded-lg transition subtab-active">
-              1. Programados para Hoje
+              Programados para Hoje
             </button>
             <button type="button" onclick="alternarSubAbaRevisoes('completa')" id="subbtn-rev-completa" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-              2. Lista Completa da Fila
+              Lista Completa da Fila
             </button>
             <button type="button" onclick="alternarSubAbaRevisoes('calendario')" id="subbtn-rev-calendario" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-              3. Distribuição por Data
+              Distribuição por Data
             </button>
             <button type="button" onclick="alternarSubAbaRevisoes('historico')" id="subbtn-rev-historico" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
-              4. Histórico Concluído
+              Histórico Concluído
             </button>
           </div>
 
@@ -1762,10 +1752,10 @@
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
           <div class="flex items-center gap-1.5">
             <button type="button" onclick="alternarSubAbaEstatisticas('graficos')" id="subbtn-est-graficos" class="px-3 py-1 rounded-lg transition subtab-active">
-              1. Gráficos de Desempenho
+              Gráficos de Desempenho
             </button>
             <button type="button" onclick="alternarSubAbaEstatisticas('relatorio')" id="subbtn-est-relatorio" class="px-3 py-1 rounded-lg transition subtab-inactive">
-              2. Relatório Comparativo de Sessões
+              Relatório Comparativo de Sessões
             </button>
           </div>
           <button onclick="exportarRelatorioExcel()" class="px-3 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px]">
@@ -1856,9 +1846,7 @@
           <!-- PAINEL DE SELEÇÃO, CONTROLE DE BLOCOS E DECOREBA -->
           <div id="fcPainelSelecao" class="p-4 space-y-4">
 
-            <!-- ================================================================
-                 1. FILTROS E CONFIGURAÇÃO INDEPENDENTE DE BLOCOS E RETORNO DE ERROS
-                 ================================================================ -->
+            <!-- FILTROS E CONFIGURAÇÃO INDEPENDENTE DE BLOCOS E RETORNO DE ERROS -->
             <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3.5">
               <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
                 <div>
@@ -1873,25 +1861,25 @@
               <!-- Linha 1: Filtros de Matéria, Tópico e Modalidade -->
               <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 text-xs">
                 <div class="md:col-span-4">
-                  <label class="block font-bold text-slate-300 mb-1">1. Filtrar Matéria</label>
+                  <label class="block font-bold text-slate-300 mb-1">Filtrar Matéria</label>
                   <select id="fcFiltroMateria" onchange="aoMudarMateriaFiltroFC()" class="w-full rounded-lg border px-2.5 py-1.5 font-medium">
                     <option value="">Todas as Matérias</option>
                   </select>
                 </div>
                 <div class="md:col-span-5">
-                  <label class="block font-bold text-slate-300 mb-1">2. Filtrar Tópico</label>
+                  <label class="block font-bold text-slate-300 mb-1">Filtrar Tópico</label>
                   <select id="fcFiltroTopico" onchange="aoMudarFiltroDeckResetarBlocos()" class="w-full rounded-lg border px-2.5 py-1.5 font-medium">
                     <option value="">Todos os Tópicos</option>
                   </select>
                 </div>
                 <div class="md:col-span-3">
-                  <label class="block font-bold text-slate-300 mb-1">3. Modalidade do Cartão</label>
+                  <label class="block font-bold text-slate-300 mb-1">Modalidade do Cartão</label>
                   <select id="fcFiltroTipo" onchange="aoMudarFiltroDeckResetarBlocos()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
                     <option value="">[ Todas as 4 Modalidades ]</option>
-                    <option value="PDF_BASE">1. PDF-Base (Certo/Errado)</option>
-                    <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
-                    <option value="LEI_SECA">3. Lei Seca</option>
-                    <option value="DECOREBA">4. Decoreba (Exclusão)</option>
+                    <option value="PDF_BASE">PDF-Base (Certo/Errado)</option>
+                    <option value="CADERNO_ERROS">Caderno de Erros (C/E)</option>
+                    <option value="LEI_SECA">Lei Seca</option>
+                    <option value="DECOREBA">Decoreba (Exclusão)</option>
                   </select>
                 </div>
               </div>
@@ -1899,7 +1887,7 @@
               <!-- Linha 2: CONTROLES INDEPENDENTES DE BLOCOS E INTERVALO DE RETORNO -->
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 pt-2 border-t border-slate-800 items-end text-xs">
                 <div class="lg:col-span-3">
-                  <label class="block font-bold text-indigo-300 mb-1">A) Dividir Total em Quantos Blocos?</label>
+                  <label class="block font-bold text-indigo-300 mb-1">Dividir Total em Quantos Blocos?</label>
                   <div class="flex items-center gap-1.5">
                     <input type="number" id="fcInputQtdBlocos" min="1" max="50" value="3" oninput="atualizarDivisaoBlocosAquecimentoUI(this.value)" class="w-20 rounded-lg border px-2.5 py-1.5 font-extrabold text-indigo-400 text-center">
                     <span id="fcResumoCalculoBlocos" class="text-[11px] text-slate-300 font-semibold">blocos (0 cards/bloco)</span>
@@ -1907,7 +1895,7 @@
                 </div>
 
                 <div class="lg:col-span-3">
-                  <label class="block font-bold text-rose-300 mb-1">B) Retorno do Erro Após Quantos Cards?</label>
+                  <label class="block font-bold text-rose-300 mb-1">Retorno do Erro Após Quantos Cards?</label>
                   <div class="flex items-center gap-1.5">
                     <input type="number" id="fcInputIntervaloRetorno" min="1" max="50" value="3" oninput="atualizarIntervaloRetornoAquecimentoUI(this.value)" class="w-20 rounded-lg border px-2.5 py-1.5 font-extrabold text-rose-400 text-center">
                     <span class="text-[11px] text-slate-300 font-semibold">cartões respondidos</span>
@@ -1915,7 +1903,7 @@
                 </div>
 
                 <div class="lg:col-span-3">
-                  <label class="block font-bold text-emerald-300 mb-1">C) Critério de Domínio no Bloco</label>
+                  <label class="block font-bold text-emerald-300 mb-1">Critério de Domínio no Bloco</label>
                   <select id="fcSelectCriterioDominio" onchange="atualizarCriterioDominioAquecimentoUI(this.value)" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
                     <option value="1">1 acerto líquido no bloco</option>
                     <option value="2">2 acertos consecutivos no bloco</option>
@@ -1933,7 +1921,7 @@
                 </div>
               </div>
 
-              <!-- PAINEL DE ACOMPANHAMENTO DOS BLOCOS (QUANTIDADE, RESPONDIDOS, REFORÇO, DOMINADOS, CONCLUÍDOS) -->
+              <!-- PAINEL DE ACOMPANHAMENTO DOS BLOCOS -->
               <div class="space-y-2 pt-2 border-t border-slate-800">
                 <div class="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                   <span id="fcStatusGeralBlocosTxt" class="font-bold text-slate-200">
@@ -1947,9 +1935,7 @@
               </div>
             </div>
 
-            <!-- ================================================================
-                 2. SISTEMA INTELIGENTE DE DECOREBA (CARTÕES DE EXCLUSÃO DIÁRIA)
-                 ================================================================ -->
+            <!-- SISTEMA INTELIGENTE DE DECOREBA -->
             <div class="bg-purple-950/35 border border-purple-800/70 rounded-xl p-4 space-y-3">
               <div class="flex flex-wrap items-center justify-between gap-3 border-b border-purple-800/50 pb-2.5">
                 <div>
@@ -2020,11 +2006,11 @@
               </div>
             </div>
 
-            <!-- 3. RESUMO DAS 4 MODALIDADES E ATALHOS DE HOJE -->
+            <!-- RESUMO DAS 4 MODALIDADES E ATALHOS DE HOJE -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
               <div onclick="filtrarDeckPorModalidadeRapida('PDF_BASE')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-emerald-800/60 hover:border-emerald-500 transition">
                 <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-emerald-400 uppercase text-[10px]">1. PDF-Base (C/E)</span>
+                  <span class="font-extrabold text-emerald-400 uppercase text-[10px]">PDF-Base (C/E)</span>
                   <span id="fcCountPdfBase" class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]">0</span>
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Compreensão lógica dos PDFs estudados</p>
@@ -2032,7 +2018,7 @@
 
               <div onclick="filtrarDeckPorModalidadeRapida('CADERNO_ERROS')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-rose-800/60 hover:border-rose-500 transition">
                 <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-rose-400 uppercase text-[10px]">2. Caderno de Erros (C/E)</span>
+                  <span class="font-extrabold text-rose-400 uppercase text-[10px]">Caderno de Erros (C/E)</span>
                   <span id="fcCountCadernoErros" class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold text-[10px]">0</span>
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Alternativas difíceis convertidas em C/E</p>
@@ -2040,7 +2026,7 @@
 
               <div onclick="filtrarDeckPorModalidadeRapida('LEI_SECA')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-indigo-800/60 hover:border-indigo-500 transition">
                 <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-indigo-400 uppercase text-[10px]">3. Lei Seca</span>
+                  <span class="font-extrabold text-indigo-400 uppercase text-[10px]">Lei Seca</span>
                   <span id="fcCountLeiSeca" class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px]">0</span>
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Memorização literal de dispositivos</p>
@@ -2048,7 +2034,7 @@
 
               <div onclick="filtrarDeckPorModalidadeRapida('DECOREBA')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-purple-800/60 hover:border-purple-500 transition">
                 <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-purple-400 uppercase text-[10px]">4. Decoreba</span>
+                  <span class="font-extrabold text-purple-400 uppercase text-[10px]">Decoreba</span>
                   <span id="fcCountDecoreba" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold text-[10px]">0</span>
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Prazos, listas e tabelas de exclusão</p>
@@ -2084,9 +2070,7 @@
             </div>
           </div>
 
-          <!-- ==================================================================
-               PLAYER DE CARTÕES CENTRALIZADO (ACOMPANHAMENTO DE BLOCO + ROTAÇÃO +N)
-               ================================================================== -->
+          <!-- PLAYER DE CARTÕES CENTRALIZADO -->
           <div id="fcSessaoPlayer" class="hidden p-3 md:p-5 bg-slate-950 flex flex-col items-center justify-between">
             <!-- Barra Superior do Player -->
             <div class="max-w-5xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm space-y-2 shrink-0">
@@ -2264,7 +2248,6 @@
                 <div id="fcDiagListaCriticos" class="space-y-1.5 text-xs max-h-48 overflow-y-auto"></div>
               </div>
 
-              <!-- Ações Pós-Bloco: Avançar para o Próximo Bloco OU Ir para Bateria Noturna de Questões -->
               <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
                 <button type="button" id="fcBtnAvancarProximoBloco" class="hidden px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow transition">
                   Avançar para o Próximo Bloco →
@@ -2294,20 +2277,20 @@
                 <div class="font-extrabold text-indigo-300 uppercase text-[10px]">Classificação Padrão do Lote:</div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div>
-                    <label class="block font-bold text-slate-300 mb-1">1. Matéria</label>
+                    <label class="block font-bold text-slate-300 mb-1">Matéria</label>
                     <select id="fcImportDefaultMateria" onchange="filtrarTopicosModalImportCSV()" class="w-full rounded-lg border px-2.5 py-1.5 font-medium"></select>
                   </div>
                   <div>
-                    <label class="block font-bold text-slate-300 mb-1">2. Tópico</label>
+                    <label class="block font-bold text-slate-300 mb-1">Tópico</label>
                     <select id="fcImportDefaultTopico" class="w-full rounded-lg border px-2.5 py-1.5 font-medium"></select>
                   </div>
                   <div>
-                    <label class="block font-bold text-slate-300 mb-1">3. Tipo de Cartão</label>
+                    <label class="block font-bold text-slate-300 mb-1">Tipo de Cartão</label>
                     <select id="fcImportDefaultTipo" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                      <option value="PDF_BASE">1. PDF-Base (Certo/Errado)</option>
-                      <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
-                      <option value="LEI_SECA">3. Lei Seca</option>
-                      <option value="DECOREBA">4. Decoreba (Exclusão)</option>
+                      <option value="PDF_BASE">PDF-Base (Certo/Errado)</option>
+                      <option value="CADERNO_ERROS">Caderno de Erros (C/E)</option>
+                      <option value="LEI_SECA">Lei Seca</option>
+                      <option value="DECOREBA">Decoreba (Exclusão)</option>
                     </select>
                   </div>
                 </div>
@@ -2357,20 +2340,20 @@
             <form onsubmit="salvarNovoFlashcardIndividual(event)" class="p-5 space-y-3.5 text-xs overflow-y-auto">
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>
-                  <label class="block font-bold text-slate-300 mb-1">1. Matéria *</label>
+                  <label class="block font-bold text-slate-300 mb-1">Matéria *</label>
                   <select id="fcNovoMateria" required onchange="filtrarTopicosModalNovoFC()" class="w-full rounded-lg border px-2.5 py-1.5"></select>
                 </div>
                 <div>
-                  <label class="block font-bold text-slate-300 mb-1">2. Tópico *</label>
+                  <label class="block font-bold text-slate-300 mb-1">Tópico *</label>
                   <select id="fcNovoTopico" required class="w-full rounded-lg border px-2.5 py-1.5"></select>
                 </div>
                 <div>
-                  <label class="block font-bold text-slate-300 mb-1">3. Tipo de Cartão *</label>
+                  <label class="block font-bold text-slate-300 mb-1">Tipo de Cartão *</label>
                   <select id="fcNovoTipo" onchange="alternarCamposModalidadeNovoFC()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                    <option value="PDF_BASE">1. PDF-Base (Certo / Errado)</option>
-                    <option value="CADERNO_ERROS">2. Caderno de Erros (Certo / Errado)</option>
-                    <option value="LEI_SECA">3. Lei Seca (Legislação)</option>
-                    <option value="DECOREBA">4. Decoreba (Exclusão Diária)</option>
+                    <option value="PDF_BASE">PDF-Base (Certo / Errado)</option>
+                    <option value="CADERNO_ERROS">Caderno de Erros (Certo / Errado)</option>
+                    <option value="LEI_SECA">Lei Seca (Legislação)</option>
+                    <option value="DECOREBA">Decoreba (Exclusão Diária)</option>
                   </select>
                 </div>
               </div>
@@ -2628,7 +2611,6 @@
       return arr.length >= 1 ? arr : padrao;
     }
 
-    // Limita uma data calculada ao prazo-limite de revisões / data da prova, quando configurado
     function aplicarTetoDataLimiteRevisao_(dataAlvoYMD, hojeYMD, configObj) {
       if (!configObj) return dataAlvoYMD;
       const limite = configObj.Data_Limite_Revisoes || configObj.Data_Prova || '';
@@ -4887,7 +4869,6 @@
       }
     }
 
-    // Presets Rápidos para a Central de Configurações Avançadas
     function aplicarPresetMetodologia(tipoPreset) {
       if (tipoPreset === 'LONGO_PRAZO') {
         document.getElementById('cfgIntervalosRev').value = '1,3,7,15,30,60';
@@ -4961,7 +4942,6 @@
         Escala_Cartoes_Bom: document.getElementById('cfgEscalaCartoesBom').value || '1,2,4,7,14,21'
       };
 
-      // Sincroniza imediatamente com o estado local do Aquecimento e Decoreba
       localStorage.setItem('GR_FC_QTD_BLOCOS', String(qtdBlocos));
       localStorage.setItem('GR_FC_INTERVALO_RETORNO', String(intRetorno));
       localStorage.setItem('GR_FC_CRITERIO_DOMINIO', String(critDom));
@@ -4980,7 +4960,7 @@
         await supabaseClient.from('configuracoes').upsert(rowsUpsert, { onConflict: 'chave' });
         const est = await recalcularERetornarEstado_({ reorganizarFila: true, corrigirDeficit: true });
         aplicarEstado(est);
-        notificar('Configurações avançadas salvas e sincronizadas em todo o sistema.');
+        notificar('Configurações avançadas salvas e sincronizadas.');
       } catch (err) {
         notificar(err.message, true);
       } finally {
@@ -6077,7 +6057,6 @@
       document.getElementById('cfgDatasEspecificasRevisao').value = c.Datas_Especificas_Revisao || '';
       document.getElementById('cfgRegraAtrasoRev').value = c.Regra_Atraso_Revisao || 'A_Partir_Conclusao';
 
-      // Parâmetros Avançados de Aquecimento e Cartões
       const qtdBlocos = c.Qtd_Blocos_Aquecimento || localStorage.getItem('GR_FC_QTD_BLOCOS') || '3';
       const intRetorno = c.Intervalo_Retorno_Erro || localStorage.getItem('GR_FC_INTERVALO_RETORNO') || '3';
       const critDom = c.Criterio_Dominio_Acertos || localStorage.getItem('GR_FC_CRITERIO_DOMINIO') || '1';
@@ -6137,7 +6116,6 @@
     let FC_CRITERIO_DOMINIO = Number(localStorage.getItem('GR_FC_CRITERIO_DOMINIO') || 1);
     let DEC_LIMITE_DIARIO = Number(localStorage.getItem('GR_DEC_LIMITE_DIARIO') || 30);
 
-    // Estado de acompanhamento de cada bloco para o filtro atual
     let FC_ESTADO_BLOCOS_MAP = {};
 
     const _aplicarEstadoOriginalFC = window.aplicarEstado;
@@ -6689,7 +6667,6 @@
         }
         FC_ESTADO_BLOCOS_MAP[chave] = novosBlocos;
       } else {
-        // Atualiza referências de cartões mantendo o progresso do bloco
         let cursor = 0;
         FC_ESTADO_BLOCOS_MAP[chave].forEach((bloco, b) => {
           const qtdNesteBloco = tamanhoBase + (b < sobra ? 1 : 0);
@@ -6737,7 +6714,6 @@
         elEst.textContent = `Tempo estimado por bloco: ~${minPorBloco} min | Retorno de erro: +${FC_INTERVALO_RETORNO} cards`;
       }
 
-      // Renderiza os cards de acompanhamento de cada bloco
       const gridBlocos = document.getElementById('fcGridBlocosAquecimento');
       const statusBlocosTxt = document.getElementById('fcStatusGeralBlocosTxt');
       const btnProxBloco = document.getElementById('btnIniciarProximoBloco');
@@ -6790,7 +6766,7 @@
                           ? 'bg-indigo-600 text-white'
                           : 'bg-slate-800 text-slate-300'
                     }">
-                      ${b.concluido ? 'CONCLUÍDO' : isProximo ? 'PRÓXIMO DISPONÍVEL' : 'PENDENTE'}
+                      ${b.concluido ? 'CONCLUÍDO' : isProximo ? 'PRÓXIMO' : 'PENDENTE'}
                     </span>
                   </div>
                   <div class="text-[11px] font-bold text-slate-300">
@@ -6879,7 +6855,6 @@
       const blocoObj = blocos[idxBloco];
       if (!blocoObj || blocoObj.cardsOriginais.length === 0) return;
 
-      // Se o bloco já estava concluído e o usuário clicou nele, reinicia o estado daquele bloco para treinar novamente
       if (blocoObj.concluido) {
         blocoObj.respondidosSet = {};
         blocoObj.acertosPorCard = {};
@@ -7273,7 +7248,7 @@
         ` : ''}
 
         ${dadosCE.exemplo ? `
-          <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-800/80 space-y-1">
+          <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/80 space-y-1">
             <span class="text-[10px] font-extrabold uppercase text-amber-400 block">
               4. Exemplo Prático:
             </span>
@@ -7289,7 +7264,6 @@
       document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
     }
 
-    // Avaliação com Rotação Configurável (+N cartões) e Critério de Domínio do Bloco
     async function avaliarCardSessaoFC(avaliacao) {
       if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
       const c = FC_SESSAO.cardAtual;
@@ -7314,7 +7288,6 @@
           FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
         }
       } else if (avaliacao === 'ERREI' && FC_SESSAO.escolhaUsuarioCE === c.gabaritoCE) {
-        // Caso tenha acertado no chute mas clicou em "1. Errei / Não Entendi"
         FC_SESSAO.errosPorCard[c.id] = (FC_SESSAO.errosPorCard[c.id] || 0) + 1;
       }
 
@@ -7331,7 +7304,6 @@
         (avaliacao === 'DIFICIL' && FC_SESSAO.comportamentoDificil === 'RETORNAR_NA_SESSAO');
 
       if (deveRetornarNaSessao) {
-        // Zera contagem consecutiva de domínio no bloco e agenda retorno exato após N cartões respondidos
         FC_SESSAO.acertosNoBlocoPorCard[c.id] = 0;
         if (FC_SESSAO.refBlocoEstado) {
           FC_SESSAO.refBlocoEstado.acertosPorCard[c.id] = 0;
@@ -7343,7 +7315,6 @@
         const posInsercao = Math.min(N_RETORNO, FC_SESSAO.filaAtiva.length);
         FC_SESSAO.filaAtiva.splice(posInsercao, 0, itemAtual);
       } else {
-        // Incrementa contagem de domínio no bloco (ou domina direto se marcou "4. Já Domino")
         const incremento = avaliacao === 'FACIL' ? FC_SESSAO.criterioDominioConfigurado : 1;
         const novoSaldoAcertos = (FC_SESSAO.acertosNoBlocoPorCard[c.id] || 0) + incremento;
         FC_SESSAO.acertosNoBlocoPorCard[c.id] = novoSaldoAcertos;
@@ -7353,7 +7324,6 @@
         }
 
         if (novoSaldoAcertos >= FC_SESSAO.criterioDominioConfigurado) {
-          // Cartão atingiu o critério de domínio do bloco
           FC_SESSAO.dominadosNaSessao.push(itemAtual);
           if (FC_SESSAO.refBlocoEstado) {
             FC_SESSAO.refBlocoEstado.dominadosSet[c.id] = true;
@@ -7361,7 +7331,6 @@
           }
           await persistirEscalonamentoCardNoSupabase_(itemAtual, avaliacao);
         } else {
-          // Ainda precisa de mais confirmações para atingir o critério de domínio configurado (ex: 2x ou 3x)
           const posConfirmacao = Math.min(N_RETORNO + 2, FC_SESSAO.filaAtiva.length);
           FC_SESSAO.filaAtiva.splice(posConfirmacao, 0, itemAtual);
         }
@@ -7417,7 +7386,6 @@
       }
     }
 
-    // Atalhos de Teclado no Player
     window.addEventListener('keydown', (ev) => {
       const areaCartoes = document.getElementById('area-cartoes');
       const playerFC = document.getElementById('fcSessaoPlayer');
@@ -7496,7 +7464,6 @@
         `).join('');
       }
 
-      // Configura botão para avançar imediatamente ao próximo bloco disponível, quando houver
       const btnProxBloco = document.getElementById('fcBtnAvancarProximoBloco');
       if (btnProxBloco) {
         if (!FC_SESSAO.isModoDecoreba && FC_SESSAO.numeroBloco < FC_SESSAO.totalBlocos) {
@@ -7889,7 +7856,7 @@
 
   <script>
     /* ==========================================================================
-     * 9. MOTOR DO CRONOGRAMA: PÁGINAS POR TÓPICO E METAS (META X — PARTE Y — DIA Z)
+     * 9. MOTOR DO CRONOGRAMA: DISTRIBUIÇÃO DIÁRIA POR ASSUNTO E PROGRESSO
      * ========================================================================== */
     let CRON_METAS = [];
     let CRON_BLOCO_FILTRO = 0;
@@ -7903,7 +7870,6 @@
       carregarCronogramaSupabase();
     };
 
-    // Extrai ou gera automaticamente a lista individual de tópicos com páginas para cada meta
     function gerarSubtopicosPadraoDaMeta_(topicoStr, paginasTotal) {
       const pagTotal = Math.max(0, Number(paginasTotal || 0));
       const nomes = String(topicoStr || '')
@@ -7946,6 +7912,68 @@
     function formatarArraySubtopicosParaTexto_(subtopicosArr) {
       if (!Array.isArray(subtopicosArr) || subtopicosArr.length === 0) return '';
       return subtopicosArr.map(s => `${s.nome}: ${s.paginas || 0} páginas`).join('\n');
+    }
+
+    /* ==========================================================================
+     * ALGORITMO DE DISTRIBUIÇÃO DIÁRIA DE PÁGINAS POR ASSUNTO E PROGRESSO
+     * Divide individualmente as páginas de cada assunto entre os dias da meta
+     * ========================================================================== */
+    function calcularDistribuicaoDiariaSubtopicosDaMeta_(metaObj, idxParteAlvo) {
+      const totalPartes = Math.max(1, Number(metaObj?.totalPartes || 3));
+      const subtopicos = (metaObj?.subtopicos && metaObj.subtopicos.length > 0)
+        ? metaObj.subtopicos
+        : gerarSubtopicosPadraoDaMeta_(metaObj?.topico, metaObj?.paginasTotal);
+
+      const partesConcluidas = Math.min(totalPartes, Number(metaObj?.partesConcluidas || 0));
+      const parteAtivaIndex = (idxParteAlvo !== undefined && idxParteAlvo >= 0)
+        ? idxParteAlvo
+        : (partesConcluidas < totalPartes ? partesConcluidas : totalPartes - 1);
+
+      let somaLeituraHoje = 0;
+      let somaTotalGeralMeta = 0;
+      let somaConcluidoGeralMeta = 0;
+
+      const distribuicaoAssuntos = subtopicos.map(st => {
+        const paginasTotalAssunto = Math.max(0, Number(st.paginas || 0));
+        somaTotalGeralMeta += paginasTotalAssunto;
+
+        const cotaBasePorDia = Math.floor(paginasTotalAssunto / totalPartes);
+        const resto = paginasTotalAssunto % totalPartes;
+
+        // Cota de leitura deste assunto especificamente no dia/parte consultado
+        const cotaHoje = cotaBasePorDia + (parteAtivaIndex < resto ? 1 : 0);
+        somaLeituraHoje += cotaHoje;
+
+        // Calcula exatamente quanto já foi lido acumulado até a parte concluída atual
+        let paginasLidasAcumuladas = 0;
+        for (let p = 0; p < partesConcluidas; p++) {
+          paginasLidasAcumuladas += (cotaBasePorDia + (p < resto ? 1 : 0));
+        }
+        paginasLidasAcumuladas = Math.min(paginasTotalAssunto, paginasLidasAcumuladas);
+        somaConcluidoGeralMeta += paginasLidasAcumuladas;
+
+        const paginasRestantesAssunto = Math.max(0, paginasTotalAssunto - paginasLidasAcumuladas);
+        const pctProgresso = paginasTotalAssunto > 0
+          ? Math.min(100, Math.round((paginasLidasAcumuladas / paginasTotalAssunto) * 100))
+          : (partesConcluidas === totalPartes ? 100 : 0);
+
+        return {
+          nome: st.nome,
+          totalAssunto: paginasTotalAssunto,
+          metaHoje: cotaHoje,
+          lidasAcumuladas: paginasLidasAcumuladas,
+          restantes: paginasRestantesAssunto,
+          progressoPct: pctProgresso
+        };
+      });
+
+      return {
+        distribuicaoAssuntos,
+        totalMeta: somaTotalGeralMeta || metaObj?.paginasTotal || 0,
+        leituraHojeTotal: somaLeituraHoje,
+        lidasAcumuladasMeta: somaConcluidoGeralMeta,
+        parteAtivaIndex
+      };
     }
 
     function serializarMetaParaColunasSupabase_(m) {
@@ -8224,16 +8252,16 @@
         badgeBloco.textContent = `Bloco ${blocoAtualNum} (Semanas ${String(semIniBloco).padStart(2, '0')} a ${String(semFimBloco).padStart(2, '0')})`;
       }
 
-      // ======================================================================
-      // PREENCHIMENTO DOS 7 INDICADORES PRIMÁRIOS DO ESTUDO DO DIA
-      // ======================================================================
+      // Calcula a distribuição proporcional de páginas por assunto da meta de hoje
       const idxParteAtiva = metaAtual.detalhesPartes.findIndex(p => !p.concluida);
+      const distInfoHoje = calcularDistribuicaoDiariaSubtopicosDaMeta_(metaAtual, idxParteAtiva !== -1 ? idxParteAtiva : 0);
+
       const parteDoDia = idxParteAtiva !== -1 ? metaAtual.detalhesPartes[idxParteAtiva] : metaAtual.detalhesPartes[metaAtual.detalhesPartes.length - 1];
       const numParteDia = parteDoDia ? parteDoDia.parte : 1;
       const numDiaGlobal = parteDoDia?.numeroDiaExecucao || numParteDia;
-      const paginasHoje = extrairQuantidadePaginasDaDescricaoParte_(parteDoDia, metaAtual.paginasTotal, metaAtual.totalPartes);
+      const paginasHoje = distInfoHoje.leituraHojeTotal > 0 ? distInfoHoje.leituraHojeTotal : extrairQuantidadePaginasDaDescricaoParte_(parteDoDia, metaAtual.paginasTotal, metaAtual.totalPartes);
 
-      // 1. Identificador META X — PARTE Y — DIA Z e Páginas do Dia
+      // Coluna 1: META X — PARTE Y — DIA Z e total de páginas do dia
       const elIdentDia = document.getElementById('cronDiaMetaIdentificador');
       if (elIdentDia) {
         elIdentDia.textContent = `META ${metaAtual.numeroMeta} — PARTE ${numParteDia} — DIA ${String(numDiaGlobal).padStart(2, '0')}`;
@@ -8244,10 +8272,10 @@
       }
       const elIntervPagDia = document.getElementById('cronDiaIntervaloPaginas');
       if (elIntervPagDia) {
-        elIntervPagDia.textContent = parteDoDia ? `(${parteDoDia.descricao})` : '';
+        elIntervPagDia.textContent = `Progresso da Meta: ${distInfoHoje.lidasAcumuladasMeta} de ${distInfoHoje.totalMeta} páginas concluídas`;
       }
 
-      // 2. Matéria do Dia e Localização
+      // Matéria e localização atual
       const elSemMeta = document.getElementById('cronTextoSemanaEMetaAtual');
       if (elSemMeta) elSemMeta.textContent = `Semana ${String(semanaAtualNum).padStart(2, '0')} de 50 • Meta ${metaAtual.numeroMeta} (${metaAtual.partesConcluidas}/${metaAtual.totalPartes} partes concluídas)`;
 
@@ -8260,22 +8288,37 @@
         elDataMetaAtual.textContent = metaAtual.status === 'Concluído' ? 'Curso Concluído' : `Execução Prevista: ${formatarDataBR(dtExib)}`;
       }
 
-      // 3 e 4. Tópicos Estudados e Quantidade de Páginas de Cada Tópico Individualmente
+      // Coluna 2: CARTÕES VISUAIS DE DISTRIBUIÇÃO DIÁRIA E BARRAS DE PROGRESSO POR ASSUNTO
       const elBadgeSomaMeta = document.getElementById('cronDiaTotalMetaPaginasBadge');
-      if (elBadgeSomaMeta) elBadgeSomaMeta.textContent = `Total da Meta: ${metaAtual.paginasTotal || 0} páginas`;
+      if (elBadgeSomaMeta) {
+        elBadgeSomaMeta.textContent = `${distInfoHoje.distribuicaoAssuntos.length} Assuntos | Total: ${distInfoHoje.totalMeta} pág.`;
+      }
 
       const contSubtopicosDia = document.getElementById('cronDiaListaTopicosIndividualizados');
       if (contSubtopicosDia) {
-        const listaSub = (metaAtual.subtopicos && metaAtual.subtopicos.length > 0)
-          ? metaAtual.subtopicos
-          : gerarSubtopicosPadraoDaMeta_(metaAtual.topico, metaAtual.paginasTotal);
+        contSubtopicosDia.innerHTML = distInfoHoje.distribuicaoAssuntos.map(item => `
+          <div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-extrabold text-white text-xs">${esc(item.nome)}</span>
+              <span class="text-[10px] text-slate-400 font-semibold">
+                Total: <strong class="text-slate-200">${item.totalAssunto} pág.</strong>
+              </span>
+            </div>
 
-        contSubtopicosDia.innerHTML = listaSub.map(st => `
-          <div class="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
-            <span class="font-bold text-slate-100">${esc(st.nome)}</span>
-            <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-extrabold text-[11px] shrink-0">
-              ${st.paginas > 0 ? st.paginas + ' páginas' : 'Revisão'}
-            </span>
+            <div class="flex items-center justify-between gap-2 text-[11px]">
+              <div>
+                <span class="text-slate-400">Leitura hoje:</span>
+                <strong class="text-emerald-400 text-xs ml-1">${item.metaHoje} páginas</strong>
+              </div>
+              <div class="text-right">
+                <span class="text-slate-400">Progresso:</span>
+                <strong class="text-indigo-300 ml-1">${item.lidasAcumuladas}/${item.totalAssunto} (${item.progressoPct}%)</strong>
+              </div>
+            </div>
+
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-500 transition-all" style="width: ${item.progressoPct}%"></div>
+            </div>
           </div>
         `).join('');
       }
@@ -8285,7 +8328,7 @@
         btnEdAtalho.onclick = () => abrirModalEditarMetaCronograma(metaAtual.id);
       }
 
-      // 5 e 6. Lei Seca do Dia e Súmulas
+      // Coluna 3: Lei Seca do Dia e Súmulas
       const elLeiDia = document.getElementById('cronDiaLeiSecaTexto');
       if (elLeiDia) elLeiDia.textContent = metaAtual.leiSeca || 'Leitura focada no PDF da meta.';
 
@@ -8304,7 +8347,7 @@
         }
       }
 
-      // 7. Divisão Clara por Dia da Semana em Curso (META X — PARTE Y — DIA Z)
+      // Grade Sequencial dos Dias da Semana em Curso (META X — PARTE Y — DIA Z)
       const gridDivisaoSemana = document.getElementById('cronGridDivisaoPorDiaSemanaAtual');
       if (gridDivisaoSemana) {
         const metasDaSemanaAtual = CRON_METAS.filter(m => m.numeroSemana === semanaAtualNum);
@@ -8312,22 +8355,19 @@
         let diaNaSemanaCounter = 1;
 
         metasDaSemanaAtual.forEach(m => {
-          const subStr = (m.subtopicos || []).map(s => `${s.nome} (${s.paginas} pág.)`).join(' + ');
           m.detalhesPartes.forEach((p, idxP) => {
-            const pagParte = extrairQuantidadePaginasDaDescricaoParte_(p, m.paginasTotal, m.totalPartes);
+            const distParte = calcularDistribuicaoDiariaSubtopicosDaMeta_(m, idxP);
             const isParteAtualHoje = m.id === metaAtual.id && idxP === idxParteAtiva;
+
             cardsPartesSemana.push({
               idMeta: m.id,
               numeroMeta: m.numeroMeta,
               materia: m.materia,
-              topicoGeral: m.topico,
-              subtopicosResumo: subStr,
-              leiSeca: m.leiSeca,
+              distInfo: distParte,
               idxParte: idxP,
               numeroParte: p.parte,
               totalPartes: m.totalPartes,
               diaSemanaSeq: diaNaSemanaCounter++,
-              paginasParte: pagParte,
               descricaoParte: p.descricao,
               dataPrevista: p.dataPrevistaParte || m.dataPrevista,
               concluida: p.concluida,
@@ -8337,14 +8377,14 @@
         });
 
         gridDivisaoSemana.innerHTML = cardsPartesSemana.map(item => `
-          <div class="p-3 rounded-xl border transition flex flex-col justify-between gap-2 ${
+          <div class="p-3 rounded-xl border transition flex flex-col justify-between gap-2.5 ${
             item.concluida
               ? 'bg-emerald-950/25 border-emerald-800/70'
               : item.isParteAtualHoje
                 ? 'bg-indigo-950/50 border-indigo-500 ring-1 ring-indigo-500/60'
                 : 'bg-slate-900 border-slate-800'
           }">
-            <div class="space-y-1">
+            <div class="space-y-1.5">
               <div class="flex items-center justify-between gap-1.5">
                 <span class="px-2 py-0.5 rounded font-extrabold text-[10px] uppercase ${
                   item.concluida
@@ -8361,13 +8401,22 @@
               </div>
 
               <div class="text-[11px] font-extrabold uppercase text-indigo-400 pt-0.5">${esc(item.materia)}</div>
-              <div class="text-xs font-bold text-white leading-snug">${esc(item.subtopicosResumo || item.topicoGeral)}</div>
+
+              <!-- Detalhamento Individual de Quanto Ler de Cada Assunto Neste Dia Específico -->
+              <div class="space-y-1 pt-1">
+                ${item.distInfo.distribuicaoAssuntos.map(st => `
+                  <div class="flex items-center justify-between gap-1 text-[11px] bg-slate-950/80 px-2 py-1 rounded border border-slate-800">
+                    <span class="font-medium text-slate-200 truncate">${esc(st.nome)}:</span>
+                    <strong class="text-emerald-400 shrink-0">${st.metaHoje} pág.</strong>
+                  </div>
+                `).join('')}
+              </div>
             </div>
 
             <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]">
               <div>
-                <span class="font-extrabold text-emerald-400">${item.paginasParte > 0 ? item.paginasParte + ' páginas' : 'Revisão'}</span>
-                <span class="text-slate-400 block text-[10px]">${esc(item.descricaoParte)}</span>
+                <span class="font-extrabold text-white">${item.distInfo.leituraHojeTotal} páginas no dia</span>
+                <span class="text-slate-400 block text-[10px]">Meta: ${item.distInfo.totalMeta} páginas totais</span>
               </div>
               <label class="flex items-center gap-1.5 cursor-pointer px-2 py-1 rounded bg-slate-950 border border-slate-800">
                 <input type="checkbox" ${item.concluida ? 'checked' : ''}
@@ -8380,7 +8429,7 @@
         `).join('');
       }
 
-      // Progresso Geral e Contagens Regressivas
+      // Indicadores Gerais
       const somaPartesTotal = CRON_METAS.reduce((acc, m) => acc + m.totalPartes, 0);
       const somaPartesFeitas = CRON_METAS.reduce((acc, m) => acc + m.partesConcluidas, 0);
       const percGlobal = somaPartesTotal > 0 ? ((somaPartesFeitas / somaPartesTotal) * 100).toFixed(1) : '0.0';
@@ -8622,7 +8671,7 @@
                           </span>
                         </div>
 
-                        <!-- LISTA DE TÓPICOS COM PÁGINAS INDIVIDUAIS -->
+                        <!-- LISTA DE ASSUNTOS COM PÁGINAS INDIVIDUAIS -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 pt-0.5">
                           ${subtopicosList.map(st => `
                             <div class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
@@ -8644,7 +8693,7 @@
                         </div>
                         <div class="flex flex-wrap items-center justify-end gap-1.5">
                           <button type="button" onclick="abrirModalEditarMetaCronograma('${m.id}')" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px]">
-                            Tópicos e Páginas
+                            Assuntos e Páginas
                           </button>
                           ${!isConc ? `
                             <button type="button" onclick="concluirMetaInteiraCronograma('${m.id}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px]">
@@ -8662,13 +8711,13 @@
                       </div>
                     </div>
 
-                    <!-- DIVISÃO DAS PARTES NO FORMATO: META X — PARTE Y — DIA Z -->
+                    <!-- DIVISÃO DAS PARTES NO FORMATO: META X — PARTE Y — DIA Z COM COTA POR ASSUNTO -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">
                       ${m.detalhesPartes.map((p, idxP) => {
                         const diaExec = contadorDiaSemanaCard++;
-                        const pagParte = extrairQuantidadePaginasDaDescricaoParte_(p, m.paginasTotal, m.totalPartes);
+                        const distCard = calcularDistribuicaoDiariaSubtopicosDaMeta_(m, idxP);
                         return `
-                          <label class="flex items-center justify-between gap-2 p-2.5 rounded-xl border cursor-pointer transition ${
+                          <label class="flex items-start justify-between gap-2 p-2.5 rounded-xl border cursor-pointer transition ${
                             p.concluida
                               ? 'bg-emerald-950/40 border-emerald-700/80 text-emerald-200'
                               : 'bg-slate-900 border-slate-800 text-slate-200 hover:border-indigo-600'
@@ -8682,9 +8731,15 @@
                                   META ${m.numeroMeta} — PARTE ${p.parte} — DIA ${String(diaExec).padStart(2, '0')}
                                 </span>
                                 <span class="text-[11px] font-bold text-emerald-400">
-                                  ${pagParte > 0 ? pagParte + ' páginas para ler' : 'Revisão de Bloco'}
+                                  ${distCard.leituraHojeTotal > 0 ? distCard.leituraHojeTotal + ' páginas no dia' : 'Revisão'}
                                 </span>
-                                <span class="text-[10px] opacity-85 block">${esc(p.descricao)}</span>
+                                <div class="space-y-0.5 pt-0.5">
+                                  ${distCard.distribuicaoAssuntos.map(st => `
+                                    <div class="text-[10px] text-slate-300">
+                                      • ${esc(st.nome)}: <strong>${st.metaHoje} pág.</strong>
+                                    </div>
+                                  `).join('')}
+                                </div>
                               </div>
                             </div>
                             <span class="text-[10px] font-bold shrink-0 ${p.concluida ? 'text-emerald-400' : 'text-indigo-300'}">
@@ -9003,7 +9058,7 @@
           numeroMeta,
           materia,
           topico,
-          subtopicos: subtopicosParsed,
+          subtopicos,
           paginasTotal,
           totalPartes,
           partesConcluidas: 0,
@@ -9060,7 +9115,7 @@
     }
 
     /* ==========================================================================
-     * 10. MATRIZ COMPLETA DAS 50 SEMANAS COM PÁGINAS INDIVIDUAIS POR TÓPICO
+     * 10. MATRIZ DAS 50 SEMANAS COM PÁGINAS INDIVIDUAIS POR TÓPICO
      * ========================================================================== */
     const CRONOGRAMA_50_SEMANAS_SEED = [
       // SEMANA 01
@@ -9084,10 +9139,10 @@
       [3, 4, "Leis Extravagantes", "Lei de Crimes Hediondos (Lei nº 8.072/1990)", 50, 2, 2, "CF/88 Art. 6º a 17 + Lei nº 8.072/1990 (21 pág.)", "", [{ nome: "Crimes Hediondos e Equiparados: Rol Taxativo", paginas: 26 }, { nome: "Regime de Cumprimento de Pena e Vedação de Benefícios", paginas: 24 }]],
       [3, 5, "Direito Constitucional", "Direitos Políticos + Nacionalidade + Estatuto do Desarmamento", 75, 3, 3, "Lei nº 10.826/2003 (Estatuto do Desarmamento - 31 pág.)", "", [{ nome: "Nacionalidade (Art. 12 e 13 da CF/88)", paginas: 22 }, { nome: "Direitos Políticos e Partidos Políticos", paginas: 25 }, { nome: "Estatuto do Desarmamento (Lei nº 10.826/2003)", paginas: 28 }]],
 
-      // SEMANA 04 (PÁGINAS DETALHADAS POR ASSUNTO)
+      // SEMANA 04 (EXEMPLO REAL: SERVIÇOS PÚBLICOS COM 39 PÁGINAS E ESTATUTO DO IDOSO COM 22 PÁGINAS)
       [4, 1, "Direito Penal", "Concurso de Pessoas e Concurso de Crimes + Crimes no CDC", 64, 3, 3, "CP Art. 29 a 31 + Lei nº 8.078/1990 (Art. 61 a 80)", "Tempo total estimado: 2h38 por parte", [{ nome: "Concurso de Pessoas (Autoria e Participação)", paginas: 24 }, { nome: "Concurso de Crimes (Material, Formal e Continuado)", paginas: 22 }, { nome: "Crimes contra as Relações de Consumo (CDC)", paginas: 18 }]],
       [4, 2, "Direito Constitucional", "Organização do Estado + Lei Antiterrorismo", 74, 3, 3, "CF/88 Art. 18 a 33 + Lei nº 13.260/2016 (Art. 1º a 19)", "Tempo total estimado: 3h05 por parte", [{ nome: "Organização Político-Administrativa e Repartição de Competências", paginas: 48 }, { nome: "Lei Antiterrorismo (Lei nº 13.260/2016)", paginas: 26 }]],
-      [4, 3, "Direito Administrativo", "Serviços Públicos + Estatuto da Pessoa Idosa", 61, 3, 0, "Lei nº 8.987/1995 (Art. 1º a 40) + Lei nº 10.741/2003 (Art. 93 a 110)", "Tempo total: 2h31 por parte", [{ nome: "Serviços Públicos: Conceito, Princípios e Concessão/Permissão", paginas: 39 }, { nome: "Crimes no Estatuto da Pessoa Idosa (Lei nº 10.741/2003)", paginas: 22 }]],
+      [4, 3, "Direito Administrativo", "Serviços Públicos + Estatuto da Pessoa Idosa", 61, 3, 0, "Lei nº 8.987/1995 (Art. 1º a 40) + Lei nº 10.741/2003 (Art. 93 a 110)", "Tempo total: 2h31 por parte", [{ nome: "Serviços Públicos", paginas: 39 }, { nome: "Estatuto da Pessoa Idosa", paginas: 22 }]],
       [4, 4, "Leis Extravagantes", "Crimes do ECA (Lei nº 8.069/1990)", 65, 3, 0, "Lei nº 8.069/1990 - Art. 103 a 105, 171 a 190-E, 225 a 244-C", "Tempo total: 2h45 por parte", [{ nome: "Ato Infracional e Apuração de Ato Infracional no ECA", paginas: 32 }, { nome: "Crimes em Espécie no Estatuto da Criança e do Adolescente", paginas: 33 }]],
       [4, 5, "Leis Extravagantes", "Lei das Organizações Criminosas (Lei nº 12.850/2013)", 60, 3, 0, "Lei nº 12.850/2013 - Artigos 1º a 24", "Tempo total: 2h30 por parte", [{ nome: "Conceito de Organização Criminosa e Meios de Obtenção de Prova", paginas: 32 }, { nome: "Colaboração Premiada, Ação Controlada e Infiltração de Agentes", paginas: 28 }]],
 
