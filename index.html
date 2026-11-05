@@ -190,7 +190,7 @@
     }
 
     /* ==========================================================================
-     * 2. NAVEGAÇÃO DOS 3 PILARES PRINCIPAIS E SUB-ABAS COMPACTAS
+     * 2. NAVEGAÇÃO PRINCIPAL E SUB-ABAS COMPACTAS
      * ========================================================================== */
     .main-area-active {
       background-color: #3b49df !important;
@@ -469,10 +469,18 @@
     }
 
     /* ==========================================================================
-     * 5. AGENDA INTELIGENTE DE ESTUDOS (ESTILO GOOGLE AGENDA)
+     * 5. AGENDA INTELIGENTE EM TELA CHEIA (CLEAN GOOGLE CALENDAR WORKSPACE)
      * ========================================================================== */
+    .agenda-fullscreen-workspace {
+      height: calc(100vh - 54px);
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
     .gcal-scroll-container {
-      height: 640px;
+      flex: 1 1 auto;
       overflow-y: auto;
       overflow-x: auto;
       position: relative;
@@ -481,64 +489,66 @@
 
     .gcal-day-column {
       position: relative;
-      height: 1152px; /* 24 horas * 48px por hora */
-      background-image: linear-gradient(to bottom, rgba(148, 163, 184, 0.14) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(148, 163, 184, 0.06) 1px, transparent 1px);
-      background-size: 100% 48px, 100% 24px;
-      background-position: 0 0, 0 24px;
+      height: 1248px; /* 24 horas * 52px por hora */
+      background-image: linear-gradient(to bottom, rgba(148, 163, 184, 0.13) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+      background-size: 100% 52px, 100% 26px;
+      background-position: 0 0, 0 26px;
       user-select: none;
     }
     html:not(.dark) .gcal-day-column {
-      background-image: linear-gradient(to bottom, rgba(100, 116, 139, 0.22) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(100, 116, 139, 0.10) 1px, transparent 1px);
+      background-image: linear-gradient(to bottom, rgba(100, 116, 139, 0.20) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(100, 116, 139, 0.09) 1px, transparent 1px);
     }
 
     .gcal-day-column.gcal-drop-hover {
-      background-color: rgba(79, 70, 229, 0.09) !important;
+      background-color: rgba(79, 70, 229, 0.08) !important;
       outline: 2px dashed #6366f1;
       outline-offset: -2px;
     }
 
     .gcal-time-slot-label {
-      height: 48px;
+      height: 52px;
       font-size: 10px;
+      font-weight: 600;
       color: #64748b;
       text-align: right;
-      padding-right: 6px;
+      padding-right: 8px;
       transform: translateY(-7px);
       user-select: none;
     }
 
+    /* Bloco minimalista: mostra apenas Horário, Tipo e Matéria */
     .gcal-event-block {
       position: absolute;
-      left: 3px;
-      right: 3px;
-      border-radius: 7px;
-      padding: 4px 6px;
+      left: 4px;
+      right: 4px;
+      border-radius: 8px;
+      padding: 4px 8px;
       font-size: 11px;
       line-height: 1.25;
       overflow: hidden;
-      cursor: grab;
-      transition: box-shadow 0.14s ease, opacity 0.18s ease, filter 0.18s ease;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.14s ease, opacity 0.18s ease, filter 0.18s ease;
       z-index: 15;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
       border-left-width: 4px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      justify-content: center;
     }
     .gcal-event-block:active {
       cursor: grabbing;
     }
     .gcal-event-block:hover {
       z-index: 25;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.38);
     }
 
     /* Tarefa concluída: aparência mais pálida com texto legível */
     .gcal-event-completed {
-      opacity: 0.56 !important;
-      filter: saturate(0.32) brightness(0.96);
+      opacity: 0.48 !important;
+      filter: saturate(0.25) brightness(0.95);
       border-style: dashed !important;
     }
     .gcal-event-completed .gcal-event-title {
@@ -550,19 +560,22 @@
       bottom: 0;
       left: 0;
       right: 0;
-      height: 7px;
+      height: 6px;
       cursor: ns-resize;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.18);
+      background: transparent;
     }
-    .gcal-resize-handle::after {
+    .gcal-event-block:hover .gcal-resize-handle {
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .gcal-event-block:hover .gcal-resize-handle::after {
       content: '';
-      width: 24px;
+      width: 22px;
       height: 2px;
       border-radius: 2px;
-      background: rgba(255, 255, 255, 0.65);
+      background: rgba(255, 255, 255, 0.7);
     }
 
     .gcal-now-line {
@@ -589,7 +602,7 @@
       animation: gcalPulseRing 1.8s infinite;
     }
     @keyframes gcalPulseRing {
-      0%, 100% { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.9), 0 4px 12px rgba(16, 185, 129, 0.35); }
+      0%, 100% { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.95), 0 4px 12px rgba(16, 185, 129, 0.35); }
       50% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.35), 0 4px 16px rgba(16, 185, 129, 0.5); }
     }
 
@@ -604,10 +617,10 @@
 <body class="min-h-screen flex flex-col bg-slate-950 text-slate-100" onclick="fecharSubmenuFora(event)">
 
   <!-- ==========================================================================
-       HEADER GLOBAL COMPACTO (NAVEGAÇÃO EM 3 PILARES)
+       HEADER GLOBAL COMPACTO (COM ABA AUTÔNOMA DE AGENDA EM TELA CHEIA)
        ========================================================================== -->
   <header id="appHeaderPrincipal" class="bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white sticky top-0 z-40 shadow-sm no-print">
-    <div class="max-w-7xl mx-auto px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+    <div class="w-full px-4 py-2 flex flex-wrap items-center justify-between gap-2">
       <!-- Identidade do Sistema -->
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-extrabold text-xs text-white">GE</div>
@@ -618,14 +631,19 @@
               Supabase Cloud
             </span>
           </div>
-          <p class="text-[10px] text-slate-400">Agenda Inteligente (4 Dias) | Planejamento Diário por Tópico | Aquecimento &amp; Baterias</p>
+          <p class="text-[10px] text-slate-400 hidden sm:block">Agenda Diária em Tela Cheia | Conteúdo do Dia | Aquecimento das Baterias | Questões</p>
         </div>
       </div>
 
-      <!-- 3 ÁREAS PRINCIPAIS -->
+      <!-- 4 ABAS PRINCIPAIS DE TOPO (SENDO A AGENDA AUTÔNOMA EM TELA CHEIA) -->
       <nav class="flex flex-wrap items-center gap-1.5 text-xs">
-        <button type="button" onclick="irParaAreaPrincipal('organizacao')" id="nav-area-organizacao" class="px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-active">
-          <span>1. Estudo e Organização</span>
+        <button type="button" onclick="irParaAreaPrincipal('agenda')" id="nav-area-agenda" class="px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-active">
+          <span>Agenda Diária</span>
+          <span id="badgeCountPendentesAgenda" class="px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 text-[10px] font-extrabold">0</span>
+        </button>
+
+        <button type="button" onclick="irParaAreaPrincipal('organizacao')" id="nav-area-organizacao" class="px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-inactive">
+          <span>1. Cronograma (50 Sem.)</span>
           <span id="badgeMenuCronograma" class="px-1.5 py-0.2 rounded bg-white/20 text-white text-[10px] font-extrabold">S04</span>
         </button>
 
@@ -662,8 +680,8 @@
               <span class="text-[10px] text-emerald-400 font-bold">Auto</span>
             </button>
             <div class="border-t border-slate-800 my-1"></div>
-            <button type="button" onclick="irParaSubAbaOrganizacao('agenda'); fecharSubmenuAcoes();" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-emerald-400">
-              <span>Agenda de Estudos (4 Dias)</span>
+            <button type="button" onclick="irParaAreaPrincipal('agenda'); fecharSubmenuAcoes();" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-emerald-400">
+              <span>Agenda em Tela Cheia</span>
             </button>
             <button type="button" onclick="exportarRelatorioExcel(); fecharSubmenuAcoes();" id="btnExportarExcel" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-slate-200">
               <span>Exportar Relatório (.xlsx)</span>
@@ -773,21 +791,360 @@
   </div>
 
   <!-- ==========================================================================
-       CONTEÚDO PRINCIPAL COMPACTO E COM ROLAGEM FLUIDA (3 ÁREAS PRINCIPAIS)
+       ÁREA AUTÔNOMA 0: AGENDA DE ESTUDOS EM TELA CHEIA (OCUPA 100% DA PÁGINA)
        ========================================================================== -->
-  <main class="max-w-7xl w-full mx-auto px-3 py-3.5 flex-1 space-y-4">
+  <section id="area-agenda" class="agenda-fullscreen-workspace bg-slate-950 no-print">
 
-    <!-- ========================================================================
-         ÁREA 1: ESTUDO E ORGANIZAÇÃO (AGENDA INTELIGENTE, CRONOGRAMA, MATÉRIAS E CONFIG)
-         ======================================================================== -->
+    <!-- TOPO LIMPO E DIRETO DA AGENDA EM TELA CHEIA -->
+    <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+
+      <!-- Esquerda: Navegação de Data e Período -->
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button type="button" onclick="alternarPainelLateralAgenda()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5" title="Mostrar/Ocultar gaveta de atividades do dia">
+          <span>☰ Atividades do Dia</span>
+        </button>
+
+        <div class="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+          <button type="button" onclick="navegarDiasAgenda(-1)" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 font-bold">◀</button>
+          <button type="button" onclick="irParaHojeAgenda()" class="px-2.5 py-0.5 rounded bg-indigo-600 text-white font-extrabold text-[11px]">Hoje</button>
+          <button type="button" onclick="navegarDiasAgenda(1)" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 font-bold">▶</button>
+        </div>
+
+        <h2 id="agLabelPeriodoVisivel" class="text-sm font-extrabold text-white">Hoje + Próximos 3 Dias</h2>
+
+        <div class="flex items-center rounded-lg border border-slate-800 bg-slate-950 p-0.5 text-[11px]">
+          <button type="button" onclick="alterarModoVisaoAgenda('4DIAS')" id="btnAgModo4Dias" class="px-2.5 py-1 rounded-md font-bold subtab-active">
+            4 Dias
+          </button>
+          <button type="button" onclick="alterarModoVisaoAgenda('1DIA')" id="btnAgModo1Dia" class="px-2.5 py-1 rounded-md font-bold text-slate-400">
+            1 Dia
+          </button>
+        </div>
+      </div>
+
+      <!-- Centro: Cronômetro Integrado Compacto + Ritmo min/página -->
+      <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+        <div id="agTimerIndicadorVisual" class="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[11px] font-bold text-slate-300">⏱</div>
+        <div class="max-w-[220px] sm:max-w-[280px]">
+          <div id="agTimerNomeTarefaAtiva" class="text-[11px] font-extrabold text-white truncate">Nenhuma tarefa ativa no cronômetro</div>
+          <div class="flex items-center gap-2 text-[10px] text-slate-400">
+            <span id="agTimerMetaRestanteTxt">Selecione uma tarefa para iniciar</span>
+            <span class="text-slate-600">•</span>
+            <span id="agBadgeMediaMinPaginaTopo" class="text-indigo-400 font-semibold" title="Média calculada a partir das páginas lidas com cronômetro">Ritmo: em construção</span>
+          </div>
+        </div>
+        <div id="agTimerDisplayDigital" class="px-2 py-1 rounded bg-slate-900 border border-slate-800 font-mono text-xs font-extrabold text-emerald-400">
+          00:00:00
+        </div>
+        <button type="button" onclick="alternarPlayPauseTimerAgenda()" id="btnAgTimerPlayPause" disabled class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-[11px]">
+          Iniciar
+        </button>
+        <button type="button" onclick="concluirBlocoOuTarefaPeloTimer()" id="btnAgTimerConcluir" disabled class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-[11px]" title="Concluir tarefa ativa">
+          ✓
+        </button>
+      </div>
+
+      <!-- Direita: Ações Rápidas de Organização -->
+      <div class="flex flex-wrap items-center gap-1.5 text-xs">
+        <div class="hidden xl:flex items-center gap-3 mr-2 text-[11px] bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+          <span>Planejado: <strong id="agKpiPlanejadoHoje" class="text-white">0h</strong></span>
+          <span>Estudado: <strong id="agKpiRealizadoHoje" class="text-emerald-400">0h</strong></span>
+          <span>Livre: <strong id="agKpiLivreHoje" class="text-purple-300">0h</strong></span>
+          <span id="agKpiMetaDiariaSub" class="hidden"></span>
+          <span id="agKpiPercHojeSub" class="hidden"></span>
+          <span id="agKpiRestanteHoje" class="hidden"></span>
+          <span id="agKpiBlocosHojeSub" class="hidden"></span>
+        </div>
+
+        <button type="button" onclick="sincronizarPlanejamentoDiario3Areas(true)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 font-bold text-[11px]" title="Gera/Atualiza: A) Conteúdo do Dia, B) Aquecimento de Cartões da matéria de cada Bateria, C) Baterias de Questões individuais">
+          Sincronizar Dia
+        </button>
+
+        <button type="button" onclick="distribuirAutomaticamenteTarefasAgenda()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px]" title="Distribui automaticamente nos horários livres na ordem: 1º Aquecimento/Revisão -> 2º Conteúdo -> 3º Questões">
+          Auto-Organizar Horários
+        </button>
+
+        <button type="button" onclick="reorganizarPendenciasParaProximoDia(true)" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px]" title="Transfere apenas o tempo não concluído para amanhã">
+          Transferir Pendentes
+        </button>
+
+        <button type="button" onclick="abrirModalJanelaEstudoAgenda()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-[11px]" title="Configurar expediente e ritmo de leitura">
+          ⚙
+        </button>
+
+        <button type="button" onclick="abrirModalTarefaAgenda()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px]">
+          + Tarefa
+        </button>
+      </div>
+    </div>
+
+    <!-- CORPO EM TELA CHEIA: SIDEBAR DAS 3 ÁREAS DO DIA + GRADE GOOGLE CALENDAR -->
+    <div class="flex-1 flex overflow-hidden">
+
+      <!-- PAINEL LATERAL ORGANIZADO NAS 3 ÁREAS INDEPENDENTES DO DIA -->
+      <aside id="agSidebarAtividadesDia" class="w-80 xl:w-96 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden">
+        <div class="p-3 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between">
+          <div>
+            <span class="text-[10px] font-extrabold uppercase text-indigo-400 block">Planejamento Estruturado do Dia</span>
+            <h3 class="text-xs font-extrabold text-white">Arraste para a Grade ou Clique p/ Detalhes</h3>
+          </div>
+          <span class="text-[10px] text-slate-400">3 Áreas</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-4">
+
+          <!-- ÁREA A: CONTEÚDO DO DIA (LEITURA / TEORIA + MÉDIA MIN/PÁGINA) -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                <span class="text-[11px] font-extrabold uppercase text-blue-400">A) Conteúdo do Dia (Teoria)</span>
+              </div>
+              <span id="agBadgeMediaLeituraSidebar" class="text-[10px] font-semibold text-slate-400">Média: em construção</span>
+            </div>
+            <div id="agListaAreaConteudoDia" class="space-y-2"></div>
+          </div>
+
+          <!-- ÁREA B: AQUECIMENTO E REVISÃO DE CARTÕES (VINCULADOS À MATÉRIA DE CADA BATERIA) -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                <span class="text-[11px] font-extrabold uppercase text-purple-400">B) Aquecimento (Por Bateria)</span>
+              </div>
+              <span id="agCountAreaAquecimento" class="text-[10px] font-bold text-slate-400">0 tarefas</span>
+            </div>
+            <p class="text-[10px] text-slate-400 leading-snug">
+              Cada aquecimento corresponde exatamente à matéria de uma bateria de questões programada.
+            </p>
+            <div id="agListaAreaAquecimento" class="space-y-2"></div>
+          </div>
+
+          <!-- ÁREA C: BATERIAS DE QUESTÕES (TAREFAS INDIVIDUAIS SEPARADAS) -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-[11px] font-extrabold uppercase text-emerald-400">C) Baterias de Questões</span>
+              </div>
+              <span id="agCountAreaBaterias" class="text-[10px] font-bold text-slate-400">0 baterias</span>
+            </div>
+            <div id="agListaAreaBaterias" class="space-y-2"></div>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- GRADE PRINCIPAL ESTILO GOOGLE AGENDA (AMPLA, LIMPA E INTUITIVA) -->
+      <div class="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+
+        <!-- Cabeçalho das Colunas dos Dias -->
+        <div class="bg-slate-900 border-b border-slate-800 flex shrink-0">
+          <div class="w-14 shrink-0 border-r border-slate-800 p-2 flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
+            <span>HORA</span>
+          </div>
+          <div id="agHeaderColunasDias" class="flex-1 grid grid-cols-4 divide-x divide-slate-800"></div>
+        </div>
+
+        <!-- Grade Horária Rolável em Tela Cheia -->
+        <div id="agGridScrollContainer" class="gcal-scroll-container">
+          <div class="flex min-w-[640px]">
+            <!-- Régua de Horários -->
+            <div id="agColunaReguaHoras" class="w-14 shrink-0 border-r border-slate-800 bg-slate-900/50 select-none"></div>
+            <!-- Colunas dos Dias -->
+            <div id="agContainerColunasDiasGrid" class="flex-1 grid grid-cols-4 divide-x divide-slate-800 relative"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- MODAL DE DETALHES COMPLETOS E EDIÇÃO DA TAREFA (ABRE AO CLICAR NA TAREFA/BLOCO) -->
+    <div id="modalTarefaAgenda" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 no-print">
+      <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[94vh] flex flex-col">
+        <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 text-white flex items-center justify-between">
+          <div>
+            <span id="modalAgBadgeCategoria" class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-extrabold uppercase">Detalhes da Atividade</span>
+            <h3 id="modalAgTarefaTitulo" class="text-sm font-extrabold text-white mt-1">Detalhes e Configuração da Tarefa</h3>
+          </div>
+          <button type="button" onclick="fecharModalTarefaAgenda()" class="text-slate-400 hover:text-white text-xs font-bold">✕ Fechar</button>
+        </div>
+
+        <!-- Painel de Informações Específicas da Tarefa (Tópico, Páginas, Cartões ou Questões + Ações Diretas) -->
+        <div id="modalAgPainelContextoEspecifico" class="px-5 py-3 bg-indigo-950/35 border-b border-indigo-800/60 space-y-2 text-xs"></div>
+
+        <form onsubmit="salvarTarefaAgendaModal(event)" class="p-5 space-y-3.5 text-xs overflow-y-auto">
+          <input type="hidden" id="agFormTaskId" value="">
+          <input type="hidden" id="agFormBlockId" value="">
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+            <div class="sm:col-span-6">
+              <label class="block font-bold text-slate-300 mb-1">Matéria ou Disciplina *</label>
+              <input type="text" id="agFormMateria" list="datalistMateriasAgenda" required placeholder="Ex: Direito Constitucional" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+              <datalist id="datalistMateriasAgenda"></datalist>
+            </div>
+            <div class="sm:col-span-6">
+              <label class="block font-bold text-slate-300 mb-1">Identificação / Título da Tarefa *</label>
+              <input type="text" id="agFormTitulo" required placeholder="Ex: Bateria de Questões / Aquecimento" class="w-full rounded-lg border px-2.5 py-1.5 font-semibold">
+            </div>
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Tópico Específico / Detalhamento Complementar</label>
+            <input type="text" id="agFormDescricao" placeholder="Ex: Controle de Constitucionalidade • Ler pág. 1 a 20" class="w-full rounded-lg border px-2.5 py-1.5">
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Área / Tipo</label>
+              <select id="agFormTipo" onchange="aoMudarTipoTarefaModalAgenda()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+                <option value="REVISAO">1º Aquecimento / Cartões</option>
+                <option value="ESTUDO">2º Conteúdo do Dia</option>
+                <option value="QUESTOES">3º Bateria de Questões</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Prioridade</label>
+              <select id="agFormPrioridade" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+                <option value="ALTA">Alta</option>
+                <option value="MEDIA" selected>Média</option>
+                <option value="BAIXA">Baixa</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Meta Estimada (min) *</label>
+              <input type="number" id="agFormMetaMinutos" min="5" max="720" step="5" value="60" required oninput="sincronizarBlocosComMetaNoModal()" class="w-full rounded-lg border px-2.5 py-1.5 font-extrabold text-indigo-400">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Repetição</label>
+              <select id="agFormRepeticao" class="w-full rounded-lg border px-2.5 py-1.5">
+                <option value="NENHUMA">Sem repetição</option>
+                <option value="DIARIA">Diária (4 dias)</option>
+                <option value="DIAS_UTEIS">Seg a Sex</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Campos específicos de Volume (Páginas, Cartões ou Questões) -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800">
+            <div>
+              <label id="lblAgMetaUnidades" class="block font-bold text-slate-300 mb-1">Páginas / Cartões / Questões Previstas</label>
+              <input type="number" id="agFormMetaUnidades" min="0" value="0" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+            </div>
+            <div>
+              <label id="lblAgUnidadesConcluidas" class="block font-bold text-emerald-400 mb-1">Progresso Realizado (Pág. / Cards / Q.)</label>
+              <input type="number" id="agFormUnidadesConcluidas" min="0" value="0" class="w-full rounded-lg border px-2.5 py-1.5 font-bold text-emerald-400">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Tempo Estudado (min)</label>
+              <input type="number" id="agFormMinutosRealizados" min="0" step="1" value="0" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+            </div>
+          </div>
+
+          <!-- Divisão em Blocos de Horário -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span class="font-extrabold text-emerald-400 uppercase text-[10px] block">Horários Programados na Agenda (Divisão em Blocos)</span>
+                <span id="agResumoSomaBlocosModal" class="text-[11px] text-slate-400"></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="dividirAutomaticamenteEm2BlocosModal()" class="px-2.5 py-1 rounded bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 font-bold text-[11px]">
+                  Dividir em 2 Turnos
+                </button>
+                <button type="button" onclick="adicionarBlocoHorarioNoModal()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px]">
+                  + Horário
+                </button>
+              </div>
+            </div>
+            <div id="agContainerLinhasBlocosModal" class="space-y-2"></div>
+          </div>
+
+          <!-- Personalização de Cor (Somente Dia vs Padrão Permanente) -->
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-indigo-300 uppercase text-[10px]">Cor na Agenda</span>
+              <span id="agLabelCorSelecionada" class="text-[11px] font-bold text-slate-300"></span>
+            </div>
+            <div id="agSeletorPaletaCores" class="flex flex-wrap items-center gap-2"></div>
+            <input type="hidden" id="agFormCorHex" value="#4f46e5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1.5 border-t border-slate-800 text-[11px]">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="agEscopoCor" value="SOMENTE_DIA" checked class="text-indigo-600">
+                <span>Aplicar <strong>somente hoje / nesta tarefa</strong></span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio" name="agEscopoCor" value="PADRAO_CATEGORIA" class="text-indigo-600">
+                <span>Definir como <strong>cor padrão permanente</strong></span>
+              </label>
+            </div>
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <input type="checkbox" id="agFormConcluida" class="rounded text-emerald-600 w-4 h-4">
+            <span class="font-bold text-slate-200">Tarefa Concluída (Fica com cor pálida na agenda e atualiza o histórico)</span>
+          </label>
+
+          <div class="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <button type="button" onclick="excluirTarefaAgendaDoModal()" id="btnAgExcluirTarefaModal" class="hidden px-3 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold">
+              Excluir Tarefa
+            </button>
+            <div class="flex items-center gap-2 ml-auto">
+              <button type="button" onclick="fecharModalTarefaAgenda()" class="px-3.5 py-1.5 rounded-lg border border-slate-700 font-bold text-slate-300 hover:bg-slate-800">Cancelar</button>
+              <button type="submit" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold">Salvar Alterações</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL: CONFIGURAR EXPEDIENTE E MÉDIA POR PÁGINA -->
+    <div id="modalJanelaEstudoAgenda" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 no-print">
+      <div class="bg-slate-900 text-slate-100 rounded-xl max-w-md w-full shadow-2xl border border-slate-700 overflow-hidden">
+        <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+          <h3 class="text-xs font-extrabold uppercase text-white">Expediente Diário e Ritmo de Leitura</h3>
+          <button type="button" onclick="fecharModalJanelaEstudoAgenda()" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button>
+        </div>
+        <form onsubmit="salvarJanelaEstudoAgenda(event)" class="p-4 space-y-3 text-xs">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Início do Dia (h)</label>
+              <input type="number" id="agCfgHoraInicio" min="5" max="22" value="8" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-300 mb-1">Fim do Dia (h)</label>
+              <input type="number" id="agCfgHoraFim" min="7" max="23" value="21" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
+            </div>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Meta Diária de Estudo (minutos)</label>
+            <input type="number" id="agCfgMetaMinutosDia" min="30" max="960" step="15" value="240" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold text-indigo-400">
+          </div>
+          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Indicador de Ritmo de Leitura (Minutos / Página)</span>
+            <p id="agModalInfoMediaPagina" class="text-[11px] text-slate-300">Média em construção conforme você utiliza o cronômetro no Conteúdo do Dia.</p>
+          </div>
+          <div class="pt-2 border-t border-slate-800 flex justify-end gap-2">
+            <button type="button" onclick="fecharModalJanelaEstudoAgenda()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 font-bold">Cancelar</button>
+            <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ==========================================================================
+       CONTEÚDO DAS DEMAIS ÁREAS (1. CRONOGRAMA, 2. QUESTÕES, 3. CARTÕES)
+       ========================================================================== -->
+  <main id="mainContainerDemaisAreas" class="hidden max-w-7xl w-full mx-auto px-3 py-3.5 flex-1 space-y-4">
+
+    <!-- ÁREA 1: CRONOGRAMA DE 50 SEMANAS, MATÉRIAS E CONFIGURAÇÕES -->
     <div id="area-organizacao" class="space-y-4">
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" onclick="irParaSubAbaOrganizacao('agenda')" id="subnav-org-agenda" class="px-3 py-1.5 rounded-lg transition subtab-active flex items-center gap-1.5">
-            <span>Agenda Inteligente (Estilo Google Agenda • 4 Dias)</span>
-            <span id="badgeCountPendentesAgenda" class="px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[10px] font-extrabold">0</span>
-          </button>
-          <button type="button" onclick="irParaSubAbaOrganizacao('cronograma')" id="subnav-org-cronograma" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
+          <button type="button" onclick="irParaSubAbaOrganizacao('cronograma')" id="subnav-org-cronograma" class="px-3 py-1.5 rounded-lg transition subtab-active">
             Estudo do Dia e Cronograma (50 Semanas)
           </button>
           <button type="button" onclick="irParaSubAbaOrganizacao('cadastros')" id="subnav-org-cadastros" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
@@ -797,377 +1154,13 @@
             Configurações Avançadas de Estudo
           </button>
         </div>
-        <span class="text-[11px] text-slate-400 hidden xl:inline">Ordem recomendada: 1º Revisão/Aquecimento → 2º Estudo Teórico → 3º Baterias de Questões</span>
+        <button type="button" onclick="irParaAreaPrincipal('agenda')" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">
+          Ir para Agenda em Tela Cheia →
+        </button>
       </div>
 
-      <!-- ======================================================================
-           SUB-SEÇÃO 1.0: AGENDA INTELIGENTE DE ESTUDOS (ESTILO GOOGLE AGENDA)
-           ====================================================================== -->
-      <section id="aba-agenda" class="space-y-4">
-
-        <!-- BARRA DE COMANDO E CRONÔMETRO GLOBAL ATIVO DA AGENDA -->
-        <div class="bg-slate-900 rounded-xl border border-slate-800 p-3.5 shadow-sm space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-            <div>
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-extrabold uppercase tracking-wider">
-                  ORGANIZAÇÃO VISUAL POR BLOCOS DE HORÁRIO (DIA ATUAL + 3 DIAS)
-                </span>
-                <span id="agLabelPeriodoVisivel" class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold">
-                  Hoje + Próximos 3 Dias
-                </span>
-              </div>
-              <h2 class="text-base font-extrabold text-white mt-1">Agenda Inteligente de Estudos com Cronômetro Integrado e Divisão em Blocos</h2>
-            </div>
-
-            <!-- Controles de Navegação, Sincronização e Auto-Alocação -->
-            <div class="flex flex-wrap items-center gap-1.5 text-xs">
-              <div class="flex items-center rounded-lg border border-slate-700 bg-slate-950 p-0.5">
-                <button type="button" onclick="alterarModoVisaoAgenda('4DIAS')" id="btnAgModo4Dias" class="px-2.5 py-1 rounded-md font-bold subtab-active text-[11px]">
-                  4 Dias (Hoje + 3)
-                </button>
-                <button type="button" onclick="alterarModoVisaoAgenda('1DIA')" id="btnAgModo1Dia" class="px-2.5 py-1 rounded-md font-bold text-slate-300 text-[11px]">
-                  Visão Diária
-                </button>
-              </div>
-
-              <div class="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
-                <button type="button" onclick="navegarDiasAgenda(-1)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold" title="Dia anterior">◀</button>
-                <button type="button" onclick="irParaHojeAgenda()" class="px-2.5 py-0.5 rounded bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 font-extrabold text-[11px]">Hoje</button>
-                <button type="button" onclick="navegarDiasAgenda(1)" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold" title="Próximo dia">▶</button>
-              </div>
-
-              <button type="button" onclick="importarAtividadesDoSistemaParaCaixa()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 font-bold text-[11px] transition" title="Importa a Meta do Cronograma, Revisões e Baterias do dia para a Caixa de Tarefas">
-                Sincronizar Metas do Dia
-              </button>
-
-              <button type="button" onclick="distribuirAutomaticamenteTarefasAgenda()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] transition" title="Organiza automaticamente nas janelas livres respeitando: 1º Revisão -> 2º Estudo -> 3º Questões">
-                Auto-Organizar nos Horários Livres
-              </button>
-
-              <button type="button" onclick="reorganizarPendenciasParaProximoDia(true)" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px] transition" title="Transfere apenas o tempo restante não concluído para o próximo dia disponível">
-                Transferir Pendentes p/ Amanhã
-              </button>
-
-              <button type="button" onclick="abrirModalTarefaAgenda()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px] shadow transition">
-                + Nova Tarefa
-              </button>
-            </div>
-          </div>
-
-          <!-- BARRA DE STATUS DIÁRIO + CRONÔMETRO EM EXECUÇÃO -->
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-            <!-- Indicadores Rápidos dos 4 Dias / Meta Diária -->
-            <div class="lg:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                <span class="text-[10px] font-bold uppercase text-indigo-400 block">Planejado Hoje</span>
-                <div id="agKpiPlanejadoHoje" class="text-sm font-extrabold text-white mt-0.5">0h 00m</div>
-                <span id="agKpiMetaDiariaSub" class="text-[10px] text-slate-400">Meta diária: 4h 00m</span>
-              </div>
-              <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                <span class="text-[10px] font-bold uppercase text-emerald-400 block">Estudado Hoje (Real)</span>
-                <div id="agKpiRealizadoHoje" class="text-sm font-extrabold text-emerald-400 mt-0.5">0h 00m</div>
-                <span id="agKpiPercHojeSub" class="text-[10px] text-slate-400">0% da meta cumprida</span>
-              </div>
-              <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                <span class="text-[10px] font-bold uppercase text-amber-400 block">Restante Hoje</span>
-                <div id="agKpiRestanteHoje" class="text-sm font-extrabold text-amber-400 mt-0.5">0h 00m</div>
-                <span id="agKpiBlocosHojeSub" class="text-[10px] text-slate-400">0 blocos na agenda</span>
-              </div>
-              <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                <span class="text-[10px] font-bold uppercase text-purple-400 block">Janela Livre Hoje</span>
-                <div id="agKpiLivreHoje" class="text-sm font-extrabold text-purple-300 mt-0.5">0h 00m</div>
-                <button type="button" onclick="abrirModalJanelaEstudoAgenda()" class="text-[10px] text-indigo-400 hover:underline font-bold">Ajustar expediente</button>
-              </div>
-            </div>
-
-            <!-- Painel do Cronômetro Integrado Ativo -->
-            <div class="lg:col-span-5 bg-slate-950 rounded-xl border border-slate-800 p-2.5 flex flex-wrap items-center justify-between gap-2.5">
-              <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                <div id="agTimerIndicadorVisual" class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-extrabold text-xs text-slate-300 shrink-0">
-                  ⏱
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-[10px] font-extrabold uppercase text-emerald-400">Cronômetro da Tarefa</span>
-                    <span id="agTimerBadgeBloco" class="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[9px] font-bold">Parado</span>
-                  </div>
-                  <div id="agTimerNomeTarefaAtiva" class="text-xs font-extrabold text-white truncate">
-                    Clique em ▶ em qualquer tarefa ou bloco da agenda
-                  </div>
-                  <div id="agTimerMetaRestanteTxt" class="text-[10px] text-slate-400">
-                    Tempo estudado: 00:00:00 | Restante da meta: --:--
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex items-center gap-1.5 shrink-0">
-                <div id="agTimerDisplayDigital" class="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-sm font-extrabold text-white">
-                  00:00:00
-                </div>
-                <button type="button" onclick="alternarPlayPauseTimerAgenda()" id="btnAgTimerPlayPause" disabled class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs transition">
-                  Iniciar
-                </button>
-                <button type="button" onclick="concluirBlocoOuTarefaPeloTimer()" id="btnAgTimerConcluir" disabled class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-xs transition" title="Concluir este bloco/tarefa">
-                  ✓
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- LAYOUT PRINCIPAL DA AGENDA: CAIXA DE TAREFAS (ESQUERDA) + GRADE GOOGLE AGENDA 4 DIAS (DIREITA) -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-          <!-- COLUNA ESQUERDA: CAIXA DE TAREFAS DO DIA (DRAGGABLE INBOX) -->
-          <div class="lg:col-span-4 space-y-3">
-            <div class="bg-slate-900 rounded-xl border border-slate-800 p-3.5 space-y-3">
-              <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
-                <div>
-                  <span class="text-[10px] font-extrabold uppercase text-indigo-400">Caixa de Atividades Pendentes</span>
-                  <h3 class="text-xs font-extrabold text-white">Tarefas do Dia (Arraste para a Agenda)</h3>
-                </div>
-                <button type="button" onclick="abrirModalTarefaAgenda()" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">
-                  + Criar
-                </button>
-              </div>
-
-              <!-- Filtro Rápido por Ordem Recomendada -->
-              <div class="flex flex-wrap items-center gap-1 text-[10px]">
-                <button type="button" onclick="filtrarCaixaTarefasAgenda('TODOS')" id="btnFiltroInbox_TODOS" class="px-2 py-1 rounded font-bold subtab-active">
-                  Todas
-                </button>
-                <button type="button" onclick="filtrarCaixaTarefasAgenda('REVISAO')" id="btnFiltroInbox_REVISAO" class="px-2 py-1 rounded font-bold subtab-inactive">
-                  1º Revisão / Aquec.
-                </button>
-                <button type="button" onclick="filtrarCaixaTarefasAgenda('ESTUDO')" id="btnFiltroInbox_ESTUDO" class="px-2 py-1 rounded font-bold subtab-inactive">
-                  2º Estudo Teórico
-                </button>
-                <button type="button" onclick="filtrarCaixaTarefasAgenda('QUESTOES')" id="btnFiltroInbox_QUESTOES" class="px-2 py-1 rounded font-bold subtab-inactive">
-                  3º Questões
-                </button>
-              </div>
-
-              <div class="text-[11px] text-slate-400 bg-slate-950/80 border border-slate-800 rounded-lg px-2.5 py-1.5">
-                Dica: Arraste qualquer tarefa abaixo para um horário na grade ao lado ou clique em <strong>Dividir em Blocos</strong> para distribuir (ex: 08h-09h e 15h-16h).
-              </div>
-
-              <!-- Lista de Tarefas Pendentes / Caixa de Entrada -->
-              <div id="agListaCaixaTarefas" class="space-y-2 max-h-[520px] overflow-y-auto pr-1"></div>
-            </div>
-
-            <!-- Legenda de Ordem Recomendada e Cores Padrão -->
-            <div class="bg-slate-900 rounded-xl border border-slate-800 p-3.5 space-y-2 text-xs">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-extrabold uppercase text-slate-400">Ordem Recomendada &amp; Cores Padrão</span>
-                <span class="text-[10px] text-slate-400">Personalizável</span>
-              </div>
-              <div id="agLegendaCategoriasCores" class="space-y-1.5 text-[11px]"></div>
-            </div>
-          </div>
-
-          <!-- COLUNA DIREITA: GRADE VISUAL ESTILO GOOGLE AGENDA (HOJE + PRÓXIMOS 3 DIAS) -->
-          <div class="lg:col-span-8 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden flex flex-col">
-
-            <!-- Cabeçalho das Colunas dos 4 Dias (Data, Dia da Semana, Planejado vs Estudado, Meta e Livre) -->
-            <div class="bg-slate-950 border-b border-slate-800 flex">
-              <div class="w-14 shrink-0 border-r border-slate-800 p-2 flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
-                <span>HORA</span>
-                <span class="text-[9px] text-slate-500">06h-23h</span>
-              </div>
-              <div id="agHeaderColunasDias" class="flex-1 grid grid-cols-1 sm:grid-cols-4 divide-x divide-slate-800"></div>
-            </div>
-
-            <!-- Corpo Rolável da Grade Horária (Estilo Google Calendar) -->
-            <div id="agGridScrollContainer" class="gcal-scroll-container bg-slate-950/60">
-              <div class="flex min-w-[620px]">
-                <!-- Régua de Horários à Esquerda -->
-                <div id="agColunaReguaHoras" class="w-14 shrink-0 border-r border-slate-800 bg-slate-950 select-none"></div>
-
-                <!-- Colunas dos Dias com Eventos Posicionados por Horário -->
-                <div id="agContainerColunasDiasGrid" class="flex-1 grid grid-cols-4 divide-x divide-slate-800 relative"></div>
-              </div>
-            </div>
-
-            <!-- Rodapé Explicativo da Grade -->
-            <div class="px-3.5 py-2 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
-              <span>• Arraste um bloco para mudar de horário ou de dia • Puxe a borda inferior do bloco para redimensionar a duração</span>
-              <span>• Clique sobre qualquer bloco para editar, dividir, mudar cor ou iniciar o cronômetro</span>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- MODAL: CRIAR / EDITAR / DIVIDIR TAREFA E PERSONALIZAR CORES DA AGENDA -->
-        <div id="modalTarefaAgenda" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 no-print">
-          <div class="bg-slate-900 text-slate-100 rounded-xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[94vh] flex flex-col">
-            <div class="px-5 py-3.5 bg-indigo-950 border-b border-indigo-800 text-white flex items-center justify-between">
-              <div>
-                <h3 id="modalAgTarefaTitulo" class="text-xs font-extrabold uppercase">Configurar Tarefa de Estudo e Blocos na Agenda</h3>
-                <p class="text-[11px] text-indigo-300">A divisão em blocos mantém a mesma meta total de tempo vinculada à tarefa</p>
-              </div>
-              <button type="button" onclick="fecharModalTarefaAgenda()" class="text-indigo-300 hover:text-white text-xs font-bold">Fechar</button>
-            </div>
-
-            <form onsubmit="salvarTarefaAgendaModal(event)" class="p-5 space-y-3.5 text-xs overflow-y-auto">
-              <input type="hidden" id="agFormTaskId" value="">
-              <input type="hidden" id="agFormBlockId" value="">
-
-              <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                <div class="sm:col-span-7">
-                  <label class="block font-bold text-slate-300 mb-1">Nome da Tarefa / Atividade *</label>
-                  <input type="text" id="agFormTitulo" required placeholder="Ex: Revisão de Direito Constitucional / Estudo de Controle" class="w-full rounded-lg border px-2.5 py-1.5 font-semibold">
-                </div>
-                <div class="sm:col-span-5">
-                  <label class="block font-bold text-slate-300 mb-1">Matéria ou Disciplina *</label>
-                  <input type="text" id="agFormMateria" list="datalistMateriasAgenda" required placeholder="Ex: Direito Constitucional" class="w-full rounded-lg border px-2.5 py-1.5">
-                  <datalist id="datalistMateriasAgenda"></datalist>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Tipo (Ordem Recomendada)</label>
-                  <select id="agFormTipo" onchange="aoMudarTipoTarefaModalAgenda()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                    <option value="REVISAO">1º Revisão / Aquecimento</option>
-                    <option value="ESTUDO">2º Estudo de Matéria Nova</option>
-                    <option value="QUESTOES">3º Bateria de Questões</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Prioridade</label>
-                  <select id="agFormPrioridade" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                    <option value="ALTA">Alta Prioridade</option>
-                    <option value="MEDIA" selected>Média Prioridade</option>
-                    <option value="BAIXA">Baixa Prioridade</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Meta Total Estimada (min) *</label>
-                  <input type="number" id="agFormMetaMinutos" min="5" max="720" step="5" value="60" required oninput="sincronizarBlocosComMetaNoModal()" class="w-full rounded-lg border px-2.5 py-1.5 font-extrabold text-indigo-400">
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Repetição / Recorrência</label>
-                  <select id="agFormRepeticao" class="w-full rounded-lg border px-2.5 py-1.5">
-                    <option value="NENHUMA">Sem repetição (Única)</option>
-                    <option value="DIARIA">Diária (Próximos 4 dias)</option>
-                    <option value="DIAS_UTEIS">Seg a Sex</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label class="block font-bold text-slate-300 mb-1">Descrição / Anotações / Tópico Específico</label>
-                <input type="text" id="agFormDescricao" placeholder="Ex: Ler pág. 1 a 20 do PDF + Art. 5º da CF/88" class="w-full rounded-lg border px-2.5 py-1.5">
-              </div>
-
-              <!-- PERSONALIZAÇÃO DE CORES COM DUAS OPÇÕES EXPLÍCITAS -->
-              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <span class="font-extrabold text-indigo-300 uppercase text-[10px]">Personalização de Cor da Tarefa / Atividade</span>
-                  <span id="agLabelCorSelecionada" class="text-[11px] font-bold text-slate-300">Cor selecionada</span>
-                </div>
-
-                <div id="agSeletorPaletaCores" class="flex flex-wrap items-center gap-2"></div>
-                <input type="hidden" id="agFormCorHex" value="#4f46e5">
-
-                <div class="pt-2 border-t border-slate-800 space-y-1.5">
-                  <span class="block text-[11px] font-bold text-slate-300">Como deseja aplicar esta escolha de cor?</span>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer">
-                      <input type="radio" name="agEscopoCor" value="SOMENTE_DIA" checked class="text-indigo-600">
-                      <span>Aplicar <strong>somente a esta tarefa / dia atual</strong></span>
-                    </label>
-                    <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800 cursor-pointer">
-                      <input type="radio" name="agEscopoCor" value="PADRAO_CATEGORIA" class="text-indigo-600">
-                      <span>Aplicar <strong>permanentemente como padrão desta categoria/matéria</strong></span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <!-- DIVISÃO DA TAREFA EM BLOCOS AO LONGO DO DIA OU ENTRE DIAS -->
-              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span class="font-extrabold text-emerald-400 uppercase text-[10px] block">Divisão em Blocos de Horário (Vinculados à Mesma Meta Total)</span>
-                    <span id="agResumoSomaBlocosModal" class="text-[11px] text-slate-400">Você pode agendar 1 bloco único ou dividir em 2+ blocos (ex: 08h-09h e 15h-16h)</span>
-                  </div>
-                  <div class="flex items-center gap-1.5">
-                    <button type="button" onclick="dividirAutomaticamenteEm2BlocosModal()" class="px-2.5 py-1 rounded bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 font-bold text-[11px]">
-                      Dividir em 2 Blocos Iguais
-                    </button>
-                    <button type="button" onclick="adicionarBlocoHorarioNoModal()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px]">
-                      + Adicionar Bloco
-                    </button>
-                  </div>
-                </div>
-
-                <div id="agContainerLinhasBlocosModal" class="space-y-2"></div>
-              </div>
-
-              <!-- Tempo já estudado (ajustável manualmente se necessário) -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Tempo Efetivamente Estudado até agora (minutos)</label>
-                  <input type="number" id="agFormMinutosRealizados" min="0" step="1" value="0" class="w-full rounded-lg border px-2.5 py-1.5">
-                </div>
-                <div class="flex items-end">
-                  <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-slate-950 border border-slate-800 w-full">
-                    <input type="checkbox" id="agFormConcluida" class="rounded text-emerald-600 w-4 h-4">
-                    <span class="font-bold text-slate-200">Marcar tarefa como Concluída (Cor pálida / Não transfere p/ amanhã)</span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-                <button type="button" onclick="excluirTarefaAgendaDoModal()" id="btnAgExcluirTarefaModal" class="hidden px-3 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold">
-                  Excluir Tarefa
-                </button>
-                <div class="flex items-center gap-2 ml-auto">
-                  <button type="button" onclick="fecharModalTarefaAgenda()" class="px-3.5 py-1.5 rounded-lg border border-slate-700 font-bold text-slate-300 hover:bg-slate-800">Cancelar</button>
-                  <button type="submit" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold">Salvar na Agenda</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- MODAL: CONFIGURAR EXPEDIENTE / JANELA DE ESTUDO DIÁRIO DA AGENDA -->
-        <div id="modalJanelaEstudoAgenda" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 no-print">
-          <div class="bg-slate-900 text-slate-100 rounded-xl max-w-md w-full shadow-2xl border border-slate-700 overflow-hidden">
-            <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-              <h3 class="text-xs font-extrabold uppercase text-white">Configurar Horários Disponíveis e Meta Diária</h3>
-              <button type="button" onclick="fecharModalJanelaEstudoAgenda()" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button>
-            </div>
-            <form onsubmit="salvarJanelaEstudoAgenda(event)" class="p-4 space-y-3 text-xs">
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Início do Expediente (h)</label>
-                  <input type="number" id="agCfgHoraInicio" min="5" max="22" value="8" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                </div>
-                <div>
-                  <label class="block font-bold text-slate-300 mb-1">Fim do Expediente (h)</label>
-                  <input type="number" id="agCfgHoraFim" min="7" max="23" value="21" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                </div>
-              </div>
-              <div>
-                <label class="block font-bold text-slate-300 mb-1">Meta Diária de Estudo (em minutos)</label>
-                <input type="number" id="agCfgMetaMinutosDia" min="30" max="960" step="15" value="240" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold text-indigo-400">
-                <span class="text-[10px] text-slate-400">Ex: 240 min = 4 horas por dia</span>
-              </div>
-              <div class="pt-2 border-t border-slate-800 flex justify-end gap-2">
-                <button type="button" onclick="fecharModalJanelaEstudoAgenda()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 font-bold">Cancelar</button>
-                <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold">Salvar</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-      </section>
-
       <!-- SUB-SEÇÃO 1.1: CRONOGRAMA E PAINEL EXECUTIVO DO DIA -->
-      <section id="aba-cronograma" class="hidden space-y-4">
+      <section id="aba-cronograma" class="space-y-4">
         <div class="bg-slate-900 rounded-xl border border-slate-800 p-4 shadow-sm space-y-3.5">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div>
@@ -4865,14 +4858,26 @@
     }
 
     /* ==========================================================================
-     * 5. ROTEAMENTO DAS 3 ÁREAS PRINCIPAIS E SUB-ABAS
+     * 5. ROTEAMENTO DAS 4 ÁREAS DE TOPO (SENDO A AGENDA EM TELA CHEIA)
      * ========================================================================== */
     function irParaAreaPrincipal(area) {
-      const areas = ['organizacao', 'questoes', 'cartoes'];
-      areas.forEach(a => {
-        const divArea = document.getElementById(`area-${a}`);
-        if (divArea) divArea.classList.toggle('hidden', a !== area);
+      const secAgendaFullscreen = document.getElementById('area-agenda');
+      const mainDemais = document.getElementById('mainContainerDemaisAreas');
 
+      if (area === 'agenda') {
+        if (secAgendaFullscreen) secAgendaFullscreen.classList.remove('hidden');
+        if (mainDemais) mainDemais.classList.add('hidden');
+      } else {
+        if (secAgendaFullscreen) secAgendaFullscreen.classList.add('hidden');
+        if (mainDemais) mainDemais.classList.remove('hidden');
+      }
+
+      const todasAreas = ['agenda', 'organizacao', 'questoes', 'cartoes'];
+      todasAreas.forEach(a => {
+        if (a !== 'agenda') {
+          const divArea = document.getElementById(`area-${a}`);
+          if (divArea) divArea.classList.toggle('hidden', a !== area);
+        }
         const btnNav = document.getElementById(`nav-area-${a}`);
         if (btnNav) {
           btnNav.className = `px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 ${
@@ -4881,10 +4886,11 @@
         }
       });
 
-      if (area === 'organizacao') {
+      if (area === 'agenda') {
         if (typeof renderizarAgendaCompletaUI === 'function') {
           renderizarAgendaCompletaUI();
         }
+      } else if (area === 'organizacao') {
         if (typeof carregarCronogramaSupabase === 'function') {
           carregarCronogramaSupabase();
         }
@@ -4896,18 +4902,20 @@
     }
 
     function irParaSubAbaOrganizacao(sub) {
-      const subs = ['agenda', 'cronograma', 'cadastros', 'config'];
+      if (sub === 'agenda') {
+        irParaAreaPrincipal('agenda');
+        return;
+      }
+      const subs = ['cronograma', 'cadastros', 'config'];
       subs.forEach(s => {
         const sec = document.getElementById(`aba-${s}`);
         if (sec) sec.classList.toggle('hidden', s !== sub);
         const btn = document.getElementById(`subnav-org-${s}`);
         if (btn) {
-          btn.className = `px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${s === sub ? 'subtab-active' : 'subtab-inactive'}`;
+          btn.className = `px-3 py-1.5 rounded-lg transition ${s === sub ? 'subtab-active' : 'subtab-inactive'}`;
         }
       });
-      if (sub === 'agenda' && typeof renderizarAgendaCompletaUI === 'function') {
-        renderizarAgendaCompletaUI();
-      } else if (sub === 'cronograma' && typeof carregarCronogramaSupabase === 'function') {
+      if (sub === 'cronograma' && typeof carregarCronogramaSupabase === 'function') {
         carregarCronogramaSupabase();
       }
     }
@@ -4946,7 +4954,9 @@
     }
 
     function irParaAba(nomeAba) {
-      if (['agenda', 'cronograma', 'cadastros', 'config'].includes(nomeAba)) {
+      if (nomeAba === 'agenda') {
+        irParaAreaPrincipal('agenda');
+      } else if (['cronograma', 'cadastros', 'config'].includes(nomeAba)) {
         irParaAreaPrincipal('organizacao');
         irParaSubAbaOrganizacao(nomeAba);
       } else if (['painel', 'registrar', 'revisoes', 'ciclo', 'estatisticas'].includes(nomeAba)) {
@@ -7033,7 +7043,7 @@
       document.getElementById('cfgCartoesPorRodada').value = c.Cartoes_Por_Rodada || '0';
       document.getElementById('cfgEstrategiaAquecimento').value = c.Estrategia_Aquecimento || 'PADRAO';
       document.getElementById('cfgMetodoOrganizacaoCartoes').value = c.Metodo_Organizacao_Cartoes || 'SEQUENCIAL_INICIAL_DEPOIS_ERROS';
-      document.getElementById('cfgComportamentoDificilSessao').value = c.Comportamento_Dificil_Sessao || 'RETORNAR_NA_SESSAO';
+      document.getElementById('cfgComportamentoDificilSessao').value = c.Comportamento_DificilSessao || 'RETORNAR_NA_SESSAO';
       document.getElementById('cfgCriterioDominioAcertos').value = critDom;
       document.getElementById('cfgLimiteDiarioDecoreba').value = limDec;
       document.getElementById('cfgEscalaCartoesDominados').value = c.Escala_Cartoes_Dominados || '7,15,30,60,90';
@@ -7439,6 +7449,11 @@
         renderizarAtalhosTopicosHojeFC();
         renderizarVisaoDeckFC();
 
+        // Sincroniza automaticamente a quantidade real de cartões de cada matéria nas tarefas da Agenda
+        if (typeof sincronizarPlanejamentoDiario3Areas === 'function') {
+          sincronizarPlanejamentoDiario3Areas(false);
+        }
+
         const secNav = document.getElementById('subaba-fc-navegador');
         if (secNav && !secNav.classList.contains('hidden')) renderizarNavegadorAnki();
 
@@ -7800,6 +7815,8 @@
     }
 
     function selecionarTopicoEIniciarFC(idMateria, idTopico) {
+      irParaAreaPrincipal('cartoes');
+      irParaSubAbaCartoes('aquecimento');
       document.getElementById('fcFiltroMateria').value = idMateria;
       aoMudarMateriaFiltroFC();
       document.getElementById('fcFiltroTopico').value = idTopico;
@@ -9844,6 +9861,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const selCad = document.getElementById('cronInputDiasPorMeta');
       if (selCad) selCad.value = String(CRON_CADENCIA_DIAS);
       carregarCronogramaSupabase();
+      if (typeof sincronizarPlanejamentoDiario3Areas === 'function') {
+        sincronizarPlanejamentoDiario3Areas(false);
+      }
       if (typeof renderizarAgendaCompletaUI === 'function') {
         renderizarAgendaCompletaUI();
       }
@@ -10126,6 +10146,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         popularSelectFiltroSemanasCron_();
         renderizarDashboardCronograma();
         renderizarListaSemanasCronograma();
+        if (typeof sincronizarPlanejamentoDiario3Areas === 'function') {
+          sincronizarPlanejamentoDiario3Areas(false);
+        }
       } catch (err) {
         console.warn('Aviso ao sincronizar cronograma:', err.message);
       }
@@ -11306,36 +11329,41 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
   <script>
     /* ==========================================================================
-     * 11. MOTOR DA AGENDA INTELIGENTE DE ESTUDOS (ESTILO GOOGLE AGENDA - 4 DIAS)
-     *     - Caixa de Tarefas Arrastáveis (Drag & Drop e Redimensionamento)
-     *     - Divisão em Múltiplos Blocos vinculados à mesma Meta Total
-     *     - Ordem Recomendada: 1º Revisão -> 2º Estudo -> 3º Questões
-     *     - Cronômetro Integrado por Bloco/Tarefa (Sem duplicação)
-     *     - Personalização de Cores (Somente Dia vs Padrão Permanente)
-     *     - Reorganização Automática Contínua do Tempo Restante para o Dia Seguinte
+     * 11. MOTOR DA AGENDA EM TELA CHEIA (CLEAN GOOGLE CALENDAR WORKSPACE)
+     *     - 3 Áreas Independentes no Dia:
+     *       A) Conteúdo do Dia (Matéria, Tópico, Páginas, Progresso e Média min/pág)
+     *       B) Aquecimento e Revisão de Cartões (Baseado estritamente na matéria de
+     *          cada Bateria de Questões programada — tarefas separadas)
+     *       C) Baterias de Questões (Tarefas individuais separadas por bateria)
+     *     - Visualização Limpa na Grade: apenas Horário • Tipo • Matéria
+     *     - Detalhes completos exibidos somente ao clicar na tarefa
      * ========================================================================== */
-    const AG_STORAGE_KEY = 'GR_AGENDA_ESTUDOS_V1';
-    const AG_PX_POR_HORA = 48; // 48px por hora -> 0.8px por minuto
+    const AG_STORAGE_KEY = 'GR_AGENDA_ESTUDOS_V2';
+    const AG_PX_POR_HORA = 52; // 52px por hora na grade em tela cheia
 
     const AG_PALETA_CORES = [
-      { hex: '#8b5cf6', nome: 'Roxo (Revisão / Aquecimento)' },
-      { hex: '#3b82f6', nome: 'Azul Royal (Estudo Teórico)' },
+      { hex: '#8b5cf6', nome: 'Roxo (Aquecimento de Cartões)' },
+      { hex: '#3b82f6', nome: 'Azul Royal (Conteúdo do Dia)' },
       { hex: '#10b981', nome: 'Esmeralda (Bateria de Questões)' },
       { hex: '#f59e0b', nome: 'Âmbar (Lei Seca / Destaque)' },
-      { hex: '#f43f5e', nome: 'Rosa / Coral (Urgente / Reforço)' },
-      { hex: '#06b6d4', nome: 'Ciano (Jurisprudência / Súmulas)' },
-      { hex: '#6366f1', nome: 'Índigo (Simulado / Discursiva)' },
+      { hex: '#f43f5e', nome: 'Coral (Reforço Urgente)' },
+      { hex: '#06b6d4', nome: 'Ciano (Jurisprudência)' },
+      { hex: '#6366f1', nome: 'Índigo (Simulado)' },
       { hex: '#14b8a6', nome: 'Teal (Consolidação)' }
     ];
 
     let AG_STATE = {
       dataBaseVisao: '',
-      modoVisao: '4DIAS', // '4DIAS' ou '1DIA'
-      filtroInbox: 'TODOS',
+      modoVisao: '4DIAS',
+      sidebarAberta: true,
       configExpediente: {
         horaInicio: 8,
         horaFim: 21,
         metaMinutosDia: 240
+      },
+      historicoLeitura: {
+        segundosTotais: 0,
+        paginasTotais: 0
       },
       coresPadrao: {
         REVISAO: '#8b5cf6',
@@ -11366,27 +11394,27 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         AG_STATE.dataBaseVisao = hojeYMD;
       }
 
-      // Se ainda não houver tarefas cadastradas, cria exemplos iniciais das 3 etapas recomendadas
-      if (!AG_STATE.tarefas || AG_STATE.tarefas.length === 0) {
-        criarTarefasIniciaisDemonstracao_(hojeYMD);
-      }
-
-      // Verifica e executa transferência automática de tarefas não concluídas de dias passados
+      sincronizarPlanejamentoDiario3Areas(false);
       verificarERealizarRolloverAutomaticoDiario_(hojeYMD);
 
       renderizarPaletaCoresModalAgenda_();
       renderizarAgendaCompletaUI();
 
-      // Posiciona o scroll inicial da grade às 07h30
       setTimeout(() => {
         const sc = document.getElementById('agGridScrollContainer');
         if (sc) sc.scrollTop = 7.5 * AG_PX_POR_HORA;
       }, 150);
 
-      // Atualiza a linha vermelha do horário atual a cada minuto
       setInterval(() => {
         atualizarLinhaHoraAtualAgenda_();
       }, 60000);
+    }
+
+    function alternarPainelLateralAgenda() {
+      const aside = document.getElementById('agSidebarAtividadesDia');
+      if (!aside) return;
+      AG_STATE.sidebarAberta = !aside.classList.contains('hidden');
+      aside.classList.toggle('hidden');
     }
 
     function carregarEstadoAgendaStorage_() {
@@ -11402,10 +11430,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
             if (!AG_STATE.configExpediente) {
               AG_STATE.configExpediente = { horaInicio: 8, horaFim: 21, metaMinutosDia: 240 };
             }
+            if (!AG_STATE.historicoLeitura) {
+              AG_STATE.historicoLeitura = { segundosTotais: 0, paginasTotais: 0 };
+            }
           }
         }
       } catch (e) {
-        console.warn('Aviso ao ler Agenda do localStorage:', e.message);
+        console.warn('Aviso ao ler Agenda:', e.message);
       }
     }
 
@@ -11415,7 +11446,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         localStorage.setItem(AG_STORAGE_KEY, JSON.stringify(AG_STATE));
       } catch (e) {}
 
-      // Sincroniza também na tabela configuracoes do Supabase em background
       if (supabaseClient) {
         if (timerSyncAgendaCloud) clearTimeout(timerSyncAgendaCloud);
         timerSyncAgendaCloud = setTimeout(() => {
@@ -11424,81 +11454,287 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       }
     }
 
-    function criarTarefasIniciaisDemonstracao_(hojeYMD) {
-      AG_STATE.tarefas = [
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Aquecimento & Revisão de Cartões',
-          materia: 'Direito Constitucional',
-          tipo: 'REVISAO',
-          prioridade: 'ALTA',
-          metaMinutos: 30,
-          segundosEstudados: 0,
-          corPersonalizada: null,
-          descricao: 'Aquecimento da memória antes das baterias de questões',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: [
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 8 * 60, duracaoMin: 30, segundosNoBloco: 0, concluido: false }
-          ]
-        },
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Estudo Teórico: Serviços Públicos + Estatuto do Idoso',
-          materia: 'Direito Administrativo',
-          tipo: 'ESTUDO',
-          prioridade: 'ALTA',
-          metaMinutos: 120,
-          segundosEstudados: 0,
-          corPersonalizada: null,
-          descricao: 'Meta de 2h dividida em 2 blocos vinculados (Manhã e Tarde)',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: [
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 8 * 60 + 30, duracaoMin: 60, segundosNoBloco: 0, concluido: false },
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 15 * 60, duracaoMin: 60, segundosNoBloco: 0, concluido: false }
-          ]
-        },
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Bateria de Questões Pós-Teoria',
-          materia: 'Direito Penal',
-          tipo: 'QUESTOES',
-          prioridade: 'ALTA',
-          metaMinutos: 40,
-          segundosEstudados: 0,
-          corPersonalizada: null,
-          descricao: 'Resolução de 20 questões + leitura dos comentários',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: [
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 16 * 60 + 15, duracaoMin: 40, segundosNoBloco: 0, concluido: false }
-          ]
-        },
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Leitura de Lei Seca (CF/88 e CPP)',
-          materia: 'Direito Processual Penal',
-          tipo: 'REVISAO',
-          prioridade: 'MEDIA',
-          metaMinutos: 30,
-          segundosEstudados: 0,
-          corPersonalizada: '#f59e0b',
-          descricao: 'Arraste esta tarefa da caixa para qualquer horário livre da agenda',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: []
+    /* ==========================================================================
+     * 11.1 CÁLCULO PROGRESSIVO DA MÉDIA DE TEMPO GASTO POR PÁGINA
+     * ========================================================================== */
+    function obterInfoMediaTempoPorPagina_() {
+      let segTotais = Number(AG_STATE.historicoLeitura?.segundosTotais || 0);
+      let pagTotais = Number(AG_STATE.historicoLeitura?.paginasTotais || 0);
+
+      // Soma também o progresso em tempo real das tarefas de Conteúdo do Dia (ESTUDO)
+      AG_STATE.tarefas.forEach(t => {
+        if (t.tipo === 'ESTUDO') {
+          const pLidas = Number(t.unidadesConcluidas || 0);
+          const sGastos = Number(t.segundosEstudados || 0);
+          if (pLidas > 0 && sGastos >= 30 && !t.contabilizadoNoHistoricoLeitura) {
+            segTotais += sGastos;
+            pagTotais += pLidas;
+          }
         }
-      ];
-      salvarEstadoAgendaStorage_();
+      });
+
+      if (pagTotais <= 0 || segTotais < 30) {
+        return {
+          temHistorico: false,
+          minutosPorPagina: 3.0, // Estimativa inicial padrão (3 min/pág) enquanto constrói histórico
+          textoCurto: 'Média: em construção',
+          textoDetalhado: 'Em construção (inicie o cronômetro e registre as páginas lidas para formar sua média real)'
+        };
+      }
+
+      const minPorPag = (segTotais / 60) / pagTotais;
+      const minInt = Math.floor(minPorPag);
+      const segRest = Math.round((minPorPag - minInt) * 60);
+      const formatado = minInt > 0 ? `${minInt}m ${String(segRest).padStart(2, '0')}s/pág` : `${segRest}s/pág`;
+
+      return {
+        temHistorico: true,
+        minutosPorPagina: minPorPag,
+        paginasBase: pagTotais,
+        textoCurto: `Ritmo: ${formatado}`,
+        textoDetalhado: `${formatado} (calculado sobre ${pagTotais} página(s) estudada(s) no cronômetro)`
+      };
     }
 
     /* ==========================================================================
-     * 11.1 UTILITÁRIOS DE COR, TEMPO E ORDEM RECOMENDADA
+     * 11.2 SINCRONIZAÇÃO DAS 3 ÁREAS DO DIA:
+     *      A) Conteúdo do Dia
+     *      B) Aquecimento de Cartões (Baseado na Matéria de cada Bateria!)
+     *      C) Baterias de Questões (Tarefas Individuais Separadas)
+     * ========================================================================== */
+    function sincronizarPlanejamentoDiario3Areas(exibirToast = false) {
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const infoRitmo = obterInfoMediaTempoPorPagina_();
+      let novasCriadas = 0;
+
+      // ------------------------------------------------------------------------
+      // ÁREA A: CONTEÚDO DO DIA (Vem da Meta ativa do Cronograma de 50 Semanas)
+      // ------------------------------------------------------------------------
+      if (CRON_METAS && CRON_METAS.length > 0) {
+        const metaAtual = CRON_METAS.find(m => m.status !== 'Concluído');
+        if (metaAtual) {
+          const idxParte = metaAtual.detalhesPartes.findIndex(p => !p.concluida);
+          const dist = calcularDistribuicaoDiariaSubtopicosDaMeta_(metaAtual, idxParte !== -1 ? idxParte : 0);
+          const chaveConteudo = `SYS_CONTEUDO_${metaAtual.id}_P${idxParte + 1}`;
+          const paginasPrevistasHoje = Math.max(1, dist.leituraHojeTotal || 15);
+          const tempoEstimadoMin = Math.max(20, Math.min(240, Math.round(paginasPrevistasHoje * infoRitmo.minutosPorPagina)));
+          const resumoTopicos = dist.distribuicaoAssuntos.map(s => `${s.nome} (${s.metaHoje} pág.)`).join(' + ');
+
+          let tarefaConteudo = AG_STATE.tarefas.find(t => t.origemSistemaId === chaveConteudo);
+          if (!tarefaConteudo) {
+            AG_STATE.tarefas.push({
+              id: gerarId_('AG_T'),
+              origemSistemaId: chaveConteudo,
+              idMetaCronograma: metaAtual.id,
+              idxParteCronograma: idxParte !== -1 ? idxParte : 0,
+              titulo: `Conteúdo do Dia • ${metaAtual.topico}`,
+              materia: metaAtual.materia,
+              topicoEspecifico: resumoTopicos || metaAtual.topico,
+              tipo: 'ESTUDO',
+              prioridade: 'ALTA',
+              metaMinutos: tempoEstimadoMin,
+              segundosEstudados: 0,
+              unidadeTipo: 'PAGINAS',
+              metaUnidades: paginasPrevistasHoje,
+              unidadesConcluidas: 0,
+              corPersonalizada: null,
+              descricao: `Semana ${String(metaAtual.numeroSemana).padStart(2, '0')} • Meta ${metaAtual.numeroMeta} (Parte ${idxParte + 1}/${metaAtual.totalPartes}) | ${resumoTopicos}${metaAtual.leiSeca ? ' | Lei Seca: ' + metaAtual.leiSeca : ''}`,
+              repeticao: 'NENHUMA',
+              concluida: false,
+              dataReferencia: hojeYMD,
+              blocos: []
+            });
+            novasCriadas++;
+          } else {
+            tarefaConteudo.metaUnidades = paginasPrevistasHoje;
+            tarefaConteudo.topicoEspecifico = resumoTopicos || metaAtual.topico;
+          }
+        }
+      }
+
+      // ------------------------------------------------------------------------
+      // ÁREAS B e C: BATERIAS DE QUESTÕES DO DIA + AQUECIMENTO CORRESPONDENTE
+      // Regra estrita: Cada bateria programada gera:
+      // 1) Uma tarefa individual de Bateria de Questões (Área C)
+      // 2) Uma tarefa individual de Aquecimento de Cartões daquela mesma matéria (Área B)
+      // ------------------------------------------------------------------------
+      let bateriasProgramadas = [];
+      if (ESTADO && ESTADO.painel && Array.isArray(ESTADO.painel.atividadesHoje) && ESTADO.painel.atividadesHoje.length > 0) {
+        bateriasProgramadas = ESTADO.painel.atividadesHoje.filter(at => at.situacao !== 'Realizada');
+      }
+
+      bateriasProgramadas.forEach((bat, idxBat) => {
+        const numBateria = idxBat + 1;
+        const qtdQuestoes = Math.max(10, Number(bat.questoesPlanejadas || 15));
+
+        // Conta cartões cadastrados correspondentes à matéria/tópico desta bateria
+        const cardsDoTopico = FC_DECK.filter(c => c.idTopico === bat.idTopico);
+        const cardsDaMateria = FC_DECK.filter(c => c.idMateria === bat.idMateria);
+        const cardsAlvo = cardsDoTopico.length > 0 ? cardsDoTopico : cardsDaMateria;
+        const totalCardsAquecimento = cardsAlvo.length;
+        const cardsDominados = cardsAlvo.filter(c => !c.isNovo && c.totalRevisoes > 0).length;
+
+        // B) Tarefa Individual de Aquecimento de Cartões da Matéria da Bateria
+        const chaveAquecimento = `SYS_AQUEC_BAT_${bat.idRevisao}_${hojeYMD}`;
+        let tarefaAq = AG_STATE.tarefas.find(t => t.origemSistemaId === chaveAquecimento);
+        const minAquecimento = totalCardsAquecimento > 0
+          ? Math.max(10, Math.min(35, Math.ceil(totalCardsAquecimento * 0.4)))
+          : 15;
+
+        if (!tarefaAq) {
+          AG_STATE.tarefas.push({
+            id: gerarId_('AG_T'),
+            origemSistemaId: chaveAquecimento,
+            idMateriaSistema: bat.idMateria,
+            idTopicoSistema: bat.idTopico,
+            idRevisaoVinculada: bat.idRevisao,
+            titulo: `Aquecimento ${numBateria} • ${bat.materia}`,
+            materia: bat.materia,
+            topicoEspecifico: bat.topico,
+            tipo: 'REVISAO',
+            prioridade: 'ALTA',
+            metaMinutos: minAquecimento,
+            segundosEstudados: 0,
+            unidadeTipo: 'CARTOES',
+            metaUnidades: totalCardsAquecimento,
+            unidadesConcluidas: cardsDominados,
+            corPersonalizada: null,
+            descricao: `Aquecimento pré-bateria da matéria ${bat.materia} (Tópico: ${bat.topico})`,
+            repeticao: 'NENHUMA',
+            concluida: false,
+            dataReferencia: hojeYMD,
+            blocos: []
+          });
+          novasCriadas++;
+        } else {
+          tarefaAq.metaUnidades = totalCardsAquecimento;
+          tarefaAq.unidadesConcluidas = cardsDominados;
+          tarefaAq.idMateriaSistema = bat.idMateria;
+          tarefaAq.idTopicoSistema = bat.idTopico;
+        }
+
+        // C) Tarefa Individual da Bateria de Questões
+        const chaveBateria = `SYS_BATERIA_${bat.idRevisao}_${hojeYMD}`;
+        let tarefaBat = AG_STATE.tarefas.find(t => t.origemSistemaId === chaveBateria);
+        const minBateria = Math.max(20, Math.min(90, qtdQuestoes * 2));
+
+        if (!tarefaBat) {
+          AG_STATE.tarefas.push({
+            id: gerarId_('AG_T'),
+            origemSistemaId: chaveBateria,
+            idMateriaSistema: bat.idMateria,
+            idTopicoSistema: bat.idTopico,
+            idRevisaoVinculada: bat.idRevisao,
+            titulo: `Bateria ${numBateria} • ${bat.materia}`,
+            materia: bat.materia,
+            topicoEspecifico: bat.topico,
+            tipo: 'QUESTOES',
+            prioridade: bat.situacao === 'Atrasada' ? 'ALTA' : 'MEDIA',
+            metaMinutos: minBateria,
+            segundosEstudados: 0,
+            unidadeTipo: 'QUESTOES',
+            metaUnidades: qtdQuestoes,
+            unidadesConcluidas: 0,
+            corPersonalizada: null,
+            descricao: `${bat.fluxoNomeCurto || 'Bateria Programada'} • Tópico: ${bat.topico} (${qtdQuestoes} questões previstas)`,
+            repeticao: 'NENHUMA',
+            concluida: false,
+            dataReferencia: hojeYMD,
+            blocos: []
+          });
+          novasCriadas++;
+        } else {
+          tarefaBat.metaUnidades = qtdQuestoes;
+          tarefaBat.idMateriaSistema = bat.idMateria;
+          tarefaBat.idTopicoSistema = bat.idTopico;
+        }
+      });
+
+      // Caso o banco ainda esteja vazio (sem dados do Supabase conectados), garante 1 conjunto demonstrativo limpo
+      if (AG_STATE.tarefas.length === 0) {
+        criarConjuntoInicialLimpo3Areas_(hojeYMD);
+      }
+
+      salvarEstadoAgendaStorage_();
+      renderizarAgendaCompletaUI();
+
+      if (exibirToast) {
+        notificar(novasCriadas > 0
+          ? `${novasCriadas} tarefa(s) sincronizada(s) nas 3 áreas do dia!`
+          : 'Planejamento do dia já está sincronizado com o Cronograma, Cartões e Baterias.');
+      }
+    }
+
+    function criarConjuntoInicialLimpo3Areas_(hojeYMD) {
+      AG_STATE.tarefas = [
+        {
+          id: gerarId_('AG_T'),
+          titulo: 'Conteúdo do Dia • Serviços Públicos + Estatuto do Idoso',
+          materia: 'Direito Administrativo',
+          topicoEspecifico: 'Serviços Públicos (13 pág.) + Estatuto da Pessoa Idosa (8 pág.)',
+          tipo: 'ESTUDO',
+          prioridade: 'ALTA',
+          metaMinutos: 60,
+          segundosEstudados: 0,
+          unidadeTipo: 'PAGINAS',
+          metaUnidades: 21,
+          unidadesConcluidas: 0,
+          corPersonalizada: null,
+          descricao: 'Semana 04 • Meta 3 (Parte 1/3) | Leitura do PDF + Lei Seca do dia',
+          repeticao: 'NENHUMA',
+          concluida: false,
+          dataReferencia: hojeYMD,
+          blocos: [
+            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 9 * 60, duracaoMin: 60, segundosNoBloco: 0, concluido: false }
+          ]
+        },
+        {
+          id: gerarId_('AG_T'),
+          titulo: 'Aquecimento 1 • Direito Constitucional',
+          materia: 'Direito Constitucional',
+          topicoEspecifico: 'Direitos e Garantias Fundamentais (Art. 5º)',
+          tipo: 'REVISAO',
+          prioridade: 'ALTA',
+          metaMinutos: 15,
+          segundosEstudados: 0,
+          unidadeTipo: 'CARTOES',
+          metaUnidades: 20,
+          unidadesConcluidas: 0,
+          corPersonalizada: null,
+          descricao: 'Aquecimento de cartões correspondente à Bateria 1 de Direito Constitucional',
+          repeticao: 'NENHUMA',
+          concluida: false,
+          dataReferencia: hojeYMD,
+          blocos: [
+            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 8 * 60, duracaoMin: 15, segundosNoBloco: 0, concluido: false }
+          ]
+        },
+        {
+          id: gerarId_('AG_T'),
+          titulo: 'Bateria 1 • Direito Constitucional',
+          materia: 'Direito Constitucional',
+          topicoEspecifico: 'Direitos e Garantias Fundamentais (Art. 5º)',
+          tipo: 'QUESTOES',
+          prioridade: 'ALTA',
+          metaMinutos: 35,
+          segundosEstudados: 0,
+          unidadeTipo: 'QUESTOES',
+          metaUnidades: 15,
+          unidadesConcluidas: 0,
+          corPersonalizada: null,
+          descricao: 'Resolução de 15 questões pós-aquecimento de Direito Constitucional',
+          repeticao: 'NENHUMA',
+          concluida: false,
+          dataReferencia: hojeYMD,
+          blocos: [
+            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 10 * 60 + 15, duracaoMin: 35, segundosNoBloco: 0, concluido: false }
+          ]
+        }
+      ];
+    }
+
+    /* ==========================================================================
+     * 11.3 UTILITÁRIOS DE COR, TEMPO E SEQUÊNCIA RECOMENDADA
      * ========================================================================== */
     function obterOrdemRecomendadaTipo_(tipo) {
       if (tipo === 'REVISAO') return 1;
@@ -11513,10 +11749,10 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       return 3;
     }
 
-    function obterLabelTipoAgenda_(tipo) {
-      if (tipo === 'REVISAO') return '1º Revisão / Aquec.';
-      if (tipo === 'ESTUDO') return '2º Estudo Teórico';
-      return '3º Bateria de Questões';
+    function obterLabelCurtoTipoGrade_(tipo) {
+      if (tipo === 'REVISAO') return 'Aquecimento';
+      if (tipo === 'ESTUDO') return 'Conteúdo';
+      return 'Questões';
     }
 
     function obterCorEfetivaTarefaAgenda_(tarefa) {
@@ -11568,13 +11804,10 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       return dias;
     }
 
-    /* ==========================================================================
-     * 11.2 NAVEGAÇÃO DE DIAS E FILTROS DA CAIXA DE TAREFAS
-     * ========================================================================== */
     function alterarModoVisaoAgenda(modo) {
       AG_STATE.modoVisao = modo === '1DIA' ? '1DIA' : '4DIAS';
-      document.getElementById('btnAgModo4Dias').className = `px-2.5 py-1 rounded-md font-bold text-[11px] ${AG_STATE.modoVisao === '4DIAS' ? 'subtab-active' : 'text-slate-300'}`;
-      document.getElementById('btnAgModo1Dia').className = `px-2.5 py-1 rounded-md font-bold text-[11px] ${AG_STATE.modoVisao === '1DIA' ? 'subtab-active' : 'text-slate-300'}`;
+      document.getElementById('btnAgModo4Dias').className = `px-2.5 py-1 rounded-md font-bold ${AG_STATE.modoVisao === '4DIAS' ? 'subtab-active' : 'text-slate-400'}`;
+      document.getElementById('btnAgModo1Dia').className = `px-2.5 py-1 rounded-md font-bold ${AG_STATE.modoVisao === '1DIA' ? 'subtab-active' : 'text-slate-400'}`;
       salvarEstadoAgendaStorage_();
       renderizarAgendaCompletaUI();
     }
@@ -11592,146 +11825,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       renderizarAgendaCompletaUI();
     }
 
-    function filtrarCaixaTarefasAgenda(tipoFiltro) {
-      AG_STATE.filtroInbox = tipoFiltro;
-      ['TODOS', 'REVISAO', 'ESTUDO', 'QUESTOES'].forEach(k => {
-        const btn = document.getElementById(`btnFiltroInbox_${k}`);
-        if (btn) {
-          btn.className = `px-2 py-1 rounded font-bold ${k === tipoFiltro ? 'subtab-active' : 'subtab-inactive'}`;
-        }
-      });
-      renderizarCaixaTarefasAgenda_();
-    }
-
     /* ==========================================================================
-     * 11.3 IMPORTAÇÃO AUTOMÁTICA DAS METAS DO SISTEMA PARA A AGENDA
-     * ========================================================================== */
-    function importarAtividadesDoSistemaParaCaixa() {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      let adicionadas = 0;
-
-      // 1. Importa Revisões / Flashcards pendentes (1º na ordem recomendada)
-      const cardsDecoreba = typeof obterFilaInteligenteDecorebaHoje_ === 'function'
-        ? obterFilaInteligenteDecorebaHoje_().filaHoje
-        : [];
-      if (cardsDecoreba.length > 0) {
-        const chaveRef = `SYS_DEC_${hojeYMD}`;
-        if (!AG_STATE.tarefas.some(t => t.origemSistemaId === chaveRef)) {
-          AG_STATE.tarefas.push({
-            id: gerarId_('AG_T'),
-            origemSistemaId: chaveRef,
-            titulo: `Revisão Diária de Decoreba (${cardsDecoreba.length} cartões)`,
-            materia: 'Revisão Geral / Decoreba',
-            tipo: 'REVISAO',
-            prioridade: 'ALTA',
-            metaMinutos: Math.max(15, Math.min(45, Math.ceil(cardsDecoreba.length * 0.8))),
-            segundosEstudados: 0,
-            corPersonalizada: null,
-            descricao: 'Aquecimento ativo com cartões literais pendentes hoje',
-            repeticao: 'NENHUMA',
-            concluida: false,
-            dataReferencia: hojeYMD,
-            blocos: []
-          });
-          adicionadas++;
-        }
-      }
-
-      // 2. Importa a Parte do Dia do Cronograma de 50 Semanas (2º na ordem: Estudo Teórico)
-      if (CRON_METAS && CRON_METAS.length > 0) {
-        const metaAtual = CRON_METAS.find(m => m.status !== 'Concluído');
-        if (metaAtual) {
-          const idxParte = metaAtual.detalhesPartes.findIndex(p => !p.concluida);
-          const dist = calcularDistribuicaoDiariaSubtopicosDaMeta_(metaAtual, idxParte !== -1 ? idxParte : 0);
-          const chaveCron = `SYS_CRON_${metaAtual.id}_P${idxParte + 1}`;
-
-          if (!AG_STATE.tarefas.some(t => t.origemSistemaId === chaveCron)) {
-            const resumoSub = dist.distribuicaoAssuntos.map(s => `${s.nome} (${s.metaHoje} pág.)`).join(' + ');
-            const tempoEstMin = Math.max(30, Math.min(180, (dist.leituraHojeTotal || 20) * 3));
-            AG_STATE.tarefas.push({
-              id: gerarId_('AG_T'),
-              origemSistemaId: chaveCron,
-              titulo: `Estudo: ${metaAtual.topico} (Meta ${metaAtual.numeroMeta} • Parte ${idxParte + 1})`,
-              materia: metaAtual.materia,
-              tipo: 'ESTUDO',
-              prioridade: 'ALTA',
-              metaMinutos: tempoEstMin,
-              segundosEstudados: 0,
-              corPersonalizada: null,
-              descricao: `${resumoSub} | ${metaAtual.leiSeca || ''}`,
-              repeticao: 'NENHUMA',
-              concluida: false,
-              dataReferencia: hojeYMD,
-              blocos: []
-            });
-            adicionadas++;
-          }
-        }
-      }
-
-      // 3. Importa as Baterias de Questões programadas para hoje + Aquecimento prévio
-      const bateriasHoje = ESTADO?.painel?.atividadesHoje || [];
-      bateriasHoje.forEach(at => {
-        if (at.situacao === 'Realizada') return;
-
-        // Aquecimento de 15 min antes da bateria
-        const chaveAq = `SYS_AQ_${at.idTopico}_${hojeYMD}`;
-        if (!AG_STATE.tarefas.some(t => t.origemSistemaId === chaveAq)) {
-          AG_STATE.tarefas.push({
-            id: gerarId_('AG_T'),
-            origemSistemaId: chaveAq,
-            titulo: `Aquecimento de Cartões: ${at.topico}`,
-            materia: at.materia,
-            tipo: 'REVISAO',
-            prioridade: 'ALTA',
-            metaMinutos: 15,
-            segundosEstudados: 0,
-            corPersonalizada: null,
-            descricao: 'Aquecimento da memória antes da bateria de questões',
-            repeticao: 'NENHUMA',
-            concluida: false,
-            dataReferencia: hojeYMD,
-            blocos: []
-          });
-          adicionadas++;
-        }
-
-        // Bateria de Questões (3º na ordem recomendada)
-        const chaveBat = `SYS_BAT_${at.idRevisao}_${hojeYMD}`;
-        if (!AG_STATE.tarefas.some(t => t.origemSistemaId === chaveBat)) {
-          const minQuestoes = Math.max(25, Math.min(90, (at.questoesPlanejadas || 15) * 2));
-          AG_STATE.tarefas.push({
-            id: gerarId_('AG_T'),
-            origemSistemaId: chaveBat,
-            titulo: `Bateria de Questões: ${at.topico} (${at.questoesPlanejadas} q.)`,
-            materia: at.materia,
-            tipo: 'QUESTOES',
-            prioridade: at.situacao === 'Atrasada' ? 'ALTA' : 'MEDIA',
-            metaMinutos: minQuestoes,
-            segundosEstudados: 0,
-            corPersonalizada: null,
-            descricao: `${at.fluxoNomeCurto || 'Revisão'} — Resolver ${at.questoesPlanejadas} questões`,
-            repeticao: 'NENHUMA',
-            concluida: false,
-            dataReferencia: hojeYMD,
-            blocos: []
-          });
-          adicionadas++;
-        }
-      });
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-
-      if (adicionadas > 0) {
-        notificar(`${adicionadas} atividade(s) sincronizada(s) na Caixa de Tarefas! Clique em "Auto-Organizar" ou arraste para a agenda.`);
-      } else {
-        notificar('Todas as metas de hoje já estão presentes na sua Agenda.');
-      }
-    }
-
-    /* ==========================================================================
-     * 11.4 AUTO-ORGANIZAÇÃO INTELIGENTE E REORGANIZAÇÃO DE PENDÊNCIAS (ROLLOVER)
+     * 11.4 AUTO-ORGANIZAÇÃO E REORGANIZAÇÃO DE PENDÊNCIAS (ROLLOVER)
      * ========================================================================== */
     function obterIntervalosOcupadosNoDia_(dataYMD, ignorarBlockId = null) {
       const ocupados = [];
@@ -11754,7 +11849,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const iniExp = (AG_STATE.configExpediente?.horaInicio || 8) * 60;
       const fimExp = (AG_STATE.configExpediente?.horaFim || 21) * 60;
       let cursor = Math.max(iniExp, minInicioBusca || iniExp);
-      // Arredonda para múltiplo de 15 min
       cursor = Math.ceil(cursor / 15) * 15;
 
       const ocupados = obterIntervalosOcupadosNoDia_(dataYMD);
@@ -11771,12 +11865,11 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           }
           break;
         } else {
-          // Verifica se há espaço parcial de pelo menos 25 min antes do conflito
           const espacoAntes = conflito.inicio - cursor;
           if (espacoAntes >= 25) {
             return { inicioMin: cursor, duracaoCabivelMin: espacoAntes };
           }
-          cursor = Math.ceil((conflito.fim + 10) / 15) * 15; // 10 min de descanso entre blocos
+          cursor = Math.ceil((conflito.fim + 10) / 15) * 15;
         }
       }
       return null;
@@ -11791,7 +11884,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         somarDiasYMD_(hojeYMD, 3)
       ];
 
-      // Seleciona tarefas não concluídas que possuem tempo restante sem bloco agendado nos próximos 4 dias
       const tarefasParaAlocar = AG_STATE.tarefas
         .filter(t => !t.concluida)
         .slice()
@@ -11812,7 +11904,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         const minRestantesMeta = Math.max(0, t.metaMinutos - minRealizados);
         if (minRestantesMeta <= 0) return;
 
-        // Soma minutos já agendados em blocos pendentes de hoje em diante
         const minJaAgendadosFuturos = (t.blocos || [])
           .filter(b => !b.concluido && b.data >= hojeYMD)
           .reduce((acc, b) => acc + b.duracaoMin, 0);
@@ -11847,9 +11938,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       renderizarAgendaCompletaUI();
 
       if (blocosCriados > 0) {
-        notificar(`${blocosCriados} bloco(s) organizados automaticamente seguindo a ordem: 1º Revisão → 2º Estudo → 3º Questões.`);
+        notificar(`${blocosCriados} horário(s) distribuído(s) automaticamente (1º Aquecimento → 2º Conteúdo → 3º Questões).`);
       } else {
-        notificar('Todas as tarefas pendentes já estão distribuídas nos horários da agenda.');
+        notificar('Todas as tarefas pendentes já possuem horário definido na agenda.');
       }
     }
 
@@ -11863,7 +11954,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         const minRealizados = Math.floor((t.segundosEstudados || 0) / 60);
         const minRestantesTotal = Math.max(0, t.metaMinutos - minRealizados);
 
-        // Remove blocos pendentes que ficaram em datas passadas (< hojeYMD) sem conclusão
         const blocosPassadosNaoConcluidos = (t.blocos || []).filter(b => b.data < hojeYMD && !b.concluido);
         if (blocosPassadosNaoConcluidos.length > 0) {
           t.blocos = (t.blocos || []).filter(b => !(b.data < hojeYMD && !b.concluido));
@@ -11890,7 +11980,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         somarDiasYMD_(hojeYMD, 3)
       ];
 
-      // Ordena pelas 3 etapas recomendadas: Revisão -> Estudo -> Questões
       const pendentes = AG_STATE.tarefas
         .filter(t => !t.concluida)
         .slice()
@@ -11907,7 +11996,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           return;
         }
 
-        // Remove blocos não concluídos de hoje ou anteriores (preservando blocos já concluídos!)
         const tinhaBlocoHojeOuAntes = (t.blocos || []).some(b => !b.concluido && b.data <= hojeYMD);
         if (!tinhaBlocoHojeOuAntes && !acaoManual) return;
 
@@ -11942,19 +12030,18 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       salvarEstadoAgendaStorage_();
       renderizarAgendaCompletaUI();
       notificar(realocadas > 0
-        ? `Tempo restante de ${realocadas} atividade(s) transferido e organizado nos horários livres a partir de amanhã (${formatarDataBR(amanhaYMD)}).`
-        : 'Nenhuma pendência precisou ser transferida para amanhã.');
+        ? `Tempo restante de ${realocadas} atividade(s) transferido para os horários livres de amanhã (${formatarDataBR(amanhaYMD)}).`
+        : 'Nenhuma pendência precisou ser transferida.');
     }
 
     /* ==========================================================================
-     * 11.5 CRONÔMETRO INTEGRADO POR TAREFA E BLOCO (SEM DUPLICAÇÃO)
+     * 11.5 CRONÔMETRO INTEGRADO E ATUALIZAÇÃO DE MÉDIA MIN/PÁGINA
      * ========================================================================== */
     function iniciarOuFocarTimerAgenda(taskId, blockId = null, event = null) {
       if (event) event.stopPropagation();
       const tarefa = AG_STATE.tarefas.find(t => t.id === taskId);
       if (!tarefa) return;
 
-      // Se já estava rodando exatamente esta tarefa/bloco, pausa
       if (AG_TIMER.ativo && AG_TIMER.taskId === taskId && AG_TIMER.blockId === blockId) {
         pausarTimerAgenda_();
         renderizarAgendaCompletaUI();
@@ -12026,14 +12113,10 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         }
       }
 
-      // Verifica se atingiu a meta total da tarefa
       const metaSegundos = (tarefa.metaMinutos || 60) * 60;
       if (tarefa.segundosEstudados >= metaSegundos && !tarefa.concluida) {
-        tarefa.concluida = true;
-        (tarefa.blocos || []).forEach(b => { b.concluido = true; });
-        pausarTimerAgenda_();
-        notificar(`Meta de tempo atingida! Tarefa "${tarefa.titulo}" marcada como concluída.`);
-        renderizarAgendaCompletaUI();
+        alternarConclusaoTarefaAgenda(tarefa.id, true);
+        notificar(`Meta atingida! "${tarefa.materia}" concluída.`);
         return;
       }
 
@@ -12056,29 +12139,30 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const display = document.getElementById('agTimerDisplayDigital');
       const nomeEl = document.getElementById('agTimerNomeTarefaAtiva');
       const restEl = document.getElementById('agTimerMetaRestanteTxt');
-      const badgeEl = document.getElementById('agTimerBadgeBloco');
       const indVisual = document.getElementById('agTimerIndicadorVisual');
+      const badgeMediaTopo = document.getElementById('agBadgeMediaMinPaginaTopo');
+      const badgeMediaSide = document.getElementById('agBadgeMediaLeituraSidebar');
+
+      const infoRitmo = obterInfoMediaTempoPorPagina_();
+      if (badgeMediaTopo) badgeMediaTopo.textContent = infoRitmo.textoCurto;
+      if (badgeMediaSide) badgeMediaSide.textContent = infoRitmo.textoCurto;
 
       const tarefa = AG_TIMER.taskId ? AG_STATE.tarefas.find(t => t.id === AG_TIMER.taskId) : null;
       if (!tarefa) {
         if (btnPlay) { btnPlay.disabled = true; btnPlay.textContent = 'Iniciar'; }
         if (btnConc) btnConc.disabled = true;
         if (display) display.textContent = '00:00:00';
-        if (nomeEl) nomeEl.textContent = 'Clique em ▶ em qualquer tarefa ou bloco da agenda';
-        if (restEl) restEl.textContent = 'Tempo estudado: 00:00:00 | Restante da meta: --:--';
-        if (badgeEl) {
-          badgeEl.textContent = 'Parado';
-          badgeEl.className = 'px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 text-[9px] font-bold';
-        }
-        if (indVisual) indVisual.className = 'w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-extrabold text-xs text-slate-300 shrink-0';
+        if (nomeEl) nomeEl.textContent = 'Nenhuma tarefa ativa no cronômetro';
+        if (restEl) restEl.textContent = 'Clique em ▶ em qualquer tarefa';
+        if (indVisual) indVisual.className = 'w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[11px] font-bold text-slate-300';
         return;
       }
 
       if (btnPlay) {
         btnPlay.disabled = false;
         btnPlay.textContent = AG_TIMER.ativo ? 'Pausar' : 'Continuar';
-        btnPlay.className = `px-2.5 py-1.5 rounded-lg font-extrabold text-xs text-white transition ${
-          AG_TIMER.ativo ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-emerald-600 hover:bg-emerald-500'
+        btnPlay.className = `px-2.5 py-1 rounded-lg font-extrabold text-[11px] transition ${
+          AG_TIMER.ativo ? 'bg-amber-500 text-slate-950' : 'bg-emerald-600 text-white'
         }`;
       }
       if (btnConc) btnConc.disabled = false;
@@ -12088,18 +12172,12 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const segRestantes = Math.max(0, segMeta - segEstudados);
 
       if (display) display.textContent = formatarSegundosDigital_(segEstudados);
-      if (nomeEl) nomeEl.textContent = `${tarefa.materia} — ${tarefa.titulo}`;
+      if (nomeEl) nomeEl.textContent = `${obterLabelCurtoTipoGrade_(tarefa.tipo)} • ${tarefa.materia}`;
       if (restEl) {
-        restEl.textContent = `Meta total: ${formatarMinutosHorasCurto_(tarefa.metaMinutos)} | Falta: ${formatarSegundosDigital_(segRestantes)}`;
-      }
-      if (badgeEl) {
-        badgeEl.textContent = AG_TIMER.ativo ? 'EM EXECUÇÃO' : 'PAUSADO';
-        badgeEl.className = AG_TIMER.ativo
-          ? 'px-1.5 py-0.2 rounded bg-emerald-600 text-white text-[9px] font-extrabold'
-          : 'px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 text-[9px] font-extrabold';
+        restEl.textContent = `Falta: ${formatarSegundosDigital_(segRestantes)}`;
       }
       if (indVisual) {
-        indVisual.className = `w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs text-white shrink-0 ${
+        indVisual.className = `w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold text-white ${
           AG_TIMER.ativo ? 'bg-emerald-600 gcal-timer-active-ring' : 'bg-indigo-600'
         }`;
       }
@@ -12117,6 +12195,15 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         if ((t.segundosEstudados || 0) === 0) {
           t.segundosEstudados = (t.metaMinutos || 30) * 60;
         }
+        if ((t.metaUnidades || 0) > 0 && (t.unidadesConcluidas || 0) === 0) {
+          t.unidadesConcluidas = t.metaUnidades;
+        }
+        // Se for tarefa de Conteúdo do Dia (ESTUDO), incorpora ao histórico acumulado de ritmo min/página
+        if (t.tipo === 'ESTUDO' && (t.unidadesConcluidas || 0) > 0 && !t.contabilizadoNoHistoricoLeitura) {
+          AG_STATE.historicoLeitura.segundosTotais = (AG_STATE.historicoLeitura.segundosTotais || 0) + (t.segundosEstudados || 0);
+          AG_STATE.historicoLeitura.paginasTotais = (AG_STATE.historicoLeitura.paginasTotais || 0) + Number(t.unidadesConcluidas);
+          t.contabilizadoNoHistoricoLeitura = true;
+        }
         (t.blocos || []).forEach(b => { b.concluido = true; });
         if (AG_TIMER.taskId === t.id) pausarTimerAgenda_();
       } else {
@@ -12128,16 +12215,15 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     }
 
     /* ==========================================================================
-     * 11.6 RENDERIZAÇÃO COMPLETA DA AGENDA (CAIXA + GRADE GOOGLE CALENDAR 4 DIAS)
+     * 11.6 RENDERIZAÇÃO DAS 3 GAVETAS DO DIA E GRADE LIMPA EM TELA CHEIA
      * ========================================================================== */
     function renderizarAgendaCompletaUI() {
-      const secAgenda = document.getElementById('aba-agenda');
+      const secAgenda = document.getElementById('area-agenda');
       if (!secAgenda) return;
 
       atualizarKpisSuperioresAgenda_();
       atualizarPainelTimerTopoUI_();
-      renderizarCaixaTarefasAgenda_();
-      renderizarLegendaCoresPadraoAgenda_();
+      renderizarSidebar3AreasDoDia_();
       renderizarGradeGoogleCalendar4Dias_();
     }
 
@@ -12182,19 +12268,11 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const mHoje = calcularMetricasDoDiaAgenda_(hojeYMD);
 
       const elPlan = document.getElementById('agKpiPlanejadoHoje');
-      const elMetaSub = document.getElementById('agKpiMetaDiariaSub');
       const elReal = document.getElementById('agKpiRealizadoHoje');
-      const elPercSub = document.getElementById('agKpiPercHojeSub');
-      const elRest = document.getElementById('agKpiRestanteHoje');
-      const elBlocosSub = document.getElementById('agKpiBlocosHojeSub');
       const elLivre = document.getElementById('agKpiLivreHoje');
 
       if (elPlan) elPlan.textContent = formatarMinutosHorasCurto_(mHoje.minPlanejados);
-      if (elMetaSub) elMetaSub.textContent = `Meta diária: ${formatarMinutosHorasCurto_(mHoje.metaDia)}`;
       if (elReal) elReal.textContent = formatarMinutosHorasCurto_(mHoje.minRealizados);
-      if (elPercSub) elPercSub.textContent = `${mHoje.percMeta}% da meta cumprida`;
-      if (elRest) elRest.textContent = formatarMinutosHorasCurto_(mHoje.minRestantes);
-      if (elBlocosSub) elBlocosSub.textContent = `${mHoje.qtdBlocos} bloco(s) hoje`;
       if (elLivre) elLivre.textContent = formatarMinutosHorasCurto_(mHoje.minLivres);
 
       const pendentesCount = AG_STATE.tarefas.filter(t => !t.concluida).length;
@@ -12202,105 +12280,94 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       if (badgeNav) badgeNav.textContent = pendentesCount;
     }
 
-    function renderizarCaixaTarefasAgenda_() {
-      const cont = document.getElementById('agListaCaixaTarefas');
-      if (!cont) return;
+    function gerarCardResumoSidebarHTML_(t) {
+      const cor = obterCorEfetivaTarefaAgenda_(t);
+      const isRodando = AG_TIMER.ativo && AG_TIMER.taskId === t.id;
+      const primeiroBloco = (t.blocos || [])[0];
+      const horarioTxt = primeiroBloco
+        ? `${minutosParaHoraStr_(primeiroBloco.inicioMin)} - ${minutosParaHoraStr_(primeiroBloco.inicioMin + primeiroBloco.duracaoMin)}`
+        : 'Arraste p/ horário';
 
-      const filtro = AG_STATE.filtroInbox || 'TODOS';
-      const lista = AG_STATE.tarefas
-        .filter(t => filtro === 'TODOS' || t.tipo === filtro)
-        .slice()
-        .sort((a, b) => {
-          if (a.concluida !== b.concluida) return a.concluida ? 1 : -1;
-          const ordA = obterOrdemRecomendadaTipo_(a.tipo);
-          const ordB = obterOrdemRecomendadaTipo_(b.tipo);
-          if (ordA !== ordB) return ordA - ordB;
-          return obterPesoPrioridadeAgenda_(a.prioridade) - obterPesoPrioridadeAgenda_(b.prioridade);
-        });
-
-      if (lista.length === 0) {
-        cont.innerHTML = `<div class="p-5 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-slate-800">Nenhuma tarefa neste filtro. Clique em "+ Criar" ou "Sincronizar Metas do Dia".</div>`;
-        return;
+      let subInfoUnidades = '';
+      if (t.tipo === 'ESTUDO') {
+        const lidas = t.unidadesConcluidas || 0;
+        const totalP = t.metaUnidades || 0;
+        subInfoUnidades = totalP > 0 ? `${lidas}/${totalP} pág.` : `${formatarMinutosHorasCurto_(t.metaMinutos)}`;
+      } else if (t.tipo === 'REVISAO') {
+        const rev = t.unidadesConcluidas || 0;
+        const totalC = t.metaUnidades || 0;
+        subInfoUnidades = `${totalC} cartões (${rev} rev.)`;
+      } else {
+        const totalQ = t.metaUnidades || 0;
+        subInfoUnidades = totalQ > 0 ? `${totalQ} questões` : `${formatarMinutosHorasCurto_(t.metaMinutos)}`;
       }
 
-      cont.innerHTML = lista.map(t => {
-        const cor = obterCorEfetivaTarefaAgenda_(t);
-        const minEstudados = Math.floor((t.segundosEstudados || 0) / 60);
-        const minRestantes = Math.max(0, t.metaMinutos - minEstudados);
-        const pct = t.metaMinutos > 0 ? Math.min(100, Math.round((minEstudados / t.metaMinutos) * 100)) : 0;
-        const qtdBlocos = (t.blocos || []).length;
-        const isRodando = AG_TIMER.ativo && AG_TIMER.taskId === t.id;
-
-        return `
-          <div draggable="true"
-               ondragstart="iniciarDragTarefaCaixaAgenda(event, '${t.id}')"
-               onclick="abrirModalTarefaAgenda('${t.id}')"
-               style="border-left: 4px solid ${cor};"
-               class="p-2.5 rounded-xl border border-slate-800 bg-slate-950/90 hover:border-slate-700 cursor-grab transition space-y-1.5 ${
-                 t.concluida ? 'opacity-55 saturate-50' : ''
-               } ${isRodando ? 'ring-1 ring-emerald-500' : ''}">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-start gap-2 min-w-0 flex-1">
-                <input type="checkbox" ${t.concluida ? 'checked' : ''}
-                       onclick="alternarConclusaoTarefaAgenda('${t.id}', this.checked, event)"
-                       class="mt-0.5 rounded text-emerald-600 w-3.5 h-3.5 cursor-pointer shrink-0">
-                <div class="min-w-0 flex-1">
-                  <div class="flex flex-wrap items-center gap-1">
-                    <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold uppercase text-white" style="background-color:${cor}">
-                      ${esc(obterLabelTipoAgenda_(t.tipo))}
-                    </span>
-                    <span class="text-[10px] font-bold text-slate-300 truncate">${esc(t.materia)}</span>
-                    <span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-[9px] font-bold ${
-                      t.prioridade === 'ALTA' ? 'text-rose-400' : t.prioridade === 'MEDIA' ? 'text-amber-400' : 'text-slate-400'
-                    }">${t.prioridade}</span>
-                  </div>
-                  <div class="text-xs font-extrabold text-white mt-0.5 ${t.concluida ? 'line-through text-slate-400' : ''}">
-                    ${esc(t.titulo)}
-                  </div>
-                </div>
+      return `
+        <div draggable="true"
+             ondragstart="iniciarDragTarefaCaixaAgenda(event, '${t.id}')"
+             onclick="abrirModalTarefaAgenda('${t.id}')"
+             style="border-left: 4px solid ${cor};"
+             class="p-2.5 rounded-xl border border-slate-800 bg-slate-950/90 hover:border-slate-700 cursor-pointer transition flex items-center justify-between gap-2 ${
+               t.concluida ? 'opacity-45' : ''
+             } ${isRodando ? 'ring-1 ring-emerald-500' : ''}">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <input type="checkbox" ${t.concluida ? 'checked' : ''}
+                   onclick="alternarConclusaoTarefaAgenda('${t.id}', this.checked, event)"
+                   class="rounded text-emerald-600 w-3.5 h-3.5 cursor-pointer shrink-0">
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-extrabold text-white truncate ${t.concluida ? 'line-through' : ''}">
+                ${esc(t.materia)}
               </div>
-
-              <button type="button"
-                      onclick="iniciarOuFocarTimerAgenda('${t.id}', null, event)"
-                      class="px-2 py-1 rounded-lg font-extrabold text-[10px] shrink-0 transition ${
-                        isRodando ? 'bg-amber-500 text-slate-950' : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                      }" title="Iniciar/Pausar cronômetro desta tarefa">
-                ${isRodando ? '⏸' : '▶'}
-              </button>
-            </div>
-
-            <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/80">
-              <span>Meta: <strong class="text-slate-200">${formatarMinutosHorasCurto_(t.metaMinutos)}</strong> (Falta: ${formatarMinutosHorasCurto_(minRestantes)})</span>
-              <span class="font-bold ${qtdBlocos > 0 ? 'text-indigo-400' : 'text-amber-400'}">
-                ${qtdBlocos > 0 ? `${qtdBlocos} bloco(s) na grade` : 'Sem horário (Arraste)'}
-              </span>
-            </div>
-
-            <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-              <div class="h-full bg-emerald-500 transition-all" style="width:${pct}%"></div>
+              <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                <span class="font-semibold text-indigo-300">${esc(horarioTxt)}</span>
+                <span>•</span>
+                <span>${esc(subInfoUnidades)}</span>
+              </div>
             </div>
           </div>
-        `;
-      }).join('');
+
+          <button type="button"
+                  onclick="iniciarOuFocarTimerAgenda('${t.id}', null, event)"
+                  class="px-2 py-1 rounded-lg font-extrabold text-[10px] shrink-0 transition ${
+                    isRodando ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white'
+                  }" title="Iniciar/Pausar cronômetro">
+            ${isRodando ? '⏸' : '▶'}
+          </button>
+        </div>
+      `;
     }
 
-    function renderizarLegendaCoresPadraoAgenda_() {
-      const cont = document.getElementById('agLegendaCategoriasCores');
-      if (!cont) return;
-      const itens = [
-        { codigo: 'REVISAO', nome: '1º Revisão & Aquecimento de Cartões', cor: AG_STATE.coresPadrao?.REVISAO || '#8b5cf6' },
-        { codigo: 'ESTUDO', nome: '2º Estudo Teórico (PDF / Vídeo / Lei)', cor: AG_STATE.coresPadrao?.ESTUDO || '#3b82f6' },
-        { codigo: 'QUESTOES', nome: '3º Bateria de Questões (Fixação)', cor: AG_STATE.coresPadrao?.QUESTOES || '#10b981' }
-      ];
-      cont.innerHTML = itens.map(it => `
-        <div class="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-slate-950 border border-slate-800">
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full shrink-0" style="background-color:${it.cor}"></span>
-            <span class="font-bold text-slate-200">${esc(it.nome)}</span>
-          </div>
-          <span class="text-[10px] font-mono text-slate-400">${it.cor}</span>
-        </div>
-      `).join('');
+    function renderizarSidebar3AreasDoDia_() {
+      const contConteudo = document.getElementById('agListaAreaConteudoDia');
+      const contAquec = document.getElementById('agListaAreaAquecimento');
+      const contBat = document.getElementById('agListaAreaBaterias');
+
+      const listaConteudo = AG_STATE.tarefas.filter(t => t.tipo === 'ESTUDO');
+      const listaAquec = AG_STATE.tarefas.filter(t => t.tipo === 'REVISAO');
+      const listaBat = AG_STATE.tarefas.filter(t => t.tipo === 'QUESTOES');
+
+      const elCountAq = document.getElementById('agCountAreaAquecimento');
+      const elCountBat = document.getElementById('agCountAreaBaterias');
+      if (elCountAq) elCountAq.textContent = `${listaAquec.length} tarefa(s)`;
+      if (elCountBat) elCountBat.textContent = `${listaBat.length} bateria(s)`;
+
+      if (contConteudo) {
+        contConteudo.innerHTML = listaConteudo.length === 0
+          ? `<div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">Nenhum conteúdo teórico pendente.</div>`
+          : listaConteudo.map(gerarCardResumoSidebarHTML_).join('');
+      }
+
+      if (contAquec) {
+        contAquec.innerHTML = listaAquec.length === 0
+          ? `<div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">Nenhum aquecimento pendente.</div>`
+          : listaAquec.map(gerarCardResumoSidebarHTML_).join('');
+      }
+
+      if (contBat) {
+        contBat.innerHTML = listaBat.length === 0
+          ? `<div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">Nenhuma bateria programada.</div>`
+          : listaBat.map(gerarCardResumoSidebarHTML_).join('');
+      }
     }
 
     function renderizarGradeGoogleCalendar4Dias_() {
@@ -12314,7 +12381,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           : `${formatarDataBR(diasVisiveis[0])} a ${formatarDataBR(diasVisiveis[diasVisiveis.length - 1])}`;
       }
 
-      // 1. Cabeçalho das colunas de dias
       const headerDiasEl = document.getElementById('agHeaderColunasDias');
       const gridColsClass = diasVisiveis.length === 1 ? 'grid-cols-1' : 'grid-cols-4';
       if (headerDiasEl) {
@@ -12326,37 +12392,20 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           const diaMesCurto = `${partesData[2]}/${partesData[1]}`;
 
           return `
-            <div class="p-2.5 ${isHoje ? 'bg-indigo-950/40' : 'bg-slate-950'} space-y-1">
-              <div class="flex items-center justify-between gap-1">
-                <div class="flex items-center gap-1.5">
-                  <span class="text-xs font-extrabold ${isHoje ? 'text-indigo-400' : 'text-white'}">${diaMesCurto}</span>
-                  <span class="text-[11px] font-bold text-slate-300">${esc(nomeDiaSemana_(dt))}</span>
-                </div>
+            <div class="px-3 py-2 ${isHoje ? 'bg-indigo-950/35' : 'bg-slate-900'} flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold ${isHoje ? 'text-indigo-400' : 'text-white'}">${diaMesCurto}</span>
+                <span class="text-xs font-bold text-slate-300">${esc(nomeDiaSemana_(dt))}</span>
                 ${isHoje ? '<span class="px-1.5 py-0.2 rounded bg-indigo-600 text-white font-extrabold text-[9px] uppercase">HOJE</span>' : ''}
               </div>
-
-              <div class="grid grid-cols-2 gap-1 text-[10px] pt-0.5">
-                <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800">
-                  <span class="text-slate-400">Plan:</span> <strong class="text-white">${formatarMinutosHorasCurto_(mDia.minPlanejados)}</strong>
-                </div>
-                <div class="bg-slate-900/90 px-1.5 py-0.5 rounded border border-slate-800">
-                  <span class="text-slate-400">Real:</span> <strong class="text-emerald-400">${formatarMinutosHorasCurto_(mDia.minRealizados)}</strong>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between text-[9px] text-slate-400">
-                <span>Livre: <strong class="text-purple-300">${formatarMinutosHorasCurto_(mDia.minLivres)}</strong></span>
-                <span>Meta: ${mDia.percMeta}%</span>
-              </div>
-              <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
-                <div class="h-full bg-indigo-500 transition-all" style="width:${mDia.percMeta}%"></div>
+              <div class="text-[10px] text-slate-400 font-semibold">
+                <strong class="text-emerald-400">${formatarMinutosHorasCurto_(mDia.minRealizados)}</strong> / ${formatarMinutosHorasCurto_(mDia.minPlanejados)}
               </div>
             </div>
           `;
         }).join('');
       }
 
-      // 2. Régua de 24 horas (00:00 às 23:00)
       const reguaEl = document.getElementById('agColunaReguaHoras');
       if (reguaEl) {
         let htmlHoras = '';
@@ -12367,7 +12416,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         reguaEl.innerHTML = htmlHoras;
       }
 
-      // 3. Colunas dos dias e renderização dos blocos de horário
       const containerCols = document.getElementById('agContainerColunasDiasGrid');
       if (!containerCols) return;
       containerCols.className = `flex-1 grid ${gridColsClass} divide-x divide-slate-800 relative`;
@@ -12389,34 +12437,32 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
         blocosDoDia.sort((a, b) => a.bloco.inicioMin - b.bloco.inicioMin);
 
+        // VISUALIZAÇÃO LIMPA NA GRADE: Exibe APENAS Horário, Tipo de Atividade e Matéria
         const eventosHTML = blocosDoDia.map(item => {
-          const { tarefa, bloco, numeroBloco, totalBlocosTarefa } = item;
+          const { tarefa, bloco } = item;
           const cor = obterCorEfetivaTarefaAgenda_(tarefa);
           const topPx = Math.round((bloco.inicioMin / 60) * AG_PX_POR_HORA);
-          const heightPx = Math.max(22, Math.round((bloco.duracaoMin / 60) * AG_PX_POR_HORA) - 2);
+          const heightPx = Math.max(24, Math.round((bloco.duracaoMin / 60) * AG_PX_POR_HORA) - 2);
           const horaIniStr = minutosParaHoraStr_(bloco.inicioMin);
           const horaFimStr = minutosParaHoraStr_(bloco.inicioMin + bloco.duracaoMin);
           const isConcluido = Boolean(tarefa.concluida || bloco.concluido);
           const isTimerAtivo = AG_TIMER.ativo && AG_TIMER.taskId === tarefa.id && AG_TIMER.blockId === bloco.id;
-
-          const minEstudadosTarefa = Math.floor((tarefa.segundosEstudados || 0) / 60);
-          const labelDivisao = totalBlocosTarefa > 1 ? ` [Bloco ${numeroBloco}/${totalBlocosTarefa}]` : '';
+          const tipoCurto = obterLabelCurtoTipoGrade_(tarefa.tipo);
 
           return `
             <div draggable="true"
                  ondragstart="iniciarDragBlocoNaGrade(event, '${tarefa.id}', '${bloco.id}')"
                  onclick="abrirModalTarefaAgenda('${tarefa.id}', '${bloco.id}', event)"
-                 style="top:${topPx}px; height:${heightPx}px; background-color:${cor}26; border-color:${cor}; color:#ffffff;"
-                 class="gcal-event-block ${isConcluido ? 'gcal-event-completed' : ''} ${isTimerAtivo ? 'gcal-timer-active-ring' : ''}">
-              <div class="flex items-start justify-between gap-1 min-w-0">
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1 text-[10px] font-extrabold" style="color:${cor}">
-                    <span>${horaIniStr} - ${horaFimStr}</span>
-                    <span>• ${esc(tarefa.materia)}</span>
-                  </div>
-                  <div class="gcal-event-title font-extrabold text-[11px] text-white truncate">
-                    ${esc(tarefa.titulo)}${esc(labelDivisao)}
-                  </div>
+                 style="top:${topPx}px; height:${heightPx}px; background-color:${cor}28; border-color:${cor}; color:#ffffff;"
+                 class="gcal-event-block ${isConcluido ? 'gcal-event-completed' : ''} ${isTimerAtivo ? 'gcal-timer-active-ring' : ''}"
+                 title="Clique para ver tópico, páginas, cartões ou questões">
+              <div class="flex items-center justify-between gap-1.5 min-w-0">
+                <div class="min-w-0 flex-1 truncate">
+                  <span class="font-mono font-bold text-[10px]" style="color:${cor}">${horaIniStr}-${horaFimStr}</span>
+                  <span class="mx-1 text-slate-400">•</span>
+                  <span class="font-extrabold text-[10px] uppercase tracking-wide" style="color:${cor}">${esc(tipoCurto)}</span>
+                  <span class="mx-1 text-slate-400">—</span>
+                  <span class="gcal-event-title font-extrabold text-[11px] text-white">${esc(tarefa.materia)}</span>
                 </div>
 
                 <div class="flex items-center gap-1 shrink-0">
@@ -12424,22 +12470,15 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
                           onclick="iniciarOuFocarTimerAgenda('${tarefa.id}', '${bloco.id}', event)"
                           class="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-white transition"
                           style="background-color:${isTimerAtivo ? '#f59e0b' : cor}"
-                          title="Iniciar/Pausar cronômetro neste bloco">
+                          title="Iniciar/Pausar cronômetro">
                     ${isTimerAtivo ? '⏸' : '▶'}
                   </button>
                   <input type="checkbox" ${isConcluido ? 'checked' : ''}
                          onclick="alternarConclusaoBlocoIndividualAgenda('${tarefa.id}', '${bloco.id}', this.checked, event)"
                          class="w-3.5 h-3.5 rounded cursor-pointer"
-                         title="Marcar bloco como concluído">
+                         title="Concluir horário">
                 </div>
               </div>
-
-              ${heightPx >= 44 ? `
-                <div class="flex items-center justify-between text-[9px] text-slate-300 pb-1">
-                  <span>Bloco: ${formatarMinutosHorasCurto_(bloco.duracaoMin)} | Meta Total: ${minEstudadosTarefa}/${tarefa.metaMinutos}m</span>
-                  <span>${isConcluido ? '✓ Realizada' : ''}</span>
-                </div>
-              ` : ''}
 
               <div class="gcal-resize-handle"
                    onmousedown="iniciarRedimensionamentoBlocoAgenda(event, '${tarefa.id}', '${bloco.id}')"></div>
@@ -12492,10 +12531,10 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         tarefa.segundosEstudados = Math.min(tarefa.metaMinutos * 60, (tarefa.segundosEstudados || 0) + segAdicional);
       }
 
-      // Se todos os blocos da tarefa estiverem concluídos e cobrirem a meta, marca a tarefa como concluída
       const todosConcluidos = tarefa.blocos.length > 0 && tarefa.blocos.every(b => b.concluido);
       if (todosConcluidos) {
-        tarefa.concluida = true;
+        alternarConclusaoTarefaAgenda(tarefa.id, true);
+        return;
       } else if (!marcado) {
         tarefa.concluida = false;
       }
@@ -12505,7 +12544,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     }
 
     /* ==========================================================================
-     * 11.7 DRAG & DROP ENTRE CAIXA E DIAS + REDIMENSIONAMENTO DE DURAÇÃO
+     * 11.7 DRAG & DROP ENTRE GAVETA E GRADE + REDIMENSIONAMENTO DE HORÁRIOS
      * ========================================================================== */
     function iniciarDragTarefaCaixaAgenda(ev, taskId) {
       ev.dataTransfer.setData('text/plain', JSON.stringify({
@@ -12552,7 +12591,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const offsetDrag = payload.origem === 'GRID' ? (payload.offsetY || 10) : 10;
       const yRelativo = Math.max(0, ev.clientY - rectCol.top - offsetDrag);
 
-      // Converte Y em minutos e arredonda para múltiplos de 15 minutos
       let inicioMin = Math.round(((yRelativo / AG_PX_POR_HORA) * 60) / 15) * 15;
       inicioMin = Math.max(0, Math.min(23 * 60, inicioMin));
 
@@ -12563,7 +12601,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           bloco.inicioMin = inicioMin;
         }
       } else {
-        // Tarefa vinda da Caixa de Entrada: cria bloco com o tempo restante ainda não alocado
         const minEstudados = Math.floor((tarefa.segundosEstudados || 0) / 60);
         const minJaAlocados = (tarefa.blocos || []).reduce((acc, b) => acc + b.duracaoMin, 0);
         const duracaoNovoBloco = Math.max(15, tarefa.metaMinutos - Math.max(minEstudados, minJaAlocados));
@@ -12606,7 +12643,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         const novaDuracao = Math.max(15, Math.min(8 * 60, AG_RESIZE_STATE.duracaoInicialMin + deltaMin));
 
         bloco.duracaoMin = novaDuracao;
-        // Se a soma dos blocos superar a meta original e só houver 1 bloco, atualiza a meta estimada
         if (tarefa.blocos.length === 1) {
           tarefa.metaMinutos = novaDuracao;
         }
@@ -12636,7 +12672,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     }
 
     /* ==========================================================================
-     * 11.8 MODAL DE CRIAÇÃO, EDIÇÃO, DIVISÃO EM BLOCOS E ESCOPO DE CORES
+     * 11.8 MODAL DE DETALHES DA TAREFA (ABRE AO CLICAR NA TAREFA/BLOCO)
      * ========================================================================== */
     function renderizarPaletaCoresModalAgenda_() {
       const cont = document.getElementById('agSeletorPaletaCores');
@@ -12664,10 +12700,28 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       });
     }
 
+    function ajustarLabelsUnidadesModal_(tipo) {
+      const lblMeta = document.getElementById('lblAgMetaUnidades');
+      const lblConc = document.getElementById('lblAgUnidadesConcluidas');
+      if (!lblMeta || !lblConc) return;
+
+      if (tipo === 'ESTUDO') {
+        lblMeta.textContent = 'Páginas Previstas Hoje';
+        lblConc.textContent = 'Páginas Lidas (Progresso)';
+      } else if (tipo === 'REVISAO') {
+        lblMeta.textContent = 'Quantidade de Cartões da Matéria';
+        lblConc.textContent = 'Cartões Revisados / Dominados';
+      } else {
+        lblMeta.textContent = 'Quantidade de Questões na Bateria';
+        lblConc.textContent = 'Questões Resolvidas';
+      }
+    }
+
     function aoMudarTipoTarefaModalAgenda() {
       const tipo = document.getElementById('agFormTipo').value;
       const corPadraoTipo = AG_STATE.coresPadrao?.[tipo] || '#4f46e5';
       selecionarCorNoModalAgenda(corPadraoTipo);
+      ajustarLabelsUnidadesModal_(tipo);
     }
 
     function abrirModalTarefaAgenda(taskId = null, blockId = null, ev = null, dataDefault = null, inicioMinDefault = null) {
@@ -12680,12 +12734,16 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
       const hojeYMD = dataDefault || (ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date()));
       const btnExcluir = document.getElementById('btnAgExcluirTarefaModal');
+      const painelContexto = document.getElementById('modalAgPainelContextoEspecifico');
+      const badgeCat = document.getElementById('modalAgBadgeCategoria');
+      const infoRitmo = obterInfoMediaTempoPorPagina_();
 
       if (taskId) {
         const t = AG_STATE.tarefas.find(x => x.id === taskId);
         if (!t) return;
 
-        document.getElementById('modalAgTarefaTitulo').textContent = 'Editar Tarefa, Blocos de Horário e Personalização';
+        ajustarLabelsUnidadesModal_(t.tipo || 'ESTUDO');
+        document.getElementById('modalAgTarefaTitulo').textContent = `${t.materia} — ${t.titulo}`;
         document.getElementById('agFormTaskId').value = t.id;
         document.getElementById('agFormBlockId').value = blockId || '';
         document.getElementById('agFormTitulo').value = t.titulo;
@@ -12695,14 +12753,89 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         document.getElementById('agFormMetaMinutos').value = t.metaMinutos || 60;
         document.getElementById('agFormRepeticao').value = t.repeticao || 'NENHUMA';
         document.getElementById('agFormDescricao').value = t.descricao || '';
+        document.getElementById('agFormMetaUnidades').value = t.metaUnidades || 0;
+        document.getElementById('agFormUnidadesConcluidas').value = t.unidadesConcluidas || 0;
         document.getElementById('agFormMinutosRealizados').value = Math.floor((t.segundosEstudados || 0) / 60);
         document.getElementById('agFormConcluida').checked = Boolean(t.concluida);
+
+        if (badgeCat) {
+          badgeCat.textContent = t.tipo === 'ESTUDO'
+            ? 'Área A • Conteúdo do Dia'
+            : t.tipo === 'REVISAO'
+              ? 'Área B • Aquecimento de Cartões da Bateria'
+              : 'Área C • Bateria de Questões';
+        }
+
+        // Renderiza o painel de informações detalhadas sob demanda (exibido apenas ao clicar na tarefa)
+        if (painelContexto) {
+          painelContexto.classList.remove('hidden');
+          const pctUnid = (t.metaUnidades || 0) > 0
+            ? Math.min(100, Math.round(((t.unidadesConcluidas || 0) / t.metaUnidades) * 100))
+            : 0;
+
+          if (t.tipo === 'ESTUDO') {
+            painelContexto.innerHTML = `
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-extrabold text-white text-xs">Tópico: ${esc(t.topicoEspecifico || t.descricao || t.titulo)}</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">
+                    Páginas previstas hoje: <strong>${t.metaUnidades || 0} pág.</strong> |
+                    Lidas: <strong class="text-emerald-400">${t.unidadesConcluidas || 0} pág. (${pctUnid}%)</strong> |
+                    Ritmo: <strong class="text-indigo-300">${esc(infoRitmo.textoDetalhado)}</strong>
+                  </div>
+                </div>
+                <button type="button" onclick="fecharModalTarefaAgenda(); iniciarOuFocarTimerAgenda('${t.id}');" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">
+                  ▶ Iniciar Cronômetro de Leitura
+                </button>
+              </div>
+            `;
+          } else if (t.tipo === 'REVISAO') {
+            painelContexto.innerHTML = `
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-extrabold text-white text-xs">Aquecimento vinculado à Bateria de: ${esc(t.materia)}</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">
+                    Tópico da Bateria: <strong>${esc(t.topicoEspecifico || 'Geral')}</strong> |
+                    Cartões disponíveis: <strong>${t.metaUnidades || 0} cartões</strong> |
+                    Progresso: <strong class="text-emerald-400">${t.unidadesConcluidas || 0} revisados (${pctUnid}%)</strong>
+                  </div>
+                </div>
+                ${t.idMateriaSistema ? `
+                  <button type="button" onclick="fecharModalTarefaAgenda(); selecionarTopicoEIniciarFC('${t.idMateriaSistema}', '${t.idTopicoSistema || ''}');" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs">
+                    Abrir Player de Cartões →
+                  </button>
+                ` : ''}
+              </div>
+            `;
+          } else {
+            painelContexto.innerHTML = `
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div class="font-extrabold text-white text-xs">Bateria de Questões: ${esc(t.materia)}</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">
+                    Tópico: <strong>${esc(t.topicoEspecifico || t.descricao || 'Geral')}</strong> |
+                    Quantidade prevista: <strong class="text-emerald-400">${t.metaUnidades || 15} questões</strong>
+                  </div>
+                </div>
+                ${t.idMateriaSistema && t.idTopicoSistema ? `
+                  <button type="button" onclick="fecharModalTarefaAgenda(); atalhoRegistrarEstudo('${t.idMateriaSistema}', '${t.idTopicoSistema}', ${t.metaUnidades || 15});" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">
+                    Registrar Resolução da Bateria →
+                  </button>
+                ` : ''}
+              </div>
+            `;
+          }
+        }
 
         selecionarCorNoModalAgenda(obterCorEfetivaTarefaAgenda_(t));
         AG_MODAL_BLOCOS_TEMP = (t.blocos || []).map(b => ({ ...b }));
         if (btnExcluir) btnExcluir.classList.remove('hidden');
       } else {
-        document.getElementById('modalAgTarefaTitulo').textContent = 'Nova Tarefa de Estudo na Agenda';
+        ajustarLabelsUnidadesModal_('ESTUDO');
+        if (badgeCat) badgeCat.textContent = 'Nova Atividade';
+        if (painelContexto) painelContexto.classList.add('hidden');
+
+        document.getElementById('modalAgTarefaTitulo').textContent = 'Criar Nova Tarefa na Agenda';
         document.getElementById('agFormTaskId').value = '';
         document.getElementById('agFormBlockId').value = '';
         document.getElementById('agFormTitulo').value = '';
@@ -12712,6 +12845,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         document.getElementById('agFormMetaMinutos').value = 60;
         document.getElementById('agFormRepeticao').value = 'NENHUMA';
         document.getElementById('agFormDescricao').value = '';
+        document.getElementById('agFormMetaUnidades').value = 20;
+        document.getElementById('agFormUnidadesConcluidas').value = 0;
         document.getElementById('agFormMinutosRealizados').value = 0;
         document.getElementById('agFormConcluida').checked = false;
 
@@ -12739,11 +12874,11 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
       const somaBlocos = AG_MODAL_BLOCOS_TEMP.reduce((acc, b) => acc + Number(b.duracaoMin || 0), 0);
       if (resumoEl) {
-        resumoEl.innerHTML = `Meta Total da Tarefa: <strong class="text-white">${formatarMinutosHorasCurto_(metaMin)}</strong> | Soma dos ${AG_MODAL_BLOCOS_TEMP.length} bloco(s): <strong class="${somaBlocos === metaMin ? 'text-emerald-400' : 'text-amber-400'}">${formatarMinutosHorasCurto_(somaBlocos)}</strong>`;
+        resumoEl.innerHTML = `Meta Total: <strong class="text-white">${formatarMinutosHorasCurto_(metaMin)}</strong> | Soma dos horários: <strong class="${somaBlocos === metaMin ? 'text-emerald-400' : 'text-amber-400'}">${formatarMinutosHorasCurto_(somaBlocos)}</strong>`;
       }
 
       if (AG_MODAL_BLOCOS_TEMP.length === 0) {
-        cont.innerHTML = `<div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-center">Sem horário fixo (Ficará na Caixa de Tarefas Pendentes para arrastar depois).</div>`;
+        cont.innerHTML = `<div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-center">Sem horário fixo na grade (Arraste da barra lateral quando desejar).</div>`;
         return;
       }
 
@@ -12769,7 +12904,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
               <span class="text-[10px] text-slate-400">min</span>
             </div>
             <div class="sm:col-span-1 text-right">
-              <button type="button" onclick="removerBlocoTempModal(${idx})" class="text-rose-400 hover:text-rose-300 font-bold text-xs" title="Remover bloco">✕</button>
+              <button type="button" onclick="removerBlocoTempModal(${idx})" class="text-rose-400 hover:text-rose-300 font-bold text-xs">✕</button>
             </div>
           </div>
         `;
@@ -12850,6 +12985,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const metaMinutos = Math.max(5, Number(document.getElementById('agFormMetaMinutos').value || 60));
       const repeticao = document.getElementById('agFormRepeticao').value;
       const descricao = document.getElementById('agFormDescricao').value.trim();
+      const metaUnidades = Math.max(0, Number(document.getElementById('agFormMetaUnidades').value || 0));
+      const unidadesConcluidas = Math.max(0, Number(document.getElementById('agFormUnidadesConcluidas').value || 0));
       const corHex = document.getElementById('agFormCorHex').value || '#3b82f6';
       const minRealizadosInput = Math.max(0, Number(document.getElementById('agFormMinutosRealizados').value || 0));
       const concluida = Boolean(document.getElementById('agFormConcluida').checked);
@@ -12874,6 +13011,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         tarefaAlvo.metaMinutos = metaMinutos;
         tarefaAlvo.repeticao = repeticao;
         tarefaAlvo.descricao = descricao;
+        tarefaAlvo.metaUnidades = metaUnidades;
+        tarefaAlvo.unidadesConcluidas = unidadesConcluidas;
         tarefaAlvo.corPersonalizada = radioEscopo === 'SOMENTE_DIA' ? corHex : null;
         tarefaAlvo.segundosEstudados = minRealizadosInput * 60;
         tarefaAlvo.concluida = concluida;
@@ -12886,10 +13025,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           id: gerarId_('AG_T'),
           titulo,
           materia,
+          topicoEspecifico: descricao,
           tipo,
           prioridade,
           metaMinutos,
           segundosEstudados: minRealizadosInput * 60,
+          metaUnidades,
+          unidadesConcluidas,
           corPersonalizada: radioEscopo === 'SOMENTE_DIA' ? corHex : null,
           descricao,
           repeticao,
@@ -12902,7 +13044,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         };
         AG_STATE.tarefas.push(novaTarefa);
 
-        // Se configurou repetição diária, replica para os próximos 3 dias da janela
         if (repeticao === 'DIARIA' || repeticao === 'DIAS_UTEIS') {
           for (let d = 1; d <= 3; d++) {
             const dtFutura = somarDiasYMD_(hojeYMD, d);
@@ -12913,6 +13054,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
               ...novaTarefa,
               id: gerarId_('AG_T'),
               segundosEstudados: 0,
+              unidadesConcluidas: 0,
               concluida: false,
               dataReferencia: dtFutura,
               blocos: (novaTarefa.blocos || []).map(b => ({
@@ -12930,26 +13072,29 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       salvarEstadoAgendaStorage_();
       fecharModalTarefaAgenda();
       renderizarAgendaCompletaUI();
-      notificar('Tarefa salva e atualizada na Agenda.');
+      notificar('Tarefa salva na Agenda.');
     }
 
     function excluirTarefaAgendaDoModal() {
       const id = document.getElementById('agFormTaskId').value.trim();
       if (!id) return;
-      if (!confirm('Deseja realmente excluir esta tarefa e seus blocos da agenda?')) return;
+      if (!confirm('Deseja realmente excluir esta tarefa da agenda?')) return;
 
       if (AG_TIMER.taskId === id) pausarTimerAgenda_();
       AG_STATE.tarefas = AG_STATE.tarefas.filter(t => t.id !== id);
       salvarEstadoAgendaStorage_();
       fecharModalTarefaAgenda();
       renderizarAgendaCompletaUI();
-      notificar('Tarefa removida da Agenda.');
+      notificar('Tarefa removida.');
     }
 
     function abrirModalJanelaEstudoAgenda() {
       document.getElementById('agCfgHoraInicio').value = AG_STATE.configExpediente?.horaInicio || 8;
       document.getElementById('agCfgHoraFim').value = AG_STATE.configExpediente?.horaFim || 21;
       document.getElementById('agCfgMetaMinutosDia').value = AG_STATE.configExpediente?.metaMinutosDia || 240;
+      const infoRitmo = obterInfoMediaTempoPorPagina_();
+      const elInfo = document.getElementById('agModalInfoMediaPagina');
+      if (elInfo) elInfo.textContent = infoRitmo.textoDetalhado;
       document.getElementById('modalJanelaEstudoAgenda').classList.remove('hidden');
     }
 
@@ -12967,7 +13112,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       salvarEstadoAgendaStorage_();
       fecharModalJanelaEstudoAgenda();
       renderizarAgendaCompletaUI();
-      notificar('Expediente de estudo e meta diária atualizados.');
+      notificar('Expediente e meta diária salvos.');
     }
   </script>
 
