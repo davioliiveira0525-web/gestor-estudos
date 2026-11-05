@@ -481,6 +481,8 @@
       flex-direction: column;
     }
 
+    .agenda-fullscreen-workspace.hidden { display: none !important; }
+
     .ag-split {
       flex: 1 1 auto;
       min-height: 0;
@@ -3145,32 +3147,39 @@
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div>
               <span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-extrabold uppercase">Cartões Pendentes de Criação</span>
-              <h2 class="text-base font-extrabold text-white mt-1">Tópicos do Cronograma que ainda precisam de cartões do PDF-Base</h2>
-              <p class="text-[11px] text-slate-400">Leitura do PDF, criação dos cartões e resolução de questões são etapas separadas, cada uma com seu próprio registro.</p>
+              <h2 class="text-base font-extrabold text-white mt-1">Tópicos já estudados e a situação dos seus cartões-base de PDF</h2>
+              <p class="text-[11px] text-slate-400">Somente conteúdos concluídos (PDF concluído no Cronograma, teoria registrada ou questões resolvidas). Acompanhamento apenas informativo: nenhuma bateria de questões é bloqueada.</p>
             </div>
           </div>
 
+          <div id="cpAlertaSemBase" class="hidden p-3 rounded-xl bg-rose-950/40 border border-rose-800/70 text-[11px] text-rose-200"></div>
+
           <!-- Indicador automático de progresso -->
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
             <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-              <span class="text-[10px] font-bold uppercase text-slate-400 block">Total de Tópicos</span>
+              <span class="text-[10px] font-bold uppercase text-slate-400 block">Tópicos Estudados</span>
               <div id="cpKpiTotal" class="text-lg font-extrabold text-white mt-0.5">0</div>
             </div>
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-indigo-900/70">
+              <span class="text-[10px] font-bold uppercase text-indigo-300 block">Com Cartões-Base</span>
+              <div id="cpKpiComBase" class="text-lg font-extrabold text-indigo-300 mt-0.5">0</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-rose-900/70">
+              <span class="text-[10px] font-bold uppercase text-rose-400 block">Sem Cartões-Base</span>
+              <div id="cpKpiSemBase" class="text-lg font-extrabold text-rose-400 mt-0.5">0</div>
+            </div>
             <div class="p-2.5 rounded-lg bg-slate-950 border border-emerald-900/70">
-              <span class="text-[10px] font-bold uppercase text-emerald-400 block">Concluídos</span>
+              <span class="text-[10px] font-bold uppercase text-emerald-400 block">Criação Concluída</span>
               <div id="cpKpiConcluidos" class="text-lg font-extrabold text-emerald-400 mt-0.5">0</div>
             </div>
             <div class="p-2.5 rounded-lg bg-slate-950 border border-amber-900/70">
-              <span class="text-[10px] font-bold uppercase text-amber-400 block">Pendentes</span>
+              <span class="text-[10px] font-bold uppercase text-amber-400 block">Criação Pendente</span>
               <div id="cpKpiPendentes" class="text-lg font-extrabold text-amber-400 mt-0.5">0</div>
             </div>
-            <div class="p-2.5 rounded-lg bg-slate-950 border border-indigo-800">
-              <span class="text-[10px] font-bold uppercase text-indigo-300 block">Progresso</span>
+            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <span class="text-[10px] font-bold uppercase text-slate-300 block">Progresso</span>
               <div id="cpKpiProgresso" class="text-lg font-extrabold text-white mt-0.5">0%</div>
-            </div>
-            <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 col-span-2 sm:col-span-1">
-              <span class="text-[10px] font-bold uppercase text-slate-400 block">Restante</span>
-              <div id="cpKpiRestante" class="text-lg font-extrabold text-rose-400 mt-0.5">0%</div>
+              <span id="cpKpiRestante" class="text-[10px] text-slate-400">0% restante</span>
             </div>
           </div>
           <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
@@ -3188,10 +3197,11 @@
             <div class="sm:col-span-3">
               <label class="block font-bold text-slate-300 mb-1">Situação</label>
               <select id="cpFiltroSituacao" onchange="renderizarCartoesPendentes()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                <option value="PENDENTES">Somente Pendentes</option>
-                <option value="CONCLUIDOS">Somente Concluídos</option>
-                <option value="PRONTOS">Prontos para Questões</option>
-                <option value="">Todos</option>
+                <option value="SEM_BASE">Estudados sem cartões-base</option>
+                <option value="COM_BASE_ABERTA">Com cartões-base (criação em aberto)</option>
+                <option value="PENDENTES">Criação pendente</option>
+                <option value="CONCLUIDOS">Criação concluída</option>
+                <option value="">Todos os estudados</option>
               </select>
             </div>
             <div class="sm:col-span-5">
@@ -11980,6 +11990,19 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       return AG_CACHE_TELEMETRIA.mapa;
     }
 
+    function obterDataDominioCartao_(card) {
+      let melhor = '';
+      /* No banco, a avaliação com data só é gravada quando o cartão é dominado (zerado) no bloco */
+      const m = String(card.ultimaAvaliacao || '').match(/(\d{4}-\d{2}-\d{2})/);
+      if (m) melhor = m[1];
+      const tel = obterTelemetriaCartoesCache_();
+      const t = tel[card.id];
+      if (t && t.ultimaDataEstudo && /^(BOM|FACIL)$/.test(String(t.ultimaAvaliacao || '')) && t.ultimaDataEstudo > melhor) {
+        melhor = t.ultimaDataEstudo;
+      }
+      return melhor;
+    }
+
     function extrairDataEstudoCartao_(card) {
       let melhor = '';
       const tel = obterTelemetriaCartoesCache_();
@@ -12023,18 +12046,26 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       }
 
       if (v.area === 'CARTOES') {
+        /* Somente os cartões vinculados a ESTE tópico; o aquecimento só conclui quando todos foram zerados */
         const deck = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK)) ? FC_DECK : [];
-        let cards = v.idTopico ? deck.filter(c => c.idTopico === v.idTopico) : [];
-        if (cards.length === 0 && v.idMateria) cards = deck.filter(c => c.idMateria === v.idMateria);
-        const estudou = cards.some(c => extrairDataEstudoCartao_(c) >= desde);
-        if (estudou) return { concluida: true, fonte: 'Cartões de Estudo', vinculada: true };
-        if (typeof obterRegistroCartoesPorTopicoAgenda_ === 'function') {
-          const reg = obterRegistroCartoesPorTopicoAgenda_(a.materia, a.titulo);
-          if (reg && reg.concluido && String(reg.dataConclusao || '') >= desde) {
-            return { concluida: true, fonte: 'Cartões de Estudo (criação concluída)', vinculada: true };
-          }
+        const cards = v.idTopico ? deck.filter(c => c.idTopico === v.idTopico) : [];
+        if (cards.length === 0) {
+          return {
+            concluida: Boolean(a.concluidaManual),
+            fonte: 'Cartões de Estudo (tópico sem cartões vinculados)',
+            vinculada: false,
+            totalCartoes: 0,
+            cartoesZerados: 0
+          };
         }
-        return { concluida: false, fonte: 'Cartões de Estudo', vinculada: true };
+        const zerados = cards.filter(c => obterDataDominioCartao_(c) >= desde).length;
+        return {
+          concluida: zerados === cards.length,
+          fonte: `Cartões de Estudo (${zerados}/${cards.length} cartões zerados)`,
+          vinculada: true,
+          totalCartoes: cards.length,
+          cartoesZerados: zerados
+        };
       }
 
       return { concluida: Boolean(a.concluidaManual), fonte: 'Manual', vinculada: false };
@@ -12044,11 +12075,12 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       return obterStatusConclusaoAtividade_(a).concluida;
     }
 
-    /* Regra 4.4: a bateria só está preparada quando os cartões do tópico foram criados */
-    function agCartoesPendentesParaBateria_(a) {
-      if (a.tipo !== 'QUESTOES' || typeof obterRegistroCartoesPorTopicoAgenda_ !== 'function') return false;
-      const reg = obterRegistroCartoesPorTopicoAgenda_(a.materia, a.titulo);
-      return Boolean(reg && reg.existeNoCronograma && !reg.concluido);
+    /* Apenas informativo: o tópico da bateria ainda não tem cartões-base de PDF.
+       Não bloqueia, não atrasa e não condiciona a bateria de questões. */
+    function agBateriaSemCartoesBase_(a) {
+      if (a.tipo !== 'QUESTOES' || !a.vinculo || !a.vinculo.idTopico) return false;
+      const deck = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK)) ? FC_DECK : [];
+      return !deck.some(c => c.idTopico === a.vinculo.idTopico && c.tipo === 'PDF_BASE');
     }
 
     /* ==========================================================================
@@ -12410,8 +12442,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
       baterias.forEach(bat => {
         const deck = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK)) ? FC_DECK : [];
-        const cardsTop = deck.filter(c => c.idTopico === bat.idTopico);
-        const cardsAlvo = cardsTop.length > 0 ? cardsTop : deck.filter(c => c.idMateria === bat.idMateria);
+        const cardsAlvo = deck.filter(c => c.idTopico === bat.idTopico);
         const qtdQ = Math.max(10, Number(bat.questoesPlanejadas || 15));
 
         candidatos.push({
@@ -12424,7 +12455,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           duracaoMin: cardsAlvo.length > 0 ? Math.max(10, Math.min(35, Math.ceil(cardsAlvo.length * 0.4 / 5) * 5)) : 15,
           origemSistemaId: `SYS_AQ_${bat.idRevisao}`,
           vinculo: { area: 'CARTOES', idRevisao: bat.idRevisao, idTopico: bat.idTopico, idMateria: bat.idMateria },
-          detalhe: 'Aquecimento antes da bateria'
+          detalhe: cardsAlvo.length > 0 ? `Aquecimento antes da bateria • zerar os ${cardsAlvo.length} cartões do tópico` : 'Aquecimento antes da bateria • tópico ainda sem cartões vinculados'
         });
 
         candidatos.push({
@@ -12669,7 +12700,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     function alternarConclusaoManualAgenda(atvId, marcado, ev) {
       if (ev) ev.stopPropagation();
       const a = AG_STATE.atividades.find(x => x.id === atvId);
-      if (!a || a.vinculo) return;
+      if (!a || obterStatusConclusaoAtividade_(a).vinculada) return;
       a.concluidaManual = Boolean(marcado);
       if (!marcado) a.concluidaLegado = false;
       if (AG_TIMER.atvId === a.id && marcado) pausarTimerAgenda_();
@@ -12968,7 +12999,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const emAndamento = isHoje && !s.continuacao && !st.concluida && agoraMin >= a.inicioMin && agoraMin < Math.min(fimAbs, AG_MIN_DIA);
       const conflitosAtv = conflitosDoDia.filter(c => c.atv.id === a.id);
       const ultimaTransf = a.transferencias && a.transferencias.length > 0 ? a.transferencias[a.transferencias.length - 1] : null;
-      const cartoesPendentes = agCartoesPendentesParaBateria_(a);
+      const semCartoesBase = agBateriaSemCartoesBase_(a);
 
       const chips = [];
       chips.push(`<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold">⏱ ${formatarMinutosHorasCurto_(a.duracaoMin)}</span>`);
@@ -12978,7 +13009,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       if (st.concluida) chips.push(`<span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold" title="${esc(st.fonte)}">✓ Concluída</span>`);
       else if (emAndamento) chips.push(`<span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-extrabold">Agora</span>`);
       if (ultimaTransf && !st.concluida) chips.push(`<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold">Transferida de ${formatarDataBR(ultimaTransf.de).slice(0, 5)}</span>`);
-      if (cartoesPendentes && !st.concluida) chips.push(`<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px] font-bold" title="Os cartões deste tópico ainda não foram criados">⚠ Cartões pendentes</span>`);
+      if (semCartoesBase) chips.push(`<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold" title="Apenas informativo: a bateria funciona normalmente">ℹ Sem cartões-base de PDF</span>`);
+      if (a.tipo === 'REVISAO' && st.totalCartoes > 0 && !st.concluida) chips.push(`<span class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[10px] font-bold">${st.cartoesZerados}/${st.totalCartoes} zerados</span>`);
+      if (a.tipo === 'REVISAO' && st.totalCartoes === 0) chips.push(`<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-semibold">Tópico sem cartões vinculados</span>`);
       if (a.emSequencia === false) chips.push(`<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 text-[10px] font-semibold" title="Não é deslocada pela auto-organização">Fora da sequência</span>`);
 
       const avisosConflito = conflitosAtv.map(c => {
@@ -13350,7 +13383,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         document.getElementById('agModalBadgeTipo').style.backgroundColor = obterCorAtividade_(a);
 
         campos.forEach(el => { if (el) el.disabled = Boolean(a.vinculo); });
-        if (boxManual) boxManual.classList.toggle('hidden', Boolean(a.vinculo));
+        if (boxManual) boxManual.classList.toggle('hidden', st.vinculada);
         if (btnExcluir) btnExcluir.classList.remove('hidden');
 
         if (painelVinc) {
@@ -13477,6 +13510,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           a.titulo = document.getElementById('agFormTopico').value.trim() || a.titulo;
           a.materia = document.getElementById('agFormMateria').value.trim();
           a.tipo = document.getElementById('agFormTipo').value;
+        }
+        if (!obterStatusConclusaoAtividade_(a).vinculada || !a.vinculo) {
           a.concluidaManual = document.getElementById('agFormConcluidaManual').checked;
           if (!a.concluidaManual) a.concluidaLegado = false;
         }
@@ -13929,42 +13964,84 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         || null;
     }
 
+    /* Situação de cada tópico JÁ ESTUDADO (somente conteúdos concluídos):
+       - Cronograma: PDF concluído individualmente ou meta concluída
+       - Base de Tópicos: tópicos com teoria registrada ou questões resolvidas (fora do Cronograma)
+       Cartões-base de PDF são detectados automaticamente; a "criação concluída" é marcada por você. */
     function montarSituacaoCartoesPendentes_() {
-      const topicos = listarTopicosDoCronogramaParaCartoes_();
       const deck = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK)) ? FC_DECK : [];
+      const estudados = listarTopicosDoCronogramaParaCartoes_().filter(i => i.leituraConcluida);
+      const idsTopicosCobertos = new Set();
 
-      return topicos.map(item => {
-        const reg = CP_REGISTRO.itens[item.chave];
+      const itens = estudados.map(item => {
         const topCad = localizarTopicoCadastradoCP_(item);
-        const qtdCartoes = topCad ? deck.filter(c => c.idTopico === topCad.id).length : 0;
-        const cartoesConcluidos = Boolean(reg && reg.concluido);
-        const questoesIniciadas = Boolean(topCad && topCad.resolvidasTotal > 0);
+        if (topCad) idsTopicosCobertos.add(topCad.id);
+        return Object.assign({}, item, { origemEstudo: 'CRONOGRAMA', topicoCadastrado: topCad });
+      });
+
+      if (ESTADO && Array.isArray(ESTADO.topicos)) {
+        const teoriaRegistrada = new Set((ESTADO.revisoes || [])
+          .filter(r => r.tipoDataOrigem === 'Teoria_Estudada' || String(r.idSessaoOrigem || '').startsWith('TEORIA_'))
+          .map(r => r.idTopico));
+        const chavesExistentes = new Set(itens.map(i => i.chave));
+
+        ESTADO.topicos.forEach(t => {
+          if (t.status !== 'Ativo' || idsTopicosCobertos.has(t.id)) return;
+          const estudado = Number(t.resolvidasTotal || 0) > 0 || teoriaRegistrada.has(t.id);
+          if (!estudado) return;
+          const chave = cpChave_(t.materia, t.topico);
+          if (chavesExistentes.has(chave)) return;
+          chavesExistentes.add(chave);
+          itens.push({
+            chave,
+            materia: t.materia,
+            topico: t.topico,
+            tituloMeta: '',
+            semana: null,
+            meta: null,
+            paginas: 0,
+            ordem: 100000 + Number(t.ordemMateria || 99),
+            leituraConcluida: true,
+            origemEstudo: 'BASE_TOPICOS',
+            topicoCadastrado: t
+          });
+        });
+      }
+
+      return itens.map(item => {
+        const reg = CP_REGISTRO.itens[item.chave];
+        const topCad = item.topicoCadastrado;
+        const cartoesTopico = topCad ? deck.filter(c => c.idTopico === topCad.id) : [];
+        const qtdCartoesBase = cartoesTopico.filter(c => c.tipo === 'PDF_BASE').length;
         return Object.assign({}, item, {
           registro: reg || null,
-          cartoesConcluidos,
-          topicoCadastrado: topCad,
-          qtdCartoes,
-          questoesIniciadas,
-          prontoParaQuestoes: cartoesConcluidos && item.leituraConcluida
+          cartoesConcluidos: Boolean(reg && reg.concluido),
+          qtdCartoes: cartoesTopico.length,
+          qtdCartoesBase,
+          semCartoesBase: qtdCartoesBase === 0,
+          questoesResolvidas: topCad ? Number(topCad.resolvidasTotal || 0) : 0
         });
-      });
+      }).sort((x, y) => x.ordem - y.ordem);
     }
 
     function obterIndicadoresCartoesPendentes_(lista) {
       const total = lista.length;
       const concluidos = lista.filter(i => i.cartoesConcluidos).length;
       const pendentes = total - concluidos;
+      const semBase = lista.filter(i => i.semCartoesBase).length;
+      const comBase = total - semBase;
       const progresso = total > 0 ? Math.round((concluidos / total) * 1000) / 10 : 0;
       const restante = total > 0 ? Math.round((100 - progresso) * 10) / 10 : 0;
-      return { total, concluidos, pendentes, progresso, restante };
+      return { total, concluidos, pendentes, semBase, comBase, progresso, restante };
     }
 
     function atualizarBadgeCartoesPendentes_() {
       const badge = document.getElementById('badgeSubnavCartoesPendentes');
       if (!badge) return;
       const ind = obterIndicadoresCartoesPendentes_(montarSituacaoCartoesPendentes_());
-      badge.textContent = ind.pendentes;
-      badge.classList.toggle('hidden', ind.total === 0);
+      badge.textContent = ind.semBase;
+      badge.title = `${ind.semBase} tópico(s) estudado(s) sem cartões-base de PDF`;
+      badge.classList.toggle('hidden', ind.semBase === 0);
     }
 
     function popularFiltroMateriasCP_(lista) {
@@ -13985,33 +14062,46 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const ind = obterIndicadoresCartoesPendentes_(lista);
 
       document.getElementById('cpKpiTotal').textContent = ind.total;
+      document.getElementById('cpKpiComBase').textContent = ind.comBase;
+      document.getElementById('cpKpiSemBase').textContent = ind.semBase;
       document.getElementById('cpKpiConcluidos').textContent = ind.concluidos;
       document.getElementById('cpKpiPendentes').textContent = ind.pendentes;
       document.getElementById('cpKpiProgresso').textContent = `${ind.progresso}%`;
-      document.getElementById('cpKpiRestante').textContent = `${ind.restante}%`;
+      document.getElementById('cpKpiRestante').textContent = `${ind.restante}% restante`;
       document.getElementById('cpBarraProgresso').style.width = `${ind.progresso}%`;
       atualizarBadgeCartoesPendentes_();
       popularFiltroMateriasCP_(lista);
 
+      const alerta = document.getElementById('cpAlertaSemBase');
+      if (alerta) {
+        if (ind.semBase > 0) {
+          alerta.classList.remove('hidden');
+          alerta.innerHTML = `<strong>${ind.semBase} tópico(s) já estudado(s) ainda sem cartões-base de PDF.</strong> Crie esses cartões para complementar seu material de revisão. As baterias de questões continuam funcionando normalmente.`;
+        } else {
+          alerta.classList.add('hidden');
+        }
+      }
+
       const fMat = document.getElementById('cpFiltroMateria')?.value || '';
-      const fSit = document.getElementById('cpFiltroSituacao')?.value ?? 'PENDENTES';
+      const fSit = document.getElementById('cpFiltroSituacao')?.value ?? 'SEM_BASE';
       const busca = cpNormalizar_(document.getElementById('cpBuscaTexto')?.value || '');
 
       const filtrados = lista.filter(i => {
         if (fMat && i.materia !== fMat) return false;
+        if (fSit === 'SEM_BASE' && !i.semCartoesBase) return false;
+        if (fSit === 'COM_BASE_ABERTA' && (i.semCartoesBase || i.cartoesConcluidos)) return false;
         if (fSit === 'PENDENTES' && i.cartoesConcluidos) return false;
         if (fSit === 'CONCLUIDOS' && !i.cartoesConcluidos) return false;
-        if (fSit === 'PRONTOS' && !i.prontoParaQuestoes) return false;
         if (busca && !cpNormalizar_(`${i.materia} ${i.topico}`).includes(busca)) return false;
         return true;
       });
 
       if (lista.length === 0) {
-        cont.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-slate-800">Aguardando o carregamento do Cronograma para identificar os tópicos.</div>`;
+        cont.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-slate-800">Nenhum conteúdo concluído até agora. Os tópicos aparecem aqui quando você conclui o PDF no Cronograma, registra a teoria ou resolve questões.</div>`;
         return;
       }
       if (filtrados.length === 0) {
-        cont.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-slate-800">Nenhum tópico encontrado para este filtro.</div>`;
+        cont.innerHTML = `<div class="p-6 text-center text-xs text-slate-400 bg-slate-950 rounded-xl border border-slate-800">Nenhum tópico estudado neste filtro.</div>`;
         return;
       }
 
@@ -14024,14 +14114,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       cont.innerHTML = Object.keys(porMateria).map(mat => {
         const itens = porMateria[mat];
         const todosDaMateria = lista.filter(i => i.materia === mat);
-        const concMat = todosDaMateria.filter(i => i.cartoesConcluidos).length;
-        const pctMat = todosDaMateria.length > 0 ? Math.round((concMat / todosDaMateria.length) * 100) : 0;
+        const comBaseMat = todosDaMateria.filter(i => !i.semCartoesBase).length;
 
         return `
           <div class="rounded-xl border border-slate-800 bg-slate-950/70 overflow-hidden">
             <div class="px-3.5 py-2 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
               <span class="text-xs font-extrabold uppercase text-indigo-300">${esc(mat)}</span>
-              <span class="text-[11px] font-bold text-slate-300">${concMat}/${todosDaMateria.length} tópicos com cartões (${pctMat}%)</span>
+              <span class="text-[11px] font-bold text-slate-300">${comBaseMat}/${todosDaMateria.length} tópicos estudados com cartões-base</span>
             </div>
             <div class="divide-y divide-slate-800">
               ${itens.map(i => gerarLinhaTopicoPendenteHTML_(i)).join('')}
@@ -14043,37 +14132,45 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
     function gerarLinhaTopicoPendenteHTML_(i) {
       const dataConc = i.registro && i.registro.dataConclusao ? formatarDataBR(i.registro.dataConclusao) : '';
-      const chipLeitura = i.leituraConcluida
-        ? '<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">Leitura do PDF: concluída</span>'
-        : '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">Leitura do PDF: pendente</span>';
-      const chipCartoes = i.cartoesConcluidos
-        ? `<span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">Cartões: concluídos${dataConc ? ` em ${dataConc}` : ''}</span>`
-        : '<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px] font-bold">Cartões: pendentes</span>';
-      const chipQuestoes = i.prontoParaQuestoes
-        ? `<span class="px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-extrabold">${i.questoesIniciadas ? 'Questões em andamento' : 'Pronto para questões'}</span>`
-        : `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-semibold">${i.questoesIniciadas ? 'Questões iniciadas sem cartões' : 'Ainda não pronto para questões'}</span>`;
+      const origemTxt = i.origemEstudo === 'CRONOGRAMA'
+        ? `Semana ${String(i.semana).padStart(2, '0')} • Meta ${i.meta}${i.paginas > 0 ? ` • ${i.paginas} pág.` : ''}`
+        : 'Base de Tópicos (teoria ou questões registradas)';
+
+      const chipEstudado = `<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">✓ Tópico estudado</span>`;
+      const chipBase = i.semCartoesBase
+        ? `<span class="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px] font-extrabold">Cartões-base de PDF ainda não cadastrados</span>`
+        : `<span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-bold">${i.qtdCartoesBase} cartão(ões)-base de PDF</span>`;
+      const chipTotal = `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-semibold">${i.qtdCartoes} cartão(ões) no total</span>`;
+      const chipCriacao = i.cartoesConcluidos
+        ? `<span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[10px] font-extrabold">Criação concluída${dataConc ? ` em ${dataConc}` : ''}</span>`
+        : '';
+      const chipQuestoes = `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px] font-semibold">Questões: ${i.questoesResolvidas > 0 ? i.questoesResolvidas + ' resolvidas' : 'nenhuma ainda'}</span>`;
+      const avisoCadastro = !i.topicoCadastrado
+        ? `<div class="text-[10px] text-amber-300 font-semibold">Tópico ainda não cadastrado em Matérias e Tópicos — cadastre-o para vincular cartões.</div>`
+        : (i.semCartoesBase ? `<div class="text-[10px] text-rose-300 font-semibold">Necessário criar os cartões-base para complementar o material de revisão.</div>` : '');
 
       return `
-        <div class="p-3 flex flex-wrap items-center justify-between gap-2.5 ${i.cartoesConcluidos ? 'bg-emerald-950/10' : ''}">
+        <div class="p-3 flex flex-wrap items-center justify-between gap-2.5 ${i.semCartoesBase ? 'bg-rose-950/10' : ''}">
           <div class="min-w-0 flex-1 space-y-1">
             <div class="text-sm font-extrabold text-white">${esc(i.topico)}</div>
-            <div class="text-[10px] text-slate-400">Semana ${String(i.semana).padStart(2, '0')} • Meta ${i.meta}${i.paginas > 0 ? ` • ${i.paginas} pág.` : ''} • ${i.qtdCartoes} cartão(ões) já cadastrado(s)</div>
-            <div class="flex flex-wrap gap-1">${chipLeitura}${chipCartoes}${chipQuestoes}</div>
+            <div class="text-[10px] text-slate-400">${origemTxt}</div>
+            <div class="flex flex-wrap gap-1">${chipEstudado}${chipBase}${chipTotal}${chipCriacao}${chipQuestoes}</div>
+            ${avisoCadastro}
           </div>
           <div class="flex flex-wrap items-center gap-1.5 shrink-0">
-            ${i.cartoesConcluidos ? `
-              <button type="button" onclick="marcarCartoesTopicoConcluido('${esc(i.chave)}', false)" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold text-[11px]">Reabrir</button>
-            ` : `
-              <button type="button" onclick="criarCartoesParaTopicoPendente('${esc(i.chave)}')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 font-bold text-[11px]">Criar cartões</button>
-              <button type="button" onclick="marcarCartoesTopicoConcluido('${esc(i.chave)}', true)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px]">Marcar como concluído</button>
-            `}
+            <button type="button" onclick="criarCartoesParaTopicoPendente('${esc(i.chave)}')" class="px-2.5 py-1 rounded-lg ${i.semCartoesBase ? 'bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold' : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 font-bold'} text-[11px]">
+              ${i.semCartoesBase ? 'Criar cartões-base' : 'Adicionar cartões'}
+            </button>
+            ${i.cartoesConcluidos
+              ? `<button type="button" onclick="marcarCartoesTopicoConcluido('${esc(i.chave)}', false)" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold text-[11px]">Reabrir</button>`
+              : `<button type="button" onclick="marcarCartoesTopicoConcluido('${esc(i.chave)}', true)" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px]">Marcar como concluído</button>`}
           </div>
         </div>
       `;
     }
 
     function marcarCartoesTopicoConcluido(chave, concluido) {
-      const item = listarTopicosDoCronogramaParaCartoes_().find(i => i.chave === chave);
+      const item = montarSituacaoCartoesPendentes_().find(i => i.chave === chave);
       const hoje = formatarDataYMD_(new Date());
       const atual = CP_REGISTRO.itens[chave] || {
         materia: item ? item.materia : '',
