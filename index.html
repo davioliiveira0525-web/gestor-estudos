@@ -86,7 +86,7 @@
     html:not(.dark) h2,
     html:not(.dark) h3,
     html:not(.dark) h4,
-    html:not(.dark) .text-white:not(button):not(.bg-indigo-600):not(.bg-emerald-600):not(.bg-emerald-700):not(.bg-rose-600):not(.bg-teal-600):not(.bg-amber-500):not(.bg-purple-600):not(.main-area-active):not(.subtab-active):not(.gcal-event-title) {
+    html:not(.dark) .text-white:not(button):not(.bg-indigo-600):not(.bg-emerald-600):not(.bg-emerald-700):not(.bg-rose-600):not(.bg-teal-600):not(.bg-amber-500):not(.bg-purple-600):not(.main-area-active):not(.subtab-active) {
       color: #181a1d !important;
     }
     html:not(.dark) .text-slate-100,
@@ -190,7 +190,7 @@
     }
 
     /* ==========================================================================
-     * 2. NAVEGAÇÃO PRINCIPAL E SUB-ABAS COMPACTAS
+     * 2. NAVEGAÇÃO DOS 3 PILARES PRINCIPAIS E SUB-ABAS COMPACTAS
      * ========================================================================== */
     .main-area-active {
       background-color: #3b49df !important;
@@ -247,7 +247,6 @@
     html.dark input[type="text"],
     html.dark input[type="number"],
     html.dark input[type="date"],
-    html.dark input[type="time"],
     html.dark input[type="url"],
     html.dark input[type="password"],
     html.dark select,
@@ -259,7 +258,6 @@
     html:not(.dark) input[type="text"],
     html:not(.dark) input[type="number"],
     html:not(.dark) input[type="date"],
-    html:not(.dark) input[type="time"],
     html:not(.dark) input[type="url"],
     html:not(.dark) input[type="password"],
     html:not(.dark) select,
@@ -468,144 +466,6 @@
       }
     }
 
-    /* ==========================================================================
-     * 5. AGENDA INTELIGENTE EM TELA CHEIA (CLEAN GOOGLE CALENDAR WORKSPACE)
-     * ========================================================================== */
-    .agenda-fullscreen-workspace {
-      height: calc(100vh - 54px);
-      width: 100vw;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .gcal-scroll-container {
-      flex: 1 1 auto;
-      overflow-y: auto;
-      overflow-x: auto;
-      position: relative;
-      scroll-behavior: smooth;
-    }
-
-    .gcal-day-column {
-      position: relative;
-      height: 1248px; /* 24 horas * 52px por hora */
-      background-image: linear-gradient(to bottom, rgba(148, 163, 184, 0.13) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-      background-size: 100% 52px, 100% 26px;
-      background-position: 0 0, 0 26px;
-      user-select: none;
-    }
-    html:not(.dark) .gcal-day-column {
-      background-image: linear-gradient(to bottom, rgba(100, 116, 139, 0.20) 1px, transparent 1px),
-                        linear-gradient(to bottom, rgba(100, 116, 139, 0.09) 1px, transparent 1px);
-    }
-
-    .gcal-day-column.gcal-drop-hover {
-      background-color: rgba(79, 70, 229, 0.08) !important;
-      outline: 2px dashed #6366f1;
-      outline-offset: -2px;
-    }
-
-    .gcal-time-slot-label {
-      height: 52px;
-      font-size: 10px;
-      font-weight: 600;
-      color: #64748b;
-      text-align: right;
-      padding-right: 8px;
-      transform: translateY(-7px);
-      user-select: none;
-    }
-
-    /* Bloco minimalista: mostra apenas Horário, Tipo e Matéria */
-    .gcal-event-block {
-      position: absolute;
-      left: 4px;
-      right: 4px;
-      border-radius: 8px;
-      padding: 4px 8px;
-      font-size: 11px;
-      line-height: 1.25;
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.12s ease, box-shadow 0.14s ease, opacity 0.18s ease, filter 0.18s ease;
-      z-index: 15;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-      border-left-width: 4px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .gcal-event-block:active {
-      cursor: grabbing;
-    }
-    .gcal-event-block:hover {
-      z-index: 25;
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.38);
-    }
-
-    /* Tarefa concluída: aparência mais pálida com texto legível */
-    .gcal-event-completed {
-      opacity: 0.48 !important;
-      filter: saturate(0.25) brightness(0.95);
-      border-style: dashed !important;
-    }
-    .gcal-event-completed .gcal-event-title {
-      text-decoration: line-through;
-    }
-
-    .gcal-resize-handle {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 6px;
-      cursor: ns-resize;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-    }
-    .gcal-event-block:hover .gcal-resize-handle {
-      background: rgba(0, 0, 0, 0.22);
-    }
-    .gcal-event-block:hover .gcal-resize-handle::after {
-      content: '';
-      width: 22px;
-      height: 2px;
-      border-radius: 2px;
-      background: rgba(255, 255, 255, 0.7);
-    }
-
-    .gcal-now-line {
-      position: absolute;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background-color: #ef4444;
-      z-index: 30;
-      pointer-events: none;
-    }
-    .gcal-now-line::before {
-      content: '';
-      position: absolute;
-      left: -4px;
-      top: -4px;
-      width: 10px;
-      height: 10px;
-      border-radius: 9999px;
-      background-color: #ef4444;
-    }
-
-    .gcal-timer-active-ring {
-      animation: gcalPulseRing 1.8s infinite;
-    }
-    @keyframes gcalPulseRing {
-      0%, 100% { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.95), 0 4px 12px rgba(16, 185, 129, 0.35); }
-      50% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.35), 0 4px 16px rgba(16, 185, 129, 0.5); }
-    }
-
     ::-webkit-scrollbar { width: 7px; height: 7px; }
     html.dark ::-webkit-scrollbar-track { background: #0f172a; }
     html.dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -617,10 +477,10 @@
 <body class="min-h-screen flex flex-col bg-slate-950 text-slate-100" onclick="fecharSubmenuFora(event)">
 
   <!-- ==========================================================================
-       HEADER GLOBAL COMPACTO (COM ABA AUTÔNOMA DE AGENDA EM TELA CHEIA)
+       HEADER GLOBAL COMPACTO (NAVEGAÇÃO EM 3 PILARES)
        ========================================================================== -->
   <header id="appHeaderPrincipal" class="bg-slate-900/95 backdrop-blur border-b border-slate-800 text-white sticky top-0 z-40 shadow-sm no-print">
-    <div class="w-full px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+    <div class="max-w-7xl mx-auto px-3 py-2 flex flex-wrap items-center justify-between gap-2">
       <!-- Identidade do Sistema -->
       <div class="flex items-center gap-2.5">
         <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-extrabold text-xs text-white">GE</div>
@@ -631,19 +491,14 @@
               Supabase Cloud
             </span>
           </div>
-          <p class="text-[10px] text-slate-400 hidden sm:block">Agenda Diária em Tela Cheia | Conteúdo do Dia | Aquecimento das Baterias | Questões</p>
+          <p class="text-[10px] text-slate-400">Planejamento Diário por Tópico | Aquecimento Sequencial e Revisão | Bateria de Questões</p>
         </div>
       </div>
 
-      <!-- 4 ABAS PRINCIPAIS DE TOPO (SENDO A AGENDA AUTÔNOMA EM TELA CHEIA) -->
+      <!-- 3 ÁREAS PRINCIPAIS -->
       <nav class="flex flex-wrap items-center gap-1.5 text-xs">
-        <button type="button" onclick="irParaAreaPrincipal('agenda')" id="nav-area-agenda" class="px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-active">
-          <span>Agenda Diária</span>
-          <span id="badgeCountPendentesAgenda" class="px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 text-[10px] font-extrabold">0</span>
-        </button>
-
-        <button type="button" onclick="irParaAreaPrincipal('organizacao')" id="nav-area-organizacao" class="px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-inactive">
-          <span>1. Cronograma (50 Sem.)</span>
+        <button type="button" onclick="irParaAreaPrincipal('organizacao')" id="nav-area-organizacao" class="px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-active">
+          <span>1. Estudo e Organização</span>
           <span id="badgeMenuCronograma" class="px-1.5 py-0.2 rounded bg-white/20 text-white text-[10px] font-extrabold">S04</span>
         </button>
 
@@ -680,9 +535,6 @@
               <span class="text-[10px] text-emerald-400 font-bold">Auto</span>
             </button>
             <div class="border-t border-slate-800 my-1"></div>
-            <button type="button" onclick="irParaAreaPrincipal('agenda'); fecharSubmenuAcoes();" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-emerald-400">
-              <span>Agenda em Tela Cheia</span>
-            </button>
             <button type="button" onclick="exportarRelatorioExcel(); fecharSubmenuAcoes();" id="btnExportarExcel" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-slate-200">
               <span>Exportar Relatório (.xlsx)</span>
             </button>
@@ -791,361 +643,18 @@
   </div>
 
   <!-- ==========================================================================
-       ÁREA AUTÔNOMA 0: AGENDA DE ESTUDOS EM TELA CHEIA (OCUPA 100% DA PÁGINA)
+       CONTEÚDO PRINCIPAL COMPACTO E COM ROLAGEM FLUIDA (3 ÁREAS PRINCIPAIS)
        ========================================================================== -->
-  <section id="area-agenda" class="agenda-fullscreen-workspace bg-slate-950 no-print">
+  <main class="max-w-7xl w-full mx-auto px-3 py-3.5 flex-1 space-y-4">
 
-    <!-- TOPO LIMPO E DIRETO DA AGENDA EM TELA CHEIA -->
-    <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shrink-0">
-
-      <!-- Esquerda: Navegação de Data e Período -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <button type="button" onclick="alternarPainelLateralAgenda()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1.5" title="Mostrar/Ocultar gaveta de atividades do dia">
-          <span>☰ Atividades do Dia</span>
-        </button>
-
-        <div class="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
-          <button type="button" onclick="navegarDiasAgenda(-1)" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 font-bold">◀</button>
-          <button type="button" onclick="irParaHojeAgenda()" class="px-2.5 py-0.5 rounded bg-indigo-600 text-white font-extrabold text-[11px]">Hoje</button>
-          <button type="button" onclick="navegarDiasAgenda(1)" class="px-2 py-0.5 rounded hover:bg-slate-800 text-slate-300 font-bold">▶</button>
-        </div>
-
-        <h2 id="agLabelPeriodoVisivel" class="text-sm font-extrabold text-white">Hoje + Próximos 3 Dias</h2>
-
-        <div class="flex items-center rounded-lg border border-slate-800 bg-slate-950 p-0.5 text-[11px]">
-          <button type="button" onclick="alterarModoVisaoAgenda('4DIAS')" id="btnAgModo4Dias" class="px-2.5 py-1 rounded-md font-bold subtab-active">
-            4 Dias
-          </button>
-          <button type="button" onclick="alterarModoVisaoAgenda('1DIA')" id="btnAgModo1Dia" class="px-2.5 py-1 rounded-md font-bold text-slate-400">
-            1 Dia
-          </button>
-        </div>
-      </div>
-
-      <!-- Centro: Cronômetro Integrado Compacto + Ritmo min/página -->
-      <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
-        <div id="agTimerIndicadorVisual" class="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[11px] font-bold text-slate-300">⏱</div>
-        <div class="max-w-[220px] sm:max-w-[280px]">
-          <div id="agTimerNomeTarefaAtiva" class="text-[11px] font-extrabold text-white truncate">Nenhuma tarefa ativa no cronômetro</div>
-          <div class="flex items-center gap-2 text-[10px] text-slate-400">
-            <span id="agTimerMetaRestanteTxt">Selecione uma tarefa para iniciar</span>
-            <span class="text-slate-600">•</span>
-            <span id="agBadgeMediaMinPaginaTopo" class="text-indigo-400 font-semibold" title="Média calculada a partir das páginas lidas com cronômetro">Ritmo: em construção</span>
-          </div>
-        </div>
-        <div id="agTimerDisplayDigital" class="px-2 py-1 rounded bg-slate-900 border border-slate-800 font-mono text-xs font-extrabold text-emerald-400">
-          00:00:00
-        </div>
-        <button type="button" onclick="alternarPlayPauseTimerAgenda()" id="btnAgTimerPlayPause" disabled class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-[11px]">
-          Iniciar
-        </button>
-        <button type="button" onclick="concluirBlocoOuTarefaPeloTimer()" id="btnAgTimerConcluir" disabled class="px-2 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-[11px]" title="Concluir tarefa ativa">
-          ✓
-        </button>
-      </div>
-
-      <!-- Direita: Ações Rápidas de Organização -->
-      <div class="flex flex-wrap items-center gap-1.5 text-xs">
-        <div class="hidden xl:flex items-center gap-3 mr-2 text-[11px] bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-          <span>Planejado: <strong id="agKpiPlanejadoHoje" class="text-white">0h</strong></span>
-          <span>Estudado: <strong id="agKpiRealizadoHoje" class="text-emerald-400">0h</strong></span>
-          <span>Livre: <strong id="agKpiLivreHoje" class="text-purple-300">0h</strong></span>
-          <span id="agKpiMetaDiariaSub" class="hidden"></span>
-          <span id="agKpiPercHojeSub" class="hidden"></span>
-          <span id="agKpiRestanteHoje" class="hidden"></span>
-          <span id="agKpiBlocosHojeSub" class="hidden"></span>
-        </div>
-
-        <button type="button" onclick="sincronizarPlanejamentoDiario3Areas(true)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 font-bold text-[11px]" title="Gera/Atualiza: A) Conteúdo do Dia, B) Aquecimento de Cartões da matéria de cada Bateria, C) Baterias de Questões individuais">
-          Sincronizar Dia
-        </button>
-
-        <button type="button" onclick="distribuirAutomaticamenteTarefasAgenda()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px]" title="Distribui automaticamente nos horários livres na ordem: 1º Aquecimento/Revisão -> 2º Conteúdo -> 3º Questões">
-          Auto-Organizar Horários
-        </button>
-
-        <button type="button" onclick="reorganizarPendenciasParaProximoDia(true)" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px]" title="Transfere apenas o tempo não concluído para amanhã">
-          Transferir Pendentes
-        </button>
-
-        <button type="button" onclick="abrirModalJanelaEstudoAgenda()" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-[11px]" title="Configurar expediente e ritmo de leitura">
-          ⚙
-        </button>
-
-        <button type="button" onclick="abrirModalTarefaAgenda()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[11px]">
-          + Tarefa
-        </button>
-      </div>
-    </div>
-
-    <!-- CORPO EM TELA CHEIA: SIDEBAR DAS 3 ÁREAS DO DIA + GRADE GOOGLE CALENDAR -->
-    <div class="flex-1 flex overflow-hidden">
-
-      <!-- PAINEL LATERAL ORGANIZADO NAS 3 ÁREAS INDEPENDENTES DO DIA -->
-      <aside id="agSidebarAtividadesDia" class="w-80 xl:w-96 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col overflow-hidden">
-        <div class="p-3 border-b border-slate-800 bg-slate-950/50 flex items-center justify-between">
-          <div>
-            <span class="text-[10px] font-extrabold uppercase text-indigo-400 block">Planejamento Estruturado do Dia</span>
-            <h3 class="text-xs font-extrabold text-white">Arraste para a Grade ou Clique p/ Detalhes</h3>
-          </div>
-          <span class="text-[10px] text-slate-400">3 Áreas</span>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-3 space-y-4">
-
-          <!-- ÁREA A: CONTEÚDO DO DIA (LEITURA / TEORIA + MÉDIA MIN/PÁGINA) -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                <span class="text-[11px] font-extrabold uppercase text-blue-400">A) Conteúdo do Dia (Teoria)</span>
-              </div>
-              <span id="agBadgeMediaLeituraSidebar" class="text-[10px] font-semibold text-slate-400">Média: em construção</span>
-            </div>
-            <div id="agListaAreaConteudoDia" class="space-y-2"></div>
-          </div>
-
-          <!-- ÁREA B: AQUECIMENTO E REVISÃO DE CARTÕES (VINCULADOS À MATÉRIA DE CADA BATERIA) -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
-                <span class="text-[11px] font-extrabold uppercase text-purple-400">B) Aquecimento (Por Bateria)</span>
-              </div>
-              <span id="agCountAreaAquecimento" class="text-[10px] font-bold text-slate-400">0 tarefas</span>
-            </div>
-            <p class="text-[10px] text-slate-400 leading-snug">
-              Cada aquecimento corresponde exatamente à matéria de uma bateria de questões programada.
-            </p>
-            <div id="agListaAreaAquecimento" class="space-y-2"></div>
-          </div>
-
-          <!-- ÁREA C: BATERIAS DE QUESTÕES (TAREFAS INDIVIDUAIS SEPARADAS) -->
-          <div class="space-y-2">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-1">
-              <div class="flex items-center gap-1.5">
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span class="text-[11px] font-extrabold uppercase text-emerald-400">C) Baterias de Questões</span>
-              </div>
-              <span id="agCountAreaBaterias" class="text-[10px] font-bold text-slate-400">0 baterias</span>
-            </div>
-            <div id="agListaAreaBaterias" class="space-y-2"></div>
-          </div>
-
-        </div>
-      </aside>
-
-      <!-- GRADE PRINCIPAL ESTILO GOOGLE AGENDA (AMPLA, LIMPA E INTUITIVA) -->
-      <div class="flex-1 flex flex-col bg-slate-950 overflow-hidden">
-
-        <!-- Cabeçalho das Colunas dos Dias -->
-        <div class="bg-slate-900 border-b border-slate-800 flex shrink-0">
-          <div class="w-14 shrink-0 border-r border-slate-800 p-2 flex flex-col items-center justify-center text-[10px] font-bold text-slate-400">
-            <span>HORA</span>
-          </div>
-          <div id="agHeaderColunasDias" class="flex-1 grid grid-cols-4 divide-x divide-slate-800"></div>
-        </div>
-
-        <!-- Grade Horária Rolável em Tela Cheia -->
-        <div id="agGridScrollContainer" class="gcal-scroll-container">
-          <div class="flex min-w-[640px]">
-            <!-- Régua de Horários -->
-            <div id="agColunaReguaHoras" class="w-14 shrink-0 border-r border-slate-800 bg-slate-900/50 select-none"></div>
-            <!-- Colunas dos Dias -->
-            <div id="agContainerColunasDiasGrid" class="flex-1 grid grid-cols-4 divide-x divide-slate-800 relative"></div>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-    <!-- MODAL DE DETALHES COMPLETOS E EDIÇÃO DA TAREFA (ABRE AO CLICAR NA TAREFA/BLOCO) -->
-    <div id="modalTarefaAgenda" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 no-print">
-      <div class="bg-slate-900 text-slate-100 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-700 overflow-hidden max-h-[94vh] flex flex-col">
-        <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 text-white flex items-center justify-between">
-          <div>
-            <span id="modalAgBadgeCategoria" class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-extrabold uppercase">Detalhes da Atividade</span>
-            <h3 id="modalAgTarefaTitulo" class="text-sm font-extrabold text-white mt-1">Detalhes e Configuração da Tarefa</h3>
-          </div>
-          <button type="button" onclick="fecharModalTarefaAgenda()" class="text-slate-400 hover:text-white text-xs font-bold">✕ Fechar</button>
-        </div>
-
-        <!-- Painel de Informações Específicas da Tarefa (Tópico, Páginas, Cartões ou Questões + Ações Diretas) -->
-        <div id="modalAgPainelContextoEspecifico" class="px-5 py-3 bg-indigo-950/35 border-b border-indigo-800/60 space-y-2 text-xs"></div>
-
-        <form onsubmit="salvarTarefaAgendaModal(event)" class="p-5 space-y-3.5 text-xs overflow-y-auto">
-          <input type="hidden" id="agFormTaskId" value="">
-          <input type="hidden" id="agFormBlockId" value="">
-
-          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
-            <div class="sm:col-span-6">
-              <label class="block font-bold text-slate-300 mb-1">Matéria ou Disciplina *</label>
-              <input type="text" id="agFormMateria" list="datalistMateriasAgenda" required placeholder="Ex: Direito Constitucional" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-              <datalist id="datalistMateriasAgenda"></datalist>
-            </div>
-            <div class="sm:col-span-6">
-              <label class="block font-bold text-slate-300 mb-1">Identificação / Título da Tarefa *</label>
-              <input type="text" id="agFormTitulo" required placeholder="Ex: Bateria de Questões / Aquecimento" class="w-full rounded-lg border px-2.5 py-1.5 font-semibold">
-            </div>
-          </div>
-
-          <div>
-            <label class="block font-bold text-slate-300 mb-1">Tópico Específico / Detalhamento Complementar</label>
-            <input type="text" id="agFormDescricao" placeholder="Ex: Controle de Constitucionalidade • Ler pág. 1 a 20" class="w-full rounded-lg border px-2.5 py-1.5">
-          </div>
-
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Área / Tipo</label>
-              <select id="agFormTipo" onchange="aoMudarTipoTarefaModalAgenda()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                <option value="REVISAO">1º Aquecimento / Cartões</option>
-                <option value="ESTUDO">2º Conteúdo do Dia</option>
-                <option value="QUESTOES">3º Bateria de Questões</option>
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Prioridade</label>
-              <select id="agFormPrioridade" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                <option value="ALTA">Alta</option>
-                <option value="MEDIA" selected>Média</option>
-                <option value="BAIXA">Baixa</option>
-              </select>
-            </div>
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Meta Estimada (min) *</label>
-              <input type="number" id="agFormMetaMinutos" min="5" max="720" step="5" value="60" required oninput="sincronizarBlocosComMetaNoModal()" class="w-full rounded-lg border px-2.5 py-1.5 font-extrabold text-indigo-400">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Repetição</label>
-              <select id="agFormRepeticao" class="w-full rounded-lg border px-2.5 py-1.5">
-                <option value="NENHUMA">Sem repetição</option>
-                <option value="DIARIA">Diária (4 dias)</option>
-                <option value="DIAS_UTEIS">Seg a Sex</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Campos específicos de Volume (Páginas, Cartões ou Questões) -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800">
-            <div>
-              <label id="lblAgMetaUnidades" class="block font-bold text-slate-300 mb-1">Páginas / Cartões / Questões Previstas</label>
-              <input type="number" id="agFormMetaUnidades" min="0" value="0" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-            </div>
-            <div>
-              <label id="lblAgUnidadesConcluidas" class="block font-bold text-emerald-400 mb-1">Progresso Realizado (Pág. / Cards / Q.)</label>
-              <input type="number" id="agFormUnidadesConcluidas" min="0" value="0" class="w-full rounded-lg border px-2.5 py-1.5 font-bold text-emerald-400">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Tempo Estudado (min)</label>
-              <input type="number" id="agFormMinutosRealizados" min="0" step="1" value="0" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-            </div>
-          </div>
-
-          <!-- Divisão em Blocos de Horário -->
-          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <span class="font-extrabold text-emerald-400 uppercase text-[10px] block">Horários Programados na Agenda (Divisão em Blocos)</span>
-                <span id="agResumoSomaBlocosModal" class="text-[11px] text-slate-400"></span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <button type="button" onclick="dividirAutomaticamenteEm2BlocosModal()" class="px-2.5 py-1 rounded bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 font-bold text-[11px]">
-                  Dividir em 2 Turnos
-                </button>
-                <button type="button" onclick="adicionarBlocoHorarioNoModal()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px]">
-                  + Horário
-                </button>
-              </div>
-            </div>
-            <div id="agContainerLinhasBlocosModal" class="space-y-2"></div>
-          </div>
-
-          <!-- Personalização de Cor (Somente Dia vs Padrão Permanente) -->
-          <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="font-extrabold text-indigo-300 uppercase text-[10px]">Cor na Agenda</span>
-              <span id="agLabelCorSelecionada" class="text-[11px] font-bold text-slate-300"></span>
-            </div>
-            <div id="agSeletorPaletaCores" class="flex flex-wrap items-center gap-2"></div>
-            <input type="hidden" id="agFormCorHex" value="#4f46e5">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1.5 border-t border-slate-800 text-[11px]">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="agEscopoCor" value="SOMENTE_DIA" checked class="text-indigo-600">
-                <span>Aplicar <strong>somente hoje / nesta tarefa</strong></span>
-              </label>
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input type="radio" name="agEscopoCor" value="PADRAO_CATEGORIA" class="text-indigo-600">
-                <span>Definir como <strong>cor padrão permanente</strong></span>
-              </label>
-            </div>
-          </div>
-
-          <label class="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <input type="checkbox" id="agFormConcluida" class="rounded text-emerald-600 w-4 h-4">
-            <span class="font-bold text-slate-200">Tarefa Concluída (Fica com cor pálida na agenda e atualiza o histórico)</span>
-          </label>
-
-          <div class="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-            <button type="button" onclick="excluirTarefaAgendaDoModal()" id="btnAgExcluirTarefaModal" class="hidden px-3 py-1.5 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800 font-bold">
-              Excluir Tarefa
-            </button>
-            <div class="flex items-center gap-2 ml-auto">
-              <button type="button" onclick="fecharModalTarefaAgenda()" class="px-3.5 py-1.5 rounded-lg border border-slate-700 font-bold text-slate-300 hover:bg-slate-800">Cancelar</button>
-              <button type="submit" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold">Salvar Alterações</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- MODAL: CONFIGURAR EXPEDIENTE E MÉDIA POR PÁGINA -->
-    <div id="modalJanelaEstudoAgenda" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 no-print">
-      <div class="bg-slate-900 text-slate-100 rounded-xl max-w-md w-full shadow-2xl border border-slate-700 overflow-hidden">
-        <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-          <h3 class="text-xs font-extrabold uppercase text-white">Expediente Diário e Ritmo de Leitura</h3>
-          <button type="button" onclick="fecharModalJanelaEstudoAgenda()" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button>
-        </div>
-        <form onsubmit="salvarJanelaEstudoAgenda(event)" class="p-4 space-y-3 text-xs">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Início do Dia (h)</label>
-              <input type="number" id="agCfgHoraInicio" min="5" max="22" value="8" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-            </div>
-            <div>
-              <label class="block font-bold text-slate-300 mb-1">Fim do Dia (h)</label>
-              <input type="number" id="agCfgHoraFim" min="7" max="23" value="21" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-            </div>
-          </div>
-          <div>
-            <label class="block font-bold text-slate-300 mb-1">Meta Diária de Estudo (minutos)</label>
-            <input type="number" id="agCfgMetaMinutosDia" min="30" max="960" step="15" value="240" required class="w-full rounded-lg border px-2.5 py-1.5 font-bold text-indigo-400">
-          </div>
-          <div class="p-3 rounded-lg bg-slate-950 border border-slate-800 space-y-1">
-            <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Indicador de Ritmo de Leitura (Minutos / Página)</span>
-            <p id="agModalInfoMediaPagina" class="text-[11px] text-slate-300">Média em construção conforme você utiliza o cronômetro no Conteúdo do Dia.</p>
-          </div>
-          <div class="pt-2 border-t border-slate-800 flex justify-end gap-2">
-            <button type="button" onclick="fecharModalJanelaEstudoAgenda()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 font-bold">Cancelar</button>
-            <button type="submit" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold">Salvar</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-  </section>
-
-  <!-- ==========================================================================
-       CONTEÚDO DAS DEMAIS ÁREAS (1. CRONOGRAMA, 2. QUESTÕES, 3. CARTÕES)
-       ========================================================================== -->
-  <main id="mainContainerDemaisAreas" class="hidden max-w-7xl w-full mx-auto px-3 py-3.5 flex-1 space-y-4">
-
-    <!-- ÁREA 1: CRONOGRAMA DE 50 SEMANAS, MATÉRIAS E CONFIGURAÇÕES -->
+    <!-- ========================================================================
+         ÁREA 1: ESTUDO E ORGANIZAÇÃO (PAINEL DO DIA, CRONOGRAMA, MATÉRIAS E CONFIG AVANÇADA)
+         ======================================================================== -->
     <div id="area-organizacao" class="space-y-4">
       <div class="bg-slate-900 rounded-xl border border-slate-800 p-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div class="flex flex-wrap items-center gap-1.5">
           <button type="button" onclick="irParaSubAbaOrganizacao('cronograma')" id="subnav-org-cronograma" class="px-3 py-1.5 rounded-lg transition subtab-active">
-            Estudo do Dia e Cronograma (50 Semanas)
+            Estudo do Dia e Cronograma (Distribuição Diária por Assunto)
           </button>
           <button type="button" onclick="irParaSubAbaOrganizacao('cadastros')" id="subnav-org-cadastros" class="px-3 py-1.5 rounded-lg transition subtab-inactive">
             Base de Matérias e Tópicos
@@ -1154,9 +663,7 @@
             Configurações Avançadas de Estudo
           </button>
         </div>
-        <button type="button" onclick="irParaAreaPrincipal('agenda')" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">
-          Ir para Agenda em Tela Cheia →
-        </button>
+        <span class="text-[11px] text-slate-400 hidden lg:inline">Cálculo automático da cota diária de leitura por assunto e acompanhamento de progresso</span>
       </div>
 
       <!-- SUB-SEÇÃO 1.1: CRONOGRAMA E PAINEL EXECUTIVO DO DIA -->
@@ -3448,9 +2955,6 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
       inicializarTemaGlobal();
-      if (typeof inicializarModuloAgendaEstudos === 'function') {
-        inicializarModuloAgendaEstudos();
-      }
       const cli = inicializarClienteSupabase();
       if (!cli) {
         if (typeof carregarCronogramaSupabase === 'function') {
@@ -4858,26 +4362,14 @@
     }
 
     /* ==========================================================================
-     * 5. ROTEAMENTO DAS 4 ÁREAS DE TOPO (SENDO A AGENDA EM TELA CHEIA)
+     * 5. ROTEAMENTO DAS 3 ÁREAS PRINCIPAIS E SUB-ABAS
      * ========================================================================== */
     function irParaAreaPrincipal(area) {
-      const secAgendaFullscreen = document.getElementById('area-agenda');
-      const mainDemais = document.getElementById('mainContainerDemaisAreas');
+      const areas = ['organizacao', 'questoes', 'cartoes'];
+      areas.forEach(a => {
+        const divArea = document.getElementById(`area-${a}`);
+        if (divArea) divArea.classList.toggle('hidden', a !== area);
 
-      if (area === 'agenda') {
-        if (secAgendaFullscreen) secAgendaFullscreen.classList.remove('hidden');
-        if (mainDemais) mainDemais.classList.add('hidden');
-      } else {
-        if (secAgendaFullscreen) secAgendaFullscreen.classList.add('hidden');
-        if (mainDemais) mainDemais.classList.remove('hidden');
-      }
-
-      const todasAreas = ['agenda', 'organizacao', 'questoes', 'cartoes'];
-      todasAreas.forEach(a => {
-        if (a !== 'agenda') {
-          const divArea = document.getElementById(`area-${a}`);
-          if (divArea) divArea.classList.toggle('hidden', a !== area);
-        }
         const btnNav = document.getElementById(`nav-area-${a}`);
         if (btnNav) {
           btnNav.className = `px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 ${
@@ -4886,11 +4378,7 @@
         }
       });
 
-      if (area === 'agenda') {
-        if (typeof renderizarAgendaCompletaUI === 'function') {
-          renderizarAgendaCompletaUI();
-        }
-      } else if (area === 'organizacao') {
+      if (area === 'organizacao') {
         if (typeof carregarCronogramaSupabase === 'function') {
           carregarCronogramaSupabase();
         }
@@ -4902,10 +4390,6 @@
     }
 
     function irParaSubAbaOrganizacao(sub) {
-      if (sub === 'agenda') {
-        irParaAreaPrincipal('agenda');
-        return;
-      }
       const subs = ['cronograma', 'cadastros', 'config'];
       subs.forEach(s => {
         const sec = document.getElementById(`aba-${s}`);
@@ -4954,9 +4438,7 @@
     }
 
     function irParaAba(nomeAba) {
-      if (nomeAba === 'agenda') {
-        irParaAreaPrincipal('agenda');
-      } else if (['cronograma', 'cadastros', 'config'].includes(nomeAba)) {
+      if (['cronograma', 'cadastros', 'config'].includes(nomeAba)) {
         irParaAreaPrincipal('organizacao');
         irParaSubAbaOrganizacao(nomeAba);
       } else if (['painel', 'registrar', 'revisoes', 'ciclo', 'estatisticas'].includes(nomeAba)) {
@@ -7043,7 +6525,7 @@
       document.getElementById('cfgCartoesPorRodada').value = c.Cartoes_Por_Rodada || '0';
       document.getElementById('cfgEstrategiaAquecimento').value = c.Estrategia_Aquecimento || 'PADRAO';
       document.getElementById('cfgMetodoOrganizacaoCartoes').value = c.Metodo_Organizacao_Cartoes || 'SEQUENCIAL_INICIAL_DEPOIS_ERROS';
-      document.getElementById('cfgComportamentoDificilSessao').value = c.Comportamento_DificilSessao || 'RETORNAR_NA_SESSAO';
+      document.getElementById('cfgComportamentoDificilSessao').value = c.Comportamento_Dificil_Sessao || 'RETORNAR_NA_SESSAO';
       document.getElementById('cfgCriterioDominioAcertos').value = critDom;
       document.getElementById('cfgLimiteDiarioDecoreba').value = limDec;
       document.getElementById('cfgEscalaCartoesDominados').value = c.Escala_Cartoes_Dominados || '7,15,30,60,90';
@@ -7203,6 +6685,7 @@
       const frente = String(frenteStr || '');
       const verso = String(versoStr || '');
 
+      // 1. Checagem explícita pelo código/nome do tipo
       if (
         tNorm === '4' ||
         tNorm.includes('DECOREBA') ||
@@ -7245,6 +6728,7 @@
         return 'PDF_BASE';
       }
 
+      // 2. Checagem automática pelo conteúdo (Lacunas Cloze, Tags ou Gabarito C/E)
       if (/\{\{c\d+::/i.test(frente) || /\bLEI\s*SECA\b/i.test(tagsNorm)) {
         return 'LEI_SECA';
       }
@@ -7434,6 +6918,7 @@
 
         const mapaTelemetria = obterMapaTelemetriaLocalCartoes_();
 
+        // Ordenação secundária determinística por ID/Timestamp para preservar a ordem exata de criação do lote
         const rowsOrdenados = (data || []).slice().sort((a, b) => {
           const tA = a.criado_em ? new Date(a.criado_em).getTime() : 0;
           const tB = b.criado_em ? new Date(b.criado_em).getTime() : 0;
@@ -7448,11 +6933,6 @@
         renderizarPainelDecorebaInteligente_();
         renderizarAtalhosTopicosHojeFC();
         renderizarVisaoDeckFC();
-
-        // Sincroniza automaticamente a quantidade real de cartões de cada matéria nas tarefas da Agenda
-        if (typeof sincronizarPlanejamentoDiario3Areas === 'function') {
-          sincronizarPlanejamentoDiario3Areas(false);
-        }
 
         const secNav = document.getElementById('subaba-fc-navegador');
         if (secNav && !secNav.classList.contains('hidden')) renderizarNavegadorAnki();
@@ -7549,6 +7029,7 @@
       const ultimoTempoSeg = tel ? Number(tel.ultimoTempoSeg || 0) : (totalRevisoes > 0 ? 10 : 0);
       const tempoMedioSeg = totalRevisoes > 0 ? Number((segundosAcumulados / totalRevisoes).toFixed(1)) : 0;
 
+      // Extrai número sequencial explícito da tag #SEQ_001 se houver, ou usa ordem de criação
       let seqExplicita = idxOrdem;
       const matchSeq = tagsStr.match(/#SEQ_(\d+)/i);
       if (matchSeq) seqExplicita = Number(matchSeq[1]);
@@ -7647,6 +7128,8 @@
       }
 
       if (metodoOrd === 'SEQUENCIAL_INICIAL_DEPOIS_ERROS') {
+        // 1º: Cartões ainda não estudados (inéditos) rigorosamente na ordem sequencial em que foram criados
+        // 2º: Cartões já estudados classificados por maior taxa de erro e dificuldade
         const ineditosSequenciais = filtrados
           .filter(c => c.isNovo || c.totalRevisoes === 0)
           .sort((a, b) => a.ordemCriacao - b.ordemCriacao || a.indiceBruto - b.indiceBruto);
@@ -7815,8 +7298,6 @@
     }
 
     function selecionarTopicoEIniciarFC(idMateria, idTopico) {
-      irParaAreaPrincipal('cartoes');
-      irParaSubAbaCartoes('aquecimento');
       document.getElementById('fcFiltroMateria').value = idMateria;
       aoMudarMateriaFiltroFC();
       document.getElementById('fcFiltroTopico').value = idTopico;
@@ -8802,12 +8283,14 @@
       if (btn) btn.disabled = true;
 
       try {
+        // Executa exclusão em lotes de 100 IDs por segurança de URL no Supabase
         for (let i = 0; i < idsParaExcluir.length; i += 100) {
           const fatiaIds = idsParaExcluir.slice(i, i + 100);
           const { error } = await supabaseClient.from('flashcards').delete().in('id', fatiaIds);
           if (error) throw error;
         }
 
+        // Remove da telemetria local
         const mapaTel = obterMapaTelemetriaLocalCartoes_();
         idsParaExcluir.forEach(id => {
           delete mapaTel[id];
@@ -8893,6 +8376,7 @@
         return;
       }
 
+      // Modo Cards Frente e Verso Simultâneos (Conferência Completa Estilo Anki)
       cont.innerHTML = filtrados.map((c, idx) => {
         const tObj = mapaTop[c.idTopico];
         const isMarcado = ANKI_SELECIONADOS_SET.has(String(c.id));
@@ -8927,6 +8411,7 @@
               </div>
             </div>
 
+            <!-- Frente e Verso Lado a Lado -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 text-xs">
               <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
                 <span class="text-[10px] font-extrabold uppercase text-indigo-400 block">Frente do Cartão (Pergunta / Afirmação):</span>
@@ -9042,6 +8527,7 @@
       document.getElementById('fcKpiTempoTotalGasto').textContent = `${String(minTot).padStart(2, '0')}m ${String(segRest).padStart(2, '0')}s`;
       document.getElementById('fcKpiTempoMedioCard').textContent = `${tempoMedioGeral}s`;
 
+      // Gráfico de Rosca: Dominados vs Em Aprendizado vs Não Estudados
       const emAprendizadoCount = Math.max(0, jaEstudados.length - dominados.length);
       const isDark = document.documentElement.classList.contains('dark');
       const canvasCob = document.getElementById('chartFcCoberturaDominio');
@@ -9071,6 +8557,7 @@
         legEl.innerHTML = `<strong>Dominados:</strong> ${dominados.length} | <strong>Em Estudo:</strong> ${emAprendizadoCount} | <strong>Inéditos:</strong> ${naoEstudados.length}`;
       }
 
+      // Tabela Consolidada por Matéria e Tópico
       const mapaTop = {};
       (ESTADO?.topicos || []).forEach(t => { mapaTop[t.id] = t; });
       const gruposTopico = {};
@@ -9135,6 +8622,7 @@
         }
       }
 
+      // Tabela de Histórico Individual por Cartão
       const listaIndiv = baseFiltrada.slice();
       if (ordemIndiv === 'MAIS_ERRADOS') {
         listaIndiv.sort((a, b) => b.totalErros - a.totalErros || a.taxaAcerto - b.taxaAcerto);
@@ -9367,6 +8855,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const fallbackTipo = tipoSelect === 'AUTO' ? 'PDF_BASE' : tipoSelect;
       const forcarPadrao = Boolean(document.getElementById('fcImportForcarSelecaoAcima')?.checked);
 
+      // Remove cercas markdown ``` caso o usuário tenha colado junto
       const linhas = bruto
         .split(/\r?\n/)
         .map(l => l.trim())
@@ -9376,6 +8865,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       let ordemSeqCounter = 1;
 
       linhas.forEach((linha, idxLinha) => {
+        // Ignora cabeçalhos
         if (idxLinha === 0 && /^(id_materia|materia|tipo|frente)\s*;/i.test(linha)) return;
 
         const partes = linha.split(';').map(p => p.trim());
@@ -9861,12 +9351,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const selCad = document.getElementById('cronInputDiasPorMeta');
       if (selCad) selCad.value = String(CRON_CADENCIA_DIAS);
       carregarCronogramaSupabase();
-      if (typeof sincronizarPlanejamentoDiario3Areas === 'function') {
-        sincronizarPlanejamentoDiario3Areas(false);
-      }
-      if (typeof renderizarAgendaCompletaUI === 'function') {
-        renderizarAgendaCompletaUI();
-      }
     };
 
     function gerarSubtopicosPadraoDaMeta_(topicoStr, paginasTotal) {
@@ -9913,6 +9397,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       return subtopicosArr.map(s => `${s.nome}: ${s.paginas || 0} páginas`).join('\n');
     }
 
+    /* ==========================================================================
+     * ALGORITMO DE DISTRIBUIÇÃO DIÁRIA DE PÁGINAS POR ASSUNTO E PROGRESSO
+     * ========================================================================== */
     function calcularDistribuicaoDiariaSubtopicosDaMeta_(metaObj, idxParteAlvo) {
       const totalPartes = Math.max(1, Number(metaObj?.totalPartes || 3));
       const subtopicos = (metaObj?.subtopicos && metaObj.subtopicos.length > 0)
@@ -10059,7 +9546,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       };
     }
 
-    function gerarDivisaoPadraoPartes_(paginasTotal, totalPartes, partesConcluidas) {
+    function gerarDivisaoPadraoPartes_(paginasTotal, totalPartes, partesConcluidas, subtopicosArr) {
       const arr = [];
       const porParte = paginasTotal > 0 ? Math.floor(paginasTotal / totalPartes) : 0;
       let pagIni = 1;
@@ -10146,9 +9633,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         popularSelectFiltroSemanasCron_();
         renderizarDashboardCronograma();
         renderizarListaSemanasCronograma();
-        if (typeof sincronizarPlanejamentoDiario3Areas === 'function') {
-          sincronizarPlanejamentoDiario3Areas(false);
-        }
       } catch (err) {
         console.warn('Aviso ao sincronizar cronograma:', err.message);
       }
@@ -11104,29 +10588,40 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
      * 10. MATRIZ DAS 50 SEMANAS COM PÁGINAS INDIVIDUAIS POR TÓPICO
      * ========================================================================== */
     const CRONOGRAMA_50_SEMANAS_SEED = [
+      // SEMANA 01
       [1, 1, "Direito Penal", "Noções Iniciais e Princípios", 56, 2, 2, "Código Penal - Artigos 1º ao 12º", "Leitura das 4 súmulas na Doutrina (Pág. 3)", [{ nome: "Noções Iniciais de Direito Penal", paginas: 26 }, { nome: "Princípios Penais Constitucionais e Legais", paginas: 30 }]],
       [1, 2, "Direito Processual Penal", "Noções Iniciais e Princípios", 48, 2, 2, "CPP - Artigos 1º a 13º (31 pág.)", "Sem súmulas pertinentes", [{ nome: "Sistemas Processuais e Aplicação da Lei Processual", paginas: 24 }, { nome: "Princípios do Processo Penal", paginas: 24 }]],
       [1, 3, "Direito Constitucional", "Direitos e Garantias Fundamentais", 72, 2, 2, "CF/88 - Artigos 1º a 4º (20 pág.)", "Leitura das 8 súmulas na Doutrina (Pág. 4)", [{ nome: "Teoria Geral dos Direitos Fundamentais", paginas: 32 }, { nome: "Direitos e Deveres Individuais e Coletivos (Art. 5º)", paginas: 40 }]],
       [1, 4, "Leis Extravagantes", "Maria da Penha | Lei nº 11.340/06", 70, 2, 2, "CF/88 - Art. 5º (Dividir 1/3 e 2/3)", "Leitura das 5 súmulas na Doutrina (Pág. 4)", [{ nome: "Lei Maria da Penha (Disposições Gerais e Medidas Protetivas)", paginas: 38 }, { nome: "Procedimentos Policiais e Judiciais na Lei 11.340/06", paginas: 32 }]],
       [1, 5, "Direito Administrativo", "Noções Iniciais e Princípios Administrativos", 42, 2, 2, "Lei nº 11.340/2006 - Art. 1º a 7º, 10 a 12-C e 18 a 24-A", "Leitura das 7 súmulas na Doutrina (Pág. 4)", [{ nome: "Regime Jurídico Administrativo", paginas: 20 }, { nome: "Princípios Expressos e Implícitos da Administração", paginas: 22 }]],
+
+      // SEMANA 02
       [2, 1, "Direito Constitucional", "Teoria Constitucional", 63, 2, 2, "Lei nº 12.016/2009 (Mandado de Segurança - 26 pág.)", "", [{ nome: "Constitucionalismo e Classificação das Constituições", paginas: 31 }, { nome: "Poder Constituinte e Eficácia das Normas", paginas: 32 }]],
       [2, 2, "Direito Processual Penal", "Inquérito Policial", 65, 2, 2, "CPP - Artigos 13-A a 23", "", [{ nome: "Inquérito Policial: Conceito, Características e Instauração", paginas: 35 }, { nome: "Diligências, Prazos, Arquivamento e Acordo de Não Persecução", paginas: 30 }]],
       [2, 3, "Direito Constitucional", "Remédios Constitucionais", 60, 2, 2, "Lei nº 4.717/1965 (Ação Popular) e Lei nº 7.347/1985 (ACP)", "", [{ nome: "Habeas Corpus, Habeas Data e Mandado de Segurança", paginas: 34 }, { nome: "Mandado de Injunção e Ação Popular", paginas: 26 }]],
       [2, 4, "Direito Penal", "Lei Penal e sua Aplicação + Teoria do Crime (Parte I)", 76, 2, 2, "Código Penal - Artigos 13 a 28", "", [{ nome: "Lei Penal no Tempo e no Espaço", paginas: 36 }, { nome: "Teoria do Crime (Parte I): Conduta, Resultado e Nexo", paginas: 40 }]],
       [2, 5, "Direito Penal", "Teoria do Crime (Parte II)", 62, 2, 2, "Lei nº 13.300/2016 (Mandado de Injunção)", "", [{ nome: "Tipicidade, Consumação, Tentativa e Desistência Voluntária", paginas: 34 }, { nome: "Erro de Tipo e Ilícito Penal", paginas: 28 }]],
+
+      // SEMANA 03
       [3, 1, "Direito Administrativo", "Entes da Administração", 68, 2, 2, "Lei nº 13.848/2019 (Agências Reguladoras - 27 pág.)", "", [{ nome: "Administração Direta, Desconcentração e Descentralização", paginas: 30 }, { nome: "Autarquias, Fundações, Empresas Públicas e Soc. Economia Mista", paginas: 38 }]],
       [3, 2, "Direito Processual Penal", "Ação Penal", 72, 2, 2, "CPP - Artigos 24 a 62", "", [{ nome: "Ação Penal Pública Incondicionada e Condicionada", paginas: 38 }, { nome: "Ação Penal Privada e Ação Civil Ex Delicto", paginas: 34 }]],
       [3, 3, "Direito Penal", "Teoria do Crime (Parte III)", 64, 3, 3, "Lei nº 13.934/2019 + Lei nº 10.741/2003 (Art. 93 a 108)", "", [{ nome: "Ilicitude e Causas Excludentes da Ilicitude", paginas: 32 }, { nome: "Culpabilidade e Dirimentes Penais", paginas: 32 }]],
       [3, 4, "Leis Extravagantes", "Lei de Crimes Hediondos (Lei nº 8.072/1990)", 50, 2, 2, "CF/88 Art. 6º a 17 + Lei nº 8.072/1990 (21 pág.)", "", [{ nome: "Crimes Hediondos e Equiparados: Rol Taxativo", paginas: 26 }, { nome: "Regime de Cumprimento de Pena e Vedação de Benefícios", paginas: 24 }]],
       [3, 5, "Direito Constitucional", "Direitos Políticos + Nacionalidade + Estatuto do Desarmamento", 75, 3, 3, "Lei nº 10.826/2003 (Estatuto do Desarmamento - 31 pág.)", "", [{ nome: "Nacionalidade (Art. 12 e 13 da CF/88)", paginas: 22 }, { nome: "Direitos Políticos e Partidos Políticos", paginas: 25 }, { nome: "Estatuto do Desarmamento (Lei nº 10.826/2003)", paginas: 28 }]],
+
+      // SEMANA 04
       [4, 1, "Direito Penal", "Concurso de Pessoas e Concurso de Crimes + Crimes no CDC", 64, 3, 3, "CP Art. 29 a 31 + Lei nº 8.078/1990 (Art. 61 a 80)", "Tempo total estimado: 2h38 por parte", [{ nome: "Concurso de Pessoas (Autoria e Participação)", paginas: 24 }, { nome: "Concurso de Crimes (Material, Formal e Continuado)", paginas: 22 }, { nome: "Crimes contra as Relações de Consumo (CDC)", paginas: 18 }]],
       [4, 2, "Direito Constitucional", "Organização do Estado + Lei Antiterrorismo", 74, 3, 3, "CF/88 Art. 18 a 33 + Lei nº 13.260/2016 (Art. 1º a 19)", "Tempo total estimado: 3h05 por parte", [{ nome: "Organização Político-Administrativa e Repartição de Competências", paginas: 48 }, { nome: "Lei Antiterrorismo (Lei nº 13.260/2016)", paginas: 26 }]],
       [4, 3, "Direito Administrativo", "Serviços Públicos + Estatuto da Pessoa Idosa", 61, 3, 0, "Lei nº 8.987/1995 (Art. 1º a 40) + Lei nº 10.741/2003 (Art. 93 a 110)", "Tempo total: 2h31 por parte", [{ nome: "Serviços Públicos", paginas: 39 }, { nome: "Estatuto da Pessoa Idosa", paginas: 22 }]],
       [4, 4, "Leis Extravagantes", "Crimes do ECA (Lei nº 8.069/1990)", 65, 3, 0, "Lei nº 8.069/1990 - Art. 103 a 105, 171 a 190-E, 225 a 244-C", "Tempo total: 2h45 por parte", [{ nome: "Ato Infracional e Apuração de Ato Infracional no ECA", paginas: 32 }, { nome: "Crimes em Espécie no Estatuto da Criança e do Adolescente", paginas: 33 }]],
       [4, 5, "Leis Extravagantes", "Lei das Organizações Criminosas (Lei nº 12.850/2013)", 60, 3, 0, "Lei nº 12.850/2013 - Artigos 1º a 24", "Tempo total: 2h30 por parte", [{ nome: "Conceito de Organização Criminosa e Meios de Obtenção de Prova", paginas: 32 }, { nome: "Colaboração Premiada, Ação Controlada e Infiltração de Agentes", paginas: 28 }]],
+
+      // SEMANA 05 - REVISÃO DO BLOCO 1
       [5, 1, "Revisão Bloco 1", "Penal e Proc. Penal: Princípios, Lei Penal, Teoria do Crime (1 a 3), IP, Ação Penal e Concurso", 30, 1, 0, "Revisão TOPIF + Caderno de Erros", "", [{ nome: "Revisão Direito Penal (Semanas 01 a 04)", paginas: 15 }, { nome: "Revisão Direito Processual Penal (Semanas 01 a 04)", paginas: 15 }]],
       [5, 2, "Revisão Bloco 1", "Constitucional e Administrativo: Direitos Fundamentais, Teoria, Remédios, Nac/Pol, Org. Estado, Entes e Serviços", 30, 1, 0, "Revisão TOPIF + Caderno de Erros", "", [{ nome: "Revisão Direito Constitucional (Semanas 01 a 04)", paginas: 15 }, { nome: "Revisão Direito Administrativo (Semanas 01 a 04)", paginas: 15 }]],
       [5, 3, "Revisão Bloco 1", "Leis Penais Especiais: Maria da Penha, Hediondos, Desarmamento, CDC, Antiterrorismo, Idoso, ECA e ORCRIM", 30, 1, 0, "Revisão TOPIF + Caderno de Erros", "", [{ nome: "Revisão Legislação Penal Especial (Semanas 01 a 04)", paginas: 30 }]],
+
+      // SEMANA 06
       [6, 1, "Direito Processual Penal", "Jurisdição e Competência", 58, 3, 0, "CPP - Artigos 69 a 91", "", [{ nome: "Jurisdição e Competência no Processo Penal", paginas: 58 }]],
       [6, 2, "Direito Constitucional", "Administração Pública - Aspectos Constitucionais", 52, 3, 0, "CF/88 - Artigos 37 a 41", "", [{ nome: "Disposições Constitucionais da Administração Pública", paginas: 52 }]],
       [6, 3, "Direito Administrativo", "Poderes da Administração", 54, 3, 0, "Doutrina + Jurisprudência STF/STJ", "", [{ nome: "Poderes Vinculado, Discricionário, Hierárquico, Disciplinar e de Polícia", paginas: 54 }]],
@@ -11134,6 +10629,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       [6, 5, "Criminologia", "Conceito, Objeto, Classificação e Estatística Criminal", 45, 3, 0, "Resumo Doutrinário", "", [{ nome: "Conceito, Método e Objeto da Criminologia", paginas: 25 }, { nome: "Cifras da Criminalidade e Estatística Criminal", paginas: 20 }]],
       [6, 6, "Direito Constitucional", "Poder e Processo Legislativo", 60, 3, 0, "CF/88 - Artigos 44 a 69", "", [{ nome: "Organização do Poder Legislativo e CPI", paginas: 30 }, { nome: "Processo Legislativo Constitucional", paginas: 30 }]],
       [6, 7, "Leis Extravagantes", "Lei de Crimes Ambientais - Lei nº 9.605/1998", 55, 3, 0, "Lei nº 9.605/1998 Integral", "", [{ nome: "Responsabilidade Penal Ambiental e Crimes em Espécie", paginas: 55 }]],
+
+      // SEMANA 07
       [7, 1, "Direito Penal", "Teoria Geral da Pena", 68, 3, 0, "CP - Artigos 32 a 95", "", [{ nome: "Espécies de Pena e Dosimetria Trifásica", paginas: 38 }, { nome: "Sursis, Livramento Condicional e Efeitos da Condenação", paginas: 30 }]],
       [7, 2, "Leis Extravagantes", "Lei nº 14.540/2023 (Prevenção ao Assédio)", 25, 2, 0, "Lei nº 14.540/2023", "", [{ nome: "Programa de Prevenção e Enfrentamento ao Assédio", paginas: 25 }]],
       [7, 3, "Direito Administrativo", "Atos Administrativos", 62, 3, 0, "Lei nº 9.784/1999", "", [{ nome: "Requisitos, Atributos e Classificação dos Atos Administrativos", paginas: 34 }, { nome: "Extinção, Anulação, Revogação e Convalidação", paginas: 28 }]],
@@ -11141,31 +10638,41 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       [7, 5, "Direito Processual Penal", "Questões Prejudiciais, Processos Incidentes, Sujeitos, Comunicação, Emendatio e Mutatio Libelli", 64, 3, 0, "CPP - Artigos 92 a 154 e 251 a 393", "", [{ nome: "Questões e Processos Incidentes", paginas: 32 }, { nome: "Sujeitos do Processo, Citações, Intimações e Sentença", paginas: 32 }]],
       [7, 6, "Leis Extravagantes", "Lei de Drogas - Lei nº 11.343/2006", 70, 3, 0, "Lei nº 11.343/2006 Integral", "", [{ nome: "Porte para Consumo Pessoal vs. Tráfico de Drogas", paginas: 38 }, { nome: "Procedimento Penal e Apreensão de Bens na Lei de Drogas", paginas: 32 }]],
       [7, 7, "Medicina Legal", "Traumatologia Forense", 56, 3, 0, "Manual de Medicina Legal", "", [{ nome: "Energias de Ordem Mecânica e Lesões Corporais", paginas: 56 }]],
+
+      // SEMANA 08
       [8, 1, "Direito Processual Penal", "Provas", 75, 3, 0, "CPP - Artigos 155 a 250", "", [{ nome: "Teoria Geral da Prova e Cadeia de Custódia", paginas: 38 }, { nome: "Meios de Prova em Espécie no CPP", paginas: 37 }]],
       [8, 2, "Direito Constitucional", "Poder Executivo", 45, 3, 0, "CF/88 - Artigos 76 a 91", "", [{ nome: "Atribuições e Responsabilização do Presidente da República", paginas: 45 }]],
       [8, 3, "Direito Constitucional", "Poder Judiciário", 58, 3, 0, "CF/88 - Artigos 92 a 126", "", [{ nome: "Garantias, Vedações, CNJ e Competências do STF/STJ", paginas: 58 }]],
       [8, 4, "Direito Penal", "Ação Penal e Causas de Extinção da Punibilidade", 60, 3, 0, "CP - Artigos 100 a 120", "", [{ nome: "Causas Extintivas da Punibilidade e Prescrição Penal", paginas: 60 }]],
       [8, 5, "Medicina Legal", "Tanatologia Forense", 50, 3, 0, "Manual de Medicina Legal", "", [{ nome: "Fenômenos Cadavéricos e Cronotanatognose", paginas: 50 }]],
       [8, 6, "Leis Extravagantes", "Lei dos Crimes de Preconceito Racial (Lei nº 7.716/1989)", 40, 3, 0, "Lei nº 7.716/1989 (Atualizada pela Lei 14.532/23)", "", [{ nome: "Crimes de Racismo e Injúria Racial", paginas: 40 }]],
+
+      // SEMANA 09
       [9, 1, "Direito Administrativo", "Licitações (Lei nº 14.133/2021)", 78, 3, 0, "Lei nº 14.133/2021", "", [{ nome: "Modalidades, Fases e Critérios de Julgamento", paginas: 42 }, { nome: "Contratação Direta (Dispensa e Inexigibilidade)", paginas: 36 }]],
       [9, 2, "Leis Extravagantes", "Lei das Contravenções Penais - Decreto-Lei nº 3.688/1941", 35, 3, 0, "Decreto-Lei nº 3.688/1941", "", [{ nome: "Lei das Contravenções Penais", paginas: 35 }]],
       [9, 3, "Direito Constitucional", "Controle de Constitucionalidade", 72, 3, 0, "Lei nº 9.868/1999 e Lei nº 9.882/1999", "", [{ nome: "Controle Difuso e Concentrado de Constitucionalidade", paginas: 38 }, { nome: "ADI, ADC, ADPF e ADI por Omissão", paginas: 34 }]],
       [9, 4, "Leis Extravagantes", "Código de Trânsito Brasileiro (CTB) - Lei nº 9.503/1997", 52, 3, 0, "CTB - Artigos 291 a 312-B", "", [{ nome: "Disposições Gerais e Crimes de Trânsito em Espécie", paginas: 52 }]],
       [9, 5, "Leis Extravagantes", "Lei de Abuso de Autoridade - Lei nº 13.869/2019", 48, 3, 0, "Lei nº 13.869/2019 Integral", "", [{ nome: "Elemento Subjetivo Especial e Crimes de Abuso de Autoridade", paginas: 48 }]],
+
+      // SEMANA 10 - REVISÃO DO BLOCO 2
       [10, 1, "Revisão Bloco 2", "Penal, Processo Penal, Criminologia e Medicina Legal (Semanas 06 a 09)", 30, 1, 0, "Revisão TOPIF", "", []],
       [10, 2, "Revisão Bloco 2", "Constitucional e Administrativo: Adm. Pública, Poderes, Atos, PAD, Licitações e Controle", 30, 1, 0, "Revisão TOPIF", "", []],
       [10, 3, "Revisão Bloco 2", "Leis Especiais: Tortura, Ambientais, Drogas, Racismo, LCP, CTB e Abuso de Autoridade", 30, 1, 0, "Revisão TOPIF", "", []],
+
+      // SEMANAS 11 A 50
       [11, 1, "Direito Constitucional", "Funções Essenciais à Justiça", 48, 3, 0, "CF/88 - Artigos 127 a 135", "", []],
       [11, 2, "Direito Constitucional", "Estado de Defesa, Estado de Sítio e Segurança Pública", 44, 3, 0, "CF/88 - Artigos 136 a 144", "", []],
       [11, 3, "Direito Processual Penal", "Prisões", 68, 3, 0, "CPP - Artigos 282 a 318-B + Lei 7.960/89", "", []],
       [11, 4, "Leis Extravagantes", "Reestruturação do COAF (Lei nº 13.974/2020)", 25, 2, 0, "Lei nº 13.974/2020", "", []],
       [11, 5, "Direito Penal", "Crimes contra a Pessoa", 72, 3, 0, "CP - Artigos 121 a 154-B", "", []],
+
       [12, 1, "Direito Processual Penal", "Liberdade Provisória, Medidas Cautelares e Fiança", 55, 3, 0, "CPP - Artigos 319 a 350", "", []],
       [12, 2, "Direito Administrativo", "Contratos Administrativos", 58, 3, 0, "Lei nº 14.133/2021 - Art. 89 a 154", "", []],
       [12, 3, "Leis Extravagantes", "Lei Geral do Esporte (Lei nº 14.597/2023)", 35, 3, 0, "Lei nº 14.597/2023", "", []],
       [12, 4, "Leis Extravagantes", "Lei de Interceptação Telefônica - Lei nº 9.296/1996", 45, 3, 0, "Lei nº 9.296/1996 Integral", "", []],
       [12, 5, "Criminologia", "História da Criminologia, Escola Clássica e Positivista", 42, 3, 0, "", "", []],
       [12, 6, "Direito Penal", "Crimes contra o Patrimônio", 78, 3, 0, "CP - Artigos 155 a 183", "", []],
+
       [13, 1, "Direito Administrativo", "Intervenção do Estado no Domínio Econômico e na Propriedade", 54, 3, 0, "Decreto-Lei nº 3.365/1941", "", []],
       [13, 2, "Leis Extravagantes", "Estatuto da Pessoa com Deficiência - Lei nº 13.146/2015", 40, 3, 0, "Lei nº 13.146/2015", "", []],
       [13, 3, "Direito Penal", "Crimes contra a Propriedade Imaterial, Organização do Trabalho e Sentimento Religioso", 45, 3, 0, "CP - Artigos 184 a 212", "", []],
@@ -11173,48 +10680,58 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       [13, 5, "Direito Processual Penal", "Tribunal do Júri", 62, 3, 0, "CPP - Artigos 406 a 497", "", []],
       [13, 6, "Criminologia", "Sociologia Criminal", 46, 3, 0, "", "", []],
       [13, 7, "Direito Constitucional", "Ordem Social e Ordem Econômica e Financeira", 55, 3, 0, "CF/88 - Artigos 170 a 232", "", []],
+
       [14, 1, "Direito Penal", "Crimes contra a Dignidade Sexual", 58, 3, 0, "CP - Artigos 213 a 234-C", "", []],
       [14, 2, "Direito Processual Penal", "Procedimentos", 54, 3, 0, "CPP - Artigos 394 a 405 e 513 a 540", "", []],
       [14, 3, "Medicina Legal", "Sexologia Forense", 44, 3, 0, "", "", []],
       [14, 4, "Direito Constitucional", "Sistema Tributário Nacional, Ciência, Tecnologia, Família, Criança e Idoso", 52, 3, 0, "CF/88 - Artigos 145 a 169", "", []],
       [14, 5, "Leis Extravagantes", "Código Eleitoral (Lei nº 4.737/1965) e JECRIM (Lei nº 9.099/1995)", 64, 3, 0, "Lei nº 9.099/1995 Integral", "", []],
+
       [15, 1, "Revisão Bloco 3", "Penal e Processo Penal: Crimes contra a Pessoa, Patrimônio, Dignidade Sexual, Prisões, Cautelares e Júri", 30, 1, 0, "Revisão TOPIF", "", []],
       [15, 2, "Revisão Bloco 3", "Constitucional, Administrativo, Criminologia e Medicina Legal (Semanas 11 a 14)", 30, 1, 0, "Revisão TOPIF", "", []],
       [15, 3, "Revisão Bloco 3", "Leis Especiais: COAF, Esporte, Interceptação, PCD, Falimentares, Eleitoral e JECRIM", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [16, 1, "Direito Penal", "Crimes contra a Família, Incolumidade Pública e Paz Pública", 56, 3, 0, "CP - Artigos 235 a 288-A", "", []],
       [16, 2, "Criminologia", "Crime Organizado, Classificação dos Criminosos e Prevenção Criminal", 44, 3, 0, "", "", []],
       [16, 3, "Direito Processual Penal", "Nulidades, Recursos em Espécie e Ações de Impugnação", 70, 3, 0, "CPP - Artigos 563 a 667", "", []],
       [16, 4, "Leis Extravagantes", "Lei Henry Borel, Crimes contra a Ordem Tributária e Lavagem de Capitais (Lei nº 9.613/1998)", 66, 3, 0, "Lei nº 14.344/22, Lei nº 8.137/90 e Lei nº 9.613/98", "", []],
       [16, 5, "Direito Administrativo", "Bens Públicos", 45, 3, 0, "", "", []],
+
       [17, 1, "Direito Penal", "Crimes contra a Fé Pública", 52, 3, 0, "CP - Artigos 289 a 311-A", "", []],
       [17, 2, "Criminologia", "Instâncias de Controle, Reincidência, Prognóstico e Criminologia Crítica", 46, 3, 0, "", "", []],
       [17, 3, "Direito Administrativo", "Agentes Públicos", 60, 3, 0, "Lei nº 8.112/1990", "", []],
       [17, 4, "Leis Extravagantes", "Lei de Execução Penal (LEP) - Parte 1 e Parte 2", 68, 3, 0, "Lei nº 7.210/1984", "", []],
       [17, 5, "Medicina Legal", "Toxicologia Forense e Antropologia Forense", 48, 3, 0, "", "", []],
       [17, 6, "Direito Processual Penal", "Processo Penal Digital", 38, 3, 0, "", "", []],
+
       [18, 1, "Direito Administrativo", "Responsabilidade Civil do Estado", 52, 3, 0, "CF/88 - Art. 37, § 6º", "", []],
       [18, 2, "Leis Extravagantes", "Lei do Genocídio e Lei da Escuta Protegida", 42, 3, 0, "Lei nº 2.889/56 e Lei nº 13.431/17", "", []],
       [18, 3, "Direito Penal", "Crimes contra a Administração Pública e Crimes de Licitação e Contratos", 74, 3, 0, "CP - Artigos 312 a 359-H", "", []],
       [18, 4, "Criminologia", "Legitimação/Deslegitimação do Direito Penal e Direito Penal do Inimigo", 40, 3, 0, "", "", []],
       [18, 5, "Medicina Legal", "Energias Físicas Não Mecânicas, Perícias/Documentos Médico-Legais e Asfixiologia", 56, 3, 0, "", "", []],
+
       [19, 1, "Direito Administrativo", "Improbidade Administrativa e Controle da Administração Pública", 68, 3, 0, "Lei nº 8.429/1992 (Atualizada pela Lei 14.230/21)", "", []],
       [19, 2, "Direito Penal", "Crimes contra as Finanças Públicas e contra o Estado Democrático de Direito", 50, 3, 0, "CP - Artigos 359-A a 359-T", "", []],
       [19, 3, "Leis Extravagantes", "Lei de Migração, Parcelamento do Solo Urbano e Lei nº 12.984/2014", 48, 3, 0, "Lei nº 13.445/2017", "", []],
       [19, 4, "Medicina Legal", "Psiquiatria Forense", 42, 3, 0, "", "", []],
       [19, 5, "Direito Civil", "Lei do Inquilinato (Lei nº 8.245/1991)", 38, 3, 0, "Lei nº 8.245/1991", "", []],
+
       [20, 1, "Revisão Bloco 4", "Penal e Processo Penal: Família, Incolumidade, Paz, Fé, Adm. Pública, Nulidades e Recursos", 30, 1, 0, "Revisão TOPIF", "", []],
       [20, 2, "Revisão Bloco 4", "Administrativo, Criminologia e Medicina Legal (Semanas 16 a 19)", 30, 1, 0, "Revisão TOPIF", "", []],
       [20, 3, "Revisão Bloco 4", "Leis Especiais: Henry Borel, Tributária, Lavagem, LEP, Genocídio, Escuta e Migração", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [21, 1, "Direito Processual Civil", "Princípios, Jurisdição, Ação e Competência", 55, 3, 0, "", "", []],
       [21, 2, "Direito do Consumidor", "Introdução ao Direito do Consumidor", 42, 3, 0, "", "", []],
       [21, 3, "Direitos Humanos", "Teoria Geral, Interpretação, Eficácia e Direitos Humanos na CF/88", 56, 3, 0, "", "", []],
       [21, 4, "Direito Ambiental", "Direito Ambiental Constitucional", 44, 3, 0, "", "", []],
       [21, 5, "Execução Penal", "Objetivos, Princípios e Jurisdição na Execução Penal", 46, 3, 0, "", "", []],
+
       [22, 1, "Direito Civil", "Constitucionalização do Direito Civil e LINDB", 50, 3, 0, "Decreto-Lei nº 4.657/1942", "", []],
       [22, 2, "Execução Penal", "Do Preso, do Trabalho Penitenciário e dos Órgãos da Execução Penal", 48, 3, 0, "", "", []],
       [22, 3, "Direito Ambiental", "Código Florestal, Lei da Mata Atlântica e Lei de Gestão Florestal", 52, 3, 0, "", "", []],
       [22, 4, "Direito Processual Civil", "Dos Sujeitos do Processo", 46, 3, 0, "", "", []],
       [22, 5, "Direitos Humanos", "Controle de Convencionalidade e Intervenção Federal para Garantia dos DH", 45, 3, 0, "", "", []],
+
       [23, 1, "Direito Civil", "Fatos Jurídicos, Negócio Jurídico, Prescrição e Decadência", 62, 3, 0, "Código Civil - Parte Geral", "", []],
       [23, 2, "Direito Processual Civil", "Dos Atos Processuais e da Formação, Suspensão e Extinção do Processo", 52, 3, 0, "", "", []],
       [23, 3, "Princípios Institucionais do MP", "Introdução aos Princípios Institucionais do MP", 40, 3, 0, "", "", []],
@@ -11222,92 +10739,119 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       [23, 5, "Estatuto da Criança e do Adolescente", "Evolução, Princípios e Depoimento sem Dano", 42, 3, 0, "", "", []],
       [23, 6, "Direitos Humanos", "Federalização dos Crimes contra DH e Programas Nacionais de DH", 38, 3, 0, "", "", []],
       [23, 7, "Direito Tributário e Financeiro", "Legislação Tributária: Competência, Fontes, Vigência, Aplicação e Interpretação", 48, 3, 0, "", "", []],
+
       [24, 1, "Direito Tributário e Financeiro", "Conceito e Classificação dos Tributos", 46, 3, 0, "", "", []],
       [24, 2, "Direitos Humanos", "Direito Internacional dos Direitos Humanos", 52, 3, 0, "", "", []],
       [24, 3, "Tutela Coletiva", "Acesso à Justiça e Microssistemas de Tutela Coletiva", 48, 3, 0, "", "", []],
       [24, 4, "Estatuto da Criança e do Adolescente", "Direitos Fundamentais no ECA", 44, 3, 0, "", "", []],
       [24, 5, "Execução Penal", "Sistema Disciplinar na Execução Penal", 42, 3, 0, "", "", []],
       [24, 6, "Princípios Institucionais do MP", "Procedimentos de Investigação no MP (PIC)", 40, 3, 0, "", "", []],
+
       [25, 1, "Revisão Bloco 5 (50%)", "Civil, Processo Civil e Consumidor (Semanas 21 a 24)", 30, 1, 0, "Revisão TOPIF", "", []],
       [25, 2, "Revisão Bloco 5 (50%)", "Direitos Humanos, Ambiental e Execução Penal (Semanas 21 a 24)", 30, 1, 0, "Revisão TOPIF", "", []],
       [25, 3, "Revisão Bloco 5 (50%)", "Tributário, Eleitoral, ECA, Tutela Coletiva e MP (Semanas 21 a 24)", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [26, 1, "Direito Empresarial", "Empresário", 42, 3, 0, "", "", []],
       [26, 2, "Princípios Institucionais do MP", "Conselho Nacional do Ministério Público (CNMP)", 38, 3, 0, "", "", []],
       [26, 3, "Direito Eleitoral", "Elegibilidade, Inelegibilidade e Código Eleitoral", 48, 3, 0, "", "", []],
       [26, 4, "Direito Eleitoral", "Propaganda Eleitoral", 40, 3, 0, "", "", []],
       [26, 5, "Execução Penal", "Direitos da Execução e Progressão de Regime", 54, 3, 0, "", "", []],
+
       [27, 1, "Direito Civil", "Obrigações I", 52, 3, 0, "", "", []],
       [27, 2, "Direito do Consumidor", "Direitos Básicos e Responsabilidade Civil no CDC", 48, 3, 0, "", "", []],
       [27, 3, "Direito Ambiental", "Saneamento Básico", 36, 3, 0, "", "", []],
       [27, 4, "Direito Eleitoral", "Partidos Políticos", 40, 3, 0, "", "", []],
+
       [28, 1, "Direito Processual Civil", "Tutelas Provisórias", 48, 3, 0, "", "", []],
       [28, 2, "Direito Ambiental", "Recursos Hídricos e Responsabilidade Ambiental", 50, 3, 0, "", "", []],
       [28, 3, "Direitos Humanos", "Integridade Física/Mental, Grupos Vulneráveis, Minorias e Defensores de DH", 46, 3, 0, "", "", []],
       [28, 4, "Direito Tributário e Financeiro", "Limitações ao Poder de Tributar e Competência Tributária", 52, 3, 0, "", "", []],
       [28, 5, "Direito Civil", "Dos Bens", 38, 3, 0, "", "", []],
       [28, 6, "Direito do Consumidor", "Práticas Comerciais e Lei do Cadastro Positivo", 42, 3, 0, "", "", []],
+
       [29, 1, "Direito Tributário e Financeiro", "Obrigação Tributária, Fato Gerador, Sujeitos, Responsabilidade e Denúncia Espontânea", 56, 3, 0, "", "", []],
       [29, 2, "Direito Ambiental", "Política Nacional do Meio Ambiente (PNMA), Biossegurança e Biodiversidade", 50, 3, 0, "", "", []],
       [29, 3, "Direito Empresarial", "Sociedades", 48, 3, 0, "", "", []],
+
       [30, 1, "Revisão Bloco 6", "Civil, Processo Civil, Empresarial e Consumidor (Semanas 26 a 29)", 30, 1, 0, "Revisão TOPIF", "", []],
       [30, 2, "Revisão Bloco 6", "Ambiental, Tributário, Eleitoral, DH, Execução Penal e MP (Semanas 26 a 29)", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [31, 1, "Direito Civil", "Obrigações - Parte II", 50, 3, 0, "", "", []],
       [31, 2, "Direito Processual Civil", "Processo de Conhecimento", 58, 3, 0, "", "", []],
       [31, 3, "Direito Empresarial", "Títulos de Crédito", 46, 3, 0, "", "", []],
       [31, 4, "Direito Tributário e Financeiro", "Crédito Tributário", 54, 3, 0, "", "", []],
+
       [32, 1, "Direito Civil", "Teoria Geral dos Contratos", 52, 3, 0, "", "", []],
       [32, 2, "Direito do Consumidor", "Práticas Contratuais e Defesa do Consumidor em Juízo", 46, 3, 0, "", "", []],
       [32, 3, "Direito à Saúde", "Direito Sanitário e Direito à Saúde", 40, 3, 0, "", "", []],
       [32, 4, "Direito Processual Civil", "Sentença e Coisa Julgada", 48, 3, 0, "", "", []],
+
       [33, 1, "Direito Civil", "Contratos em Espécie e Responsabilidade Civil", 64, 3, 0, "", "", []],
       [33, 2, "Direito Empresarial", "Direito Falimentar e Recuperação Judicial", 52, 3, 0, "", "", []],
       [33, 3, "Direitos Humanos", "Direitos da Criança, PCD, Idosos, População LGBTQIAPN+ e Pessoas Reclusas", 48, 3, 0, "", "", []],
+
       [34, 1, "Direito Civil", "Direito das Coisas (Direitos Reais)", 60, 3, 0, "", "", []],
       [34, 2, "Direito Processual Civil", "Procedimentos Especiais e Procedimentos de Jurisdição Voluntária", 52, 3, 0, "", "", []],
+
       [35, 1, "Revisão Bloco 7", "Civil (Obrigações II, Contratos, Resp. Civil, Reais) e Processo Civil", 30, 1, 0, "Revisão TOPIF", "", []],
       [35, 2, "Revisão Bloco 7", "Empresarial, Tributário, Consumidor, Direito à Saúde e Direitos Humanos", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [36, 1, "Direito Civil", "Direito de Família - Entidades Familiares", 48, 3, 0, "", "", []],
       [36, 2, "Direito Processual Civil", "Teoria Geral das Provas e Provas em Espécie", 54, 3, 0, "", "", []],
       [36, 3, "Direitos Humanos", "Indígenas, Refugiados, População em Situação de Rua, Migrantes, Quilombolas e Vítimas", 46, 3, 0, "", "", []],
       [36, 4, "Direito Empresarial", "Propriedade Industrial", 40, 3, 0, "", "", []],
       [36, 5, "Estatuto da Criança e do Adolescente", "Guarda, Tutela e Adoção", 48, 3, 0, "", "", []],
+
       [37, 1, "Direito Empresarial", "Ações Cambiais", 38, 3, 0, "", "", []],
       [37, 2, "Direito do Consumidor", "Contratos Bancários", 40, 3, 0, "", "", []],
       [37, 3, "Direito Tributário e Financeiro", "Administração Tributária", 44, 3, 0, "", "", []],
       [37, 4, "Estatuto da Criança e do Adolescente", "Poder Familiar", 42, 3, 0, "", "", []],
       [37, 5, "Execução Penal", "Livramento Condicional", 38, 3, 0, "", "", []],
       [37, 6, "Direito Civil", "Direito de Família - Casamento", 46, 3, 0, "", "", []],
+
       [38, 1, "Direito da Pessoa Idosa", "Estatuto da Pessoa Idosa - Parte Geral e Proteção Integral", 44, 3, 0, "", "", []],
       [38, 2, "Direito Civil", "Direito de Família - Dissolução da Sociedade Conjugal", 42, 3, 0, "", "", []],
       [38, 3, "Direito Tributário e Financeiro", "Execução Fiscal e Processo Judicial Tributário", 50, 3, 0, "", "", []],
+
       [39, 1, "Direito Civil", "Direito de Família - União Estável e Regime de Bens", 48, 3, 0, "", "", []],
       [39, 2, "Direito Processual Civil", "Processos nos Tribunais e Meios de Impugnação das Decisões Judiciais", 58, 3, 0, "", "", []],
       [39, 3, "Tutela Coletiva", "Legitimidade na Tutela Coletiva", 44, 3, 0, "", "", []],
+
       [40, 1, "Revisão Bloco 8", "Direito de Família, Processo Civil e Tutela Coletiva (Semanas 36 a 39)", 30, 1, 0, "Revisão TOPIF", "", []],
       [40, 2, "Revisão Bloco 8", "ECA, Idoso, Tributário, Empresarial, Consumidor, Execução Penal e DH", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [41, 1, "Tutela Coletiva", "Aspectos Processuais, Ação Coletiva, Competência, Litisconsórcio e Intervenção de Terceiros", 54, 3, 0, "", "", []],
       [41, 2, "Direito do Consumidor", "Planos de Saúde e Serviços Públicos Essenciais", 42, 3, 0, "", "", []],
       [41, 3, "Direito Civil", "Direito de Família - Relações de Parentesco", 46, 3, 0, "", "", []],
+
       [42, 1, "Tutela Coletiva", "Sentença Coletiva e Meios Adequados de Solução de Conflitos", 48, 3, 0, "", "", []],
       [42, 2, "Estatuto da Criança e do Adolescente", "Medidas de Proteção, Acesso à Justiça e Ato Infracional", 52, 3, 0, "", "", []],
       [42, 3, "Direito Civil", "Direito de Família - Tutela, Curatela e Tomada de Decisão Apoiada", 44, 3, 0, "", "", []],
+
       [43, 1, "Direito Civil", "Direito de Família - Alimentos", 46, 3, 0, "", "", []],
       [43, 2, "Estatuto da Criança e do Adolescente", "Medidas Socioeducativas, SINASE, Infrações Administrativas, LOAS e LDB", 54, 3, 0, "", "", []],
+
       [44, 1, "Direito Civil", "Direito das Sucessões", 60, 3, 0, "", "", []],
       [44, 2, "Direito Civil", "Lei da Alienação Parental", 36, 3, 0, "", "", []],
+
       [45, 1, "Revisão Bloco 9", "Tutela Coletiva, ECA, Consumidor, Família e Sucessões (Semanas 41 a 44)", 30, 1, 0, "Revisão TOPIF", "", []],
+
       [46, 1, "Direito Internacional Público", "Introdução, Sujeitos, Imunidades, Nacionalidade, Estrangeiro e Cooperação", 56, 3, 0, "", "", []],
       [46, 2, "Direito Urbanístico", "Conceitos e Aspectos Gerais do Direito Urbanístico", 42, 3, 0, "", "", []],
       [46, 3, "Direito Tributário e Financeiro", "Orçamento, Receita, Despesa e Crédito Público", 50, 3, 0, "", "", []],
       [46, 4, "Direito Previdenciário", "Seguridade Social e Previdência Complementar", 48, 3, 0, "", "", []],
+
       [47, 1, "Direito Tributário e Financeiro", "Despesa e Receita Pública e Fiscalização Financeira e Orçamentária", 48, 3, 0, "", "", []],
       [47, 2, "Direito Internacional Público", "Mercosul", 38, 3, 0, "", "", []],
+
       [48, 1, "Direito Urbanístico", "Estatuto da Cidade (Lei nº 10.257/2001)", 48, 3, 0, "", "", []],
       [48, 2, "Direito Previdenciário", "Beneficiários, Empregadores, Contribuições, Prescrição/Decadência e Crimes Previdenciários", 54, 3, 0, "", "", []],
       [48, 3, "Direito Tributário e Financeiro", "Lei de Responsabilidade Fiscal (LRF - LC nº 101/2000)", 52, 3, 0, "", "", []],
+
       [49, 1, "Direito Previdenciário", "Acidente de Trabalho", 40, 3, 0, "", "", []],
       [49, 2, "Direito Internacional Público", "Crimes Limitadores, Homologação de Sentença Estrangeira, Cooperação e Conflitos Internacionais", 50, 3, 0, "", "", []],
       [49, 3, "Direito Urbanístico", "Direito à Moradia", 38, 3, 0, "", "", []],
+
       [50, 1, "Revisão Bloco 10 (Final)", "Direito Internacional Público, Financeiro, Previdenciário e Urbanístico (Semanas 46 a 49)", 30, 1, 0, "Revisão Final TOPIF", "", []]
     ];
 
@@ -11324,1795 +10868,6 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       } catch (err) {
         console.error('Aviso ao inicializar seed no Supabase:', err.message);
       }
-    }
-  </script>
-
-  <script>
-    /* ==========================================================================
-     * 11. MOTOR DA AGENDA EM TELA CHEIA (CLEAN GOOGLE CALENDAR WORKSPACE)
-     *     - 3 Áreas Independentes no Dia:
-     *       A) Conteúdo do Dia (Matéria, Tópico, Páginas, Progresso e Média min/pág)
-     *       B) Aquecimento e Revisão de Cartões (Baseado estritamente na matéria de
-     *          cada Bateria de Questões programada — tarefas separadas)
-     *       C) Baterias de Questões (Tarefas individuais separadas por bateria)
-     *     - Visualização Limpa na Grade: apenas Horário • Tipo • Matéria
-     *     - Detalhes completos exibidos somente ao clicar na tarefa
-     * ========================================================================== */
-    const AG_STORAGE_KEY = 'GR_AGENDA_ESTUDOS_V2';
-    const AG_PX_POR_HORA = 52; // 52px por hora na grade em tela cheia
-
-    const AG_PALETA_CORES = [
-      { hex: '#8b5cf6', nome: 'Roxo (Aquecimento de Cartões)' },
-      { hex: '#3b82f6', nome: 'Azul Royal (Conteúdo do Dia)' },
-      { hex: '#10b981', nome: 'Esmeralda (Bateria de Questões)' },
-      { hex: '#f59e0b', nome: 'Âmbar (Lei Seca / Destaque)' },
-      { hex: '#f43f5e', nome: 'Coral (Reforço Urgente)' },
-      { hex: '#06b6d4', nome: 'Ciano (Jurisprudência)' },
-      { hex: '#6366f1', nome: 'Índigo (Simulado)' },
-      { hex: '#14b8a6', nome: 'Teal (Consolidação)' }
-    ];
-
-    let AG_STATE = {
-      dataBaseVisao: '',
-      modoVisao: '4DIAS',
-      sidebarAberta: true,
-      configExpediente: {
-        horaInicio: 8,
-        horaFim: 21,
-        metaMinutosDia: 240
-      },
-      historicoLeitura: {
-        segundosTotais: 0,
-        paginasTotais: 0
-      },
-      coresPadrao: {
-        REVISAO: '#8b5cf6',
-        ESTUDO: '#3b82f6',
-        QUESTOES: '#10b981',
-        materias: {}
-      },
-      tarefas: [],
-      ultimoDiaRollover: ''
-    };
-
-    let AG_TIMER = {
-      ativo: false,
-      taskId: null,
-      blockId: null,
-      ultimoTickMs: 0,
-      intervalId: null
-    };
-
-    let AG_MODAL_BLOCOS_TEMP = [];
-    let AG_RESIZE_STATE = null;
-
-    function inicializarModuloAgendaEstudos() {
-      const hojeYMD = formatarDataYMD_(new Date());
-      carregarEstadoAgendaStorage_();
-
-      if (!AG_STATE.dataBaseVisao) {
-        AG_STATE.dataBaseVisao = hojeYMD;
-      }
-
-      sincronizarPlanejamentoDiario3Areas(false);
-      verificarERealizarRolloverAutomaticoDiario_(hojeYMD);
-
-      renderizarPaletaCoresModalAgenda_();
-      renderizarAgendaCompletaUI();
-
-      setTimeout(() => {
-        const sc = document.getElementById('agGridScrollContainer');
-        if (sc) sc.scrollTop = 7.5 * AG_PX_POR_HORA;
-      }, 150);
-
-      setInterval(() => {
-        atualizarLinhaHoraAtualAgenda_();
-      }, 60000);
-    }
-
-    function alternarPainelLateralAgenda() {
-      const aside = document.getElementById('agSidebarAtividadesDia');
-      if (!aside) return;
-      AG_STATE.sidebarAberta = !aside.classList.contains('hidden');
-      aside.classList.toggle('hidden');
-    }
-
-    function carregarEstadoAgendaStorage_() {
-      try {
-        const raw = localStorage.getItem(AG_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object') {
-            AG_STATE = Object.assign(AG_STATE, parsed);
-            if (!AG_STATE.coresPadrao) {
-              AG_STATE.coresPadrao = { REVISAO: '#8b5cf6', ESTUDO: '#3b82f6', QUESTOES: '#10b981', materias: {} };
-            }
-            if (!AG_STATE.configExpediente) {
-              AG_STATE.configExpediente = { horaInicio: 8, horaFim: 21, metaMinutosDia: 240 };
-            }
-            if (!AG_STATE.historicoLeitura) {
-              AG_STATE.historicoLeitura = { segundosTotais: 0, paginasTotais: 0 };
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Aviso ao ler Agenda:', e.message);
-      }
-    }
-
-    let timerSyncAgendaCloud = null;
-    function salvarEstadoAgendaStorage_() {
-      try {
-        localStorage.setItem(AG_STORAGE_KEY, JSON.stringify(AG_STATE));
-      } catch (e) {}
-
-      if (supabaseClient) {
-        if (timerSyncAgendaCloud) clearTimeout(timerSyncAgendaCloud);
-        timerSyncAgendaCloud = setTimeout(() => {
-          salvarValorConfigDB_('Agenda_Estudos_JSON', JSON.stringify(AG_STATE)).catch(() => {});
-        }, 1200);
-      }
-    }
-
-    /* ==========================================================================
-     * 11.1 CÁLCULO PROGRESSIVO DA MÉDIA DE TEMPO GASTO POR PÁGINA
-     * ========================================================================== */
-    function obterInfoMediaTempoPorPagina_() {
-      let segTotais = Number(AG_STATE.historicoLeitura?.segundosTotais || 0);
-      let pagTotais = Number(AG_STATE.historicoLeitura?.paginasTotais || 0);
-
-      // Soma também o progresso em tempo real das tarefas de Conteúdo do Dia (ESTUDO)
-      AG_STATE.tarefas.forEach(t => {
-        if (t.tipo === 'ESTUDO') {
-          const pLidas = Number(t.unidadesConcluidas || 0);
-          const sGastos = Number(t.segundosEstudados || 0);
-          if (pLidas > 0 && sGastos >= 30 && !t.contabilizadoNoHistoricoLeitura) {
-            segTotais += sGastos;
-            pagTotais += pLidas;
-          }
-        }
-      });
-
-      if (pagTotais <= 0 || segTotais < 30) {
-        return {
-          temHistorico: false,
-          minutosPorPagina: 3.0, // Estimativa inicial padrão (3 min/pág) enquanto constrói histórico
-          textoCurto: 'Média: em construção',
-          textoDetalhado: 'Em construção (inicie o cronômetro e registre as páginas lidas para formar sua média real)'
-        };
-      }
-
-      const minPorPag = (segTotais / 60) / pagTotais;
-      const minInt = Math.floor(minPorPag);
-      const segRest = Math.round((minPorPag - minInt) * 60);
-      const formatado = minInt > 0 ? `${minInt}m ${String(segRest).padStart(2, '0')}s/pág` : `${segRest}s/pág`;
-
-      return {
-        temHistorico: true,
-        minutosPorPagina: minPorPag,
-        paginasBase: pagTotais,
-        textoCurto: `Ritmo: ${formatado}`,
-        textoDetalhado: `${formatado} (calculado sobre ${pagTotais} página(s) estudada(s) no cronômetro)`
-      };
-    }
-
-    /* ==========================================================================
-     * 11.2 SINCRONIZAÇÃO DAS 3 ÁREAS DO DIA:
-     *      A) Conteúdo do Dia
-     *      B) Aquecimento de Cartões (Baseado na Matéria de cada Bateria!)
-     *      C) Baterias de Questões (Tarefas Individuais Separadas)
-     * ========================================================================== */
-    function sincronizarPlanejamentoDiario3Areas(exibirToast = false) {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const infoRitmo = obterInfoMediaTempoPorPagina_();
-      let novasCriadas = 0;
-
-      // ------------------------------------------------------------------------
-      // ÁREA A: CONTEÚDO DO DIA (Vem da Meta ativa do Cronograma de 50 Semanas)
-      // ------------------------------------------------------------------------
-      if (CRON_METAS && CRON_METAS.length > 0) {
-        const metaAtual = CRON_METAS.find(m => m.status !== 'Concluído');
-        if (metaAtual) {
-          const idxParte = metaAtual.detalhesPartes.findIndex(p => !p.concluida);
-          const dist = calcularDistribuicaoDiariaSubtopicosDaMeta_(metaAtual, idxParte !== -1 ? idxParte : 0);
-          const chaveConteudo = `SYS_CONTEUDO_${metaAtual.id}_P${idxParte + 1}`;
-          const paginasPrevistasHoje = Math.max(1, dist.leituraHojeTotal || 15);
-          const tempoEstimadoMin = Math.max(20, Math.min(240, Math.round(paginasPrevistasHoje * infoRitmo.minutosPorPagina)));
-          const resumoTopicos = dist.distribuicaoAssuntos.map(s => `${s.nome} (${s.metaHoje} pág.)`).join(' + ');
-
-          let tarefaConteudo = AG_STATE.tarefas.find(t => t.origemSistemaId === chaveConteudo);
-          if (!tarefaConteudo) {
-            AG_STATE.tarefas.push({
-              id: gerarId_('AG_T'),
-              origemSistemaId: chaveConteudo,
-              idMetaCronograma: metaAtual.id,
-              idxParteCronograma: idxParte !== -1 ? idxParte : 0,
-              titulo: `Conteúdo do Dia • ${metaAtual.topico}`,
-              materia: metaAtual.materia,
-              topicoEspecifico: resumoTopicos || metaAtual.topico,
-              tipo: 'ESTUDO',
-              prioridade: 'ALTA',
-              metaMinutos: tempoEstimadoMin,
-              segundosEstudados: 0,
-              unidadeTipo: 'PAGINAS',
-              metaUnidades: paginasPrevistasHoje,
-              unidadesConcluidas: 0,
-              corPersonalizada: null,
-              descricao: `Semana ${String(metaAtual.numeroSemana).padStart(2, '0')} • Meta ${metaAtual.numeroMeta} (Parte ${idxParte + 1}/${metaAtual.totalPartes}) | ${resumoTopicos}${metaAtual.leiSeca ? ' | Lei Seca: ' + metaAtual.leiSeca : ''}`,
-              repeticao: 'NENHUMA',
-              concluida: false,
-              dataReferencia: hojeYMD,
-              blocos: []
-            });
-            novasCriadas++;
-          } else {
-            tarefaConteudo.metaUnidades = paginasPrevistasHoje;
-            tarefaConteudo.topicoEspecifico = resumoTopicos || metaAtual.topico;
-          }
-        }
-      }
-
-      // ------------------------------------------------------------------------
-      // ÁREAS B e C: BATERIAS DE QUESTÕES DO DIA + AQUECIMENTO CORRESPONDENTE
-      // Regra estrita: Cada bateria programada gera:
-      // 1) Uma tarefa individual de Bateria de Questões (Área C)
-      // 2) Uma tarefa individual de Aquecimento de Cartões daquela mesma matéria (Área B)
-      // ------------------------------------------------------------------------
-      let bateriasProgramadas = [];
-      if (ESTADO && ESTADO.painel && Array.isArray(ESTADO.painel.atividadesHoje) && ESTADO.painel.atividadesHoje.length > 0) {
-        bateriasProgramadas = ESTADO.painel.atividadesHoje.filter(at => at.situacao !== 'Realizada');
-      }
-
-      bateriasProgramadas.forEach((bat, idxBat) => {
-        const numBateria = idxBat + 1;
-        const qtdQuestoes = Math.max(10, Number(bat.questoesPlanejadas || 15));
-
-        // Conta cartões cadastrados correspondentes à matéria/tópico desta bateria
-        const cardsDoTopico = FC_DECK.filter(c => c.idTopico === bat.idTopico);
-        const cardsDaMateria = FC_DECK.filter(c => c.idMateria === bat.idMateria);
-        const cardsAlvo = cardsDoTopico.length > 0 ? cardsDoTopico : cardsDaMateria;
-        const totalCardsAquecimento = cardsAlvo.length;
-        const cardsDominados = cardsAlvo.filter(c => !c.isNovo && c.totalRevisoes > 0).length;
-
-        // B) Tarefa Individual de Aquecimento de Cartões da Matéria da Bateria
-        const chaveAquecimento = `SYS_AQUEC_BAT_${bat.idRevisao}_${hojeYMD}`;
-        let tarefaAq = AG_STATE.tarefas.find(t => t.origemSistemaId === chaveAquecimento);
-        const minAquecimento = totalCardsAquecimento > 0
-          ? Math.max(10, Math.min(35, Math.ceil(totalCardsAquecimento * 0.4)))
-          : 15;
-
-        if (!tarefaAq) {
-          AG_STATE.tarefas.push({
-            id: gerarId_('AG_T'),
-            origemSistemaId: chaveAquecimento,
-            idMateriaSistema: bat.idMateria,
-            idTopicoSistema: bat.idTopico,
-            idRevisaoVinculada: bat.idRevisao,
-            titulo: `Aquecimento ${numBateria} • ${bat.materia}`,
-            materia: bat.materia,
-            topicoEspecifico: bat.topico,
-            tipo: 'REVISAO',
-            prioridade: 'ALTA',
-            metaMinutos: minAquecimento,
-            segundosEstudados: 0,
-            unidadeTipo: 'CARTOES',
-            metaUnidades: totalCardsAquecimento,
-            unidadesConcluidas: cardsDominados,
-            corPersonalizada: null,
-            descricao: `Aquecimento pré-bateria da matéria ${bat.materia} (Tópico: ${bat.topico})`,
-            repeticao: 'NENHUMA',
-            concluida: false,
-            dataReferencia: hojeYMD,
-            blocos: []
-          });
-          novasCriadas++;
-        } else {
-          tarefaAq.metaUnidades = totalCardsAquecimento;
-          tarefaAq.unidadesConcluidas = cardsDominados;
-          tarefaAq.idMateriaSistema = bat.idMateria;
-          tarefaAq.idTopicoSistema = bat.idTopico;
-        }
-
-        // C) Tarefa Individual da Bateria de Questões
-        const chaveBateria = `SYS_BATERIA_${bat.idRevisao}_${hojeYMD}`;
-        let tarefaBat = AG_STATE.tarefas.find(t => t.origemSistemaId === chaveBateria);
-        const minBateria = Math.max(20, Math.min(90, qtdQuestoes * 2));
-
-        if (!tarefaBat) {
-          AG_STATE.tarefas.push({
-            id: gerarId_('AG_T'),
-            origemSistemaId: chaveBateria,
-            idMateriaSistema: bat.idMateria,
-            idTopicoSistema: bat.idTopico,
-            idRevisaoVinculada: bat.idRevisao,
-            titulo: `Bateria ${numBateria} • ${bat.materia}`,
-            materia: bat.materia,
-            topicoEspecifico: bat.topico,
-            tipo: 'QUESTOES',
-            prioridade: bat.situacao === 'Atrasada' ? 'ALTA' : 'MEDIA',
-            metaMinutos: minBateria,
-            segundosEstudados: 0,
-            unidadeTipo: 'QUESTOES',
-            metaUnidades: qtdQuestoes,
-            unidadesConcluidas: 0,
-            corPersonalizada: null,
-            descricao: `${bat.fluxoNomeCurto || 'Bateria Programada'} • Tópico: ${bat.topico} (${qtdQuestoes} questões previstas)`,
-            repeticao: 'NENHUMA',
-            concluida: false,
-            dataReferencia: hojeYMD,
-            blocos: []
-          });
-          novasCriadas++;
-        } else {
-          tarefaBat.metaUnidades = qtdQuestoes;
-          tarefaBat.idMateriaSistema = bat.idMateria;
-          tarefaBat.idTopicoSistema = bat.idTopico;
-        }
-      });
-
-      // Caso o banco ainda esteja vazio (sem dados do Supabase conectados), garante 1 conjunto demonstrativo limpo
-      if (AG_STATE.tarefas.length === 0) {
-        criarConjuntoInicialLimpo3Areas_(hojeYMD);
-      }
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-
-      if (exibirToast) {
-        notificar(novasCriadas > 0
-          ? `${novasCriadas} tarefa(s) sincronizada(s) nas 3 áreas do dia!`
-          : 'Planejamento do dia já está sincronizado com o Cronograma, Cartões e Baterias.');
-      }
-    }
-
-    function criarConjuntoInicialLimpo3Areas_(hojeYMD) {
-      AG_STATE.tarefas = [
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Conteúdo do Dia • Serviços Públicos + Estatuto do Idoso',
-          materia: 'Direito Administrativo',
-          topicoEspecifico: 'Serviços Públicos (13 pág.) + Estatuto da Pessoa Idosa (8 pág.)',
-          tipo: 'ESTUDO',
-          prioridade: 'ALTA',
-          metaMinutos: 60,
-          segundosEstudados: 0,
-          unidadeTipo: 'PAGINAS',
-          metaUnidades: 21,
-          unidadesConcluidas: 0,
-          corPersonalizada: null,
-          descricao: 'Semana 04 • Meta 3 (Parte 1/3) | Leitura do PDF + Lei Seca do dia',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: [
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 9 * 60, duracaoMin: 60, segundosNoBloco: 0, concluido: false }
-          ]
-        },
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Aquecimento 1 • Direito Constitucional',
-          materia: 'Direito Constitucional',
-          topicoEspecifico: 'Direitos e Garantias Fundamentais (Art. 5º)',
-          tipo: 'REVISAO',
-          prioridade: 'ALTA',
-          metaMinutos: 15,
-          segundosEstudados: 0,
-          unidadeTipo: 'CARTOES',
-          metaUnidades: 20,
-          unidadesConcluidas: 0,
-          corPersonalizada: null,
-          descricao: 'Aquecimento de cartões correspondente à Bateria 1 de Direito Constitucional',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: [
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 8 * 60, duracaoMin: 15, segundosNoBloco: 0, concluido: false }
-          ]
-        },
-        {
-          id: gerarId_('AG_T'),
-          titulo: 'Bateria 1 • Direito Constitucional',
-          materia: 'Direito Constitucional',
-          topicoEspecifico: 'Direitos e Garantias Fundamentais (Art. 5º)',
-          tipo: 'QUESTOES',
-          prioridade: 'ALTA',
-          metaMinutos: 35,
-          segundosEstudados: 0,
-          unidadeTipo: 'QUESTOES',
-          metaUnidades: 15,
-          unidadesConcluidas: 0,
-          corPersonalizada: null,
-          descricao: 'Resolução de 15 questões pós-aquecimento de Direito Constitucional',
-          repeticao: 'NENHUMA',
-          concluida: false,
-          dataReferencia: hojeYMD,
-          blocos: [
-            { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: 10 * 60 + 15, duracaoMin: 35, segundosNoBloco: 0, concluido: false }
-          ]
-        }
-      ];
-    }
-
-    /* ==========================================================================
-     * 11.3 UTILITÁRIOS DE COR, TEMPO E SEQUÊNCIA RECOMENDADA
-     * ========================================================================== */
-    function obterOrdemRecomendadaTipo_(tipo) {
-      if (tipo === 'REVISAO') return 1;
-      if (tipo === 'ESTUDO') return 2;
-      if (tipo === 'QUESTOES') return 3;
-      return 4;
-    }
-
-    function obterPesoPrioridadeAgenda_(prio) {
-      if (prio === 'ALTA') return 1;
-      if (prio === 'MEDIA') return 2;
-      return 3;
-    }
-
-    function obterLabelCurtoTipoGrade_(tipo) {
-      if (tipo === 'REVISAO') return 'Aquecimento';
-      if (tipo === 'ESTUDO') return 'Conteúdo';
-      return 'Questões';
-    }
-
-    function obterCorEfetivaTarefaAgenda_(tarefa) {
-      if (tarefa.corPersonalizada) return tarefa.corPersonalizada;
-      const matKey = String(tarefa.materia || '').trim().toLowerCase();
-      if (matKey && AG_STATE.coresPadrao?.materias?.[matKey]) {
-        return AG_STATE.coresPadrao.materias[matKey];
-      }
-      return AG_STATE.coresPadrao?.[tarefa.tipo] || '#4f46e5';
-    }
-
-    function minutosParaHoraStr_(minTotal) {
-      const limpo = Math.max(0, Math.min(24 * 60, Math.round(minTotal)));
-      const h = String(Math.floor(limpo / 60)).padStart(2, '0');
-      const m = String(limpo % 60).padStart(2, '0');
-      return `${h}:${m}`;
-    }
-
-    function horaStrParaMinutos_(horaStr) {
-      if (!horaStr || !horaStr.includes(':')) return 8 * 60;
-      const [h, m] = horaStr.split(':').map(Number);
-      return (isNaN(h) ? 8 : h) * 60 + (isNaN(m) ? 0 : m);
-    }
-
-    function formatarMinutosHorasCurto_(minutos) {
-      const mTotal = Math.max(0, Math.round(minutos || 0));
-      const h = Math.floor(mTotal / 60);
-      const m = mTotal % 60;
-      if (h === 0) return `${m}min`;
-      if (m === 0) return `${h}h`;
-      return `${h}h ${String(m).padStart(2, '0')}m`;
-    }
-
-    function formatarSegundosDigital_(segundos) {
-      const sTotal = Math.max(0, Math.floor(segundos || 0));
-      const h = String(Math.floor(sTotal / 3600)).padStart(2, '0');
-      const m = String(Math.floor((sTotal % 3600) / 60)).padStart(2, '0');
-      const s = String(sTotal % 60).padStart(2, '0');
-      return `${h}:${m}:${s}`;
-    }
-
-    function obterDiasVisiveisAgenda_() {
-      const base = AG_STATE.dataBaseVisao || formatarDataYMD_(new Date());
-      const qtd = AG_STATE.modoVisao === '1DIA' ? 1 : 4;
-      const dias = [];
-      for (let i = 0; i < qtd; i++) {
-        dias.push(somarDiasYMD_(base, i));
-      }
-      return dias;
-    }
-
-    function alterarModoVisaoAgenda(modo) {
-      AG_STATE.modoVisao = modo === '1DIA' ? '1DIA' : '4DIAS';
-      document.getElementById('btnAgModo4Dias').className = `px-2.5 py-1 rounded-md font-bold ${AG_STATE.modoVisao === '4DIAS' ? 'subtab-active' : 'text-slate-400'}`;
-      document.getElementById('btnAgModo1Dia').className = `px-2.5 py-1 rounded-md font-bold ${AG_STATE.modoVisao === '1DIA' ? 'subtab-active' : 'text-slate-400'}`;
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-    }
-
-    function navegarDiasAgenda(deltaDias) {
-      const base = AG_STATE.dataBaseVisao || formatarDataYMD_(new Date());
-      AG_STATE.dataBaseVisao = somarDiasYMD_(base, deltaDias);
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-    }
-
-    function irParaHojeAgenda() {
-      AG_STATE.dataBaseVisao = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-    }
-
-    /* ==========================================================================
-     * 11.4 AUTO-ORGANIZAÇÃO E REORGANIZAÇÃO DE PENDÊNCIAS (ROLLOVER)
-     * ========================================================================== */
-    function obterIntervalosOcupadosNoDia_(dataYMD, ignorarBlockId = null) {
-      const ocupados = [];
-      AG_STATE.tarefas.forEach(t => {
-        (t.blocos || []).forEach(b => {
-          if (b.data === dataYMD && b.id !== ignorarBlockId) {
-            ocupados.push({
-              inicio: b.inicioMin,
-              fim: b.inicioMin + b.duracaoMin,
-              blockId: b.id,
-              taskId: t.id
-            });
-          }
-        });
-      });
-      return ocupados.sort((a, b) => a.inicio - b.inicio);
-    }
-
-    function encontrarProximoSlotLivreNoDia_(dataYMD, duracaoDesejadaMin, minInicioBusca) {
-      const iniExp = (AG_STATE.configExpediente?.horaInicio || 8) * 60;
-      const fimExp = (AG_STATE.configExpediente?.horaFim || 21) * 60;
-      let cursor = Math.max(iniExp, minInicioBusca || iniExp);
-      cursor = Math.ceil(cursor / 15) * 15;
-
-      const ocupados = obterIntervalosOcupadosNoDia_(dataYMD);
-
-      while (cursor + 15 <= fimExp) {
-        const conflito = ocupados.find(o => cursor < o.fim && (cursor + duracaoDesejadaMin) > o.inicio);
-        if (!conflito) {
-          if (cursor + duracaoDesejadaMin <= fimExp) {
-            return { inicioMin: cursor, duracaoCabivelMin: duracaoDesejadaMin };
-          }
-          const cabivel = fimExp - cursor;
-          if (cabivel >= 15) {
-            return { inicioMin: cursor, duracaoCabivelMin: cabivel };
-          }
-          break;
-        } else {
-          const espacoAntes = conflito.inicio - cursor;
-          if (espacoAntes >= 25) {
-            return { inicioMin: cursor, duracaoCabivelMin: espacoAntes };
-          }
-          cursor = Math.ceil((conflito.fim + 10) / 15) * 15;
-        }
-      }
-      return null;
-    }
-
-    function distribuirAutomaticamenteTarefasAgenda() {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const diasAlvo = [
-        hojeYMD,
-        somarDiasYMD_(hojeYMD, 1),
-        somarDiasYMD_(hojeYMD, 2),
-        somarDiasYMD_(hojeYMD, 3)
-      ];
-
-      const tarefasParaAlocar = AG_STATE.tarefas
-        .filter(t => !t.concluida)
-        .slice()
-        .sort((a, b) => {
-          const ordA = obterOrdemRecomendadaTipo_(a.tipo);
-          const ordB = obterOrdemRecomendadaTipo_(b.tipo);
-          if (ordA !== ordB) return ordA - ordB;
-          const pA = obterPesoPrioridadeAgenda_(a.prioridade);
-          const pB = obterPesoPrioridadeAgenda_(b.prioridade);
-          if (pA !== pB) return pA - pB;
-          return String(a.id).localeCompare(String(b.id));
-        });
-
-      let blocosCriados = 0;
-
-      tarefasParaAlocar.forEach(t => {
-        const minRealizados = Math.floor((t.segundosEstudados || 0) / 60);
-        const minRestantesMeta = Math.max(0, t.metaMinutos - minRealizados);
-        if (minRestantesMeta <= 0) return;
-
-        const minJaAgendadosFuturos = (t.blocos || [])
-          .filter(b => !b.concluido && b.data >= hojeYMD)
-          .reduce((acc, b) => acc + b.duracaoMin, 0);
-
-        let faltaAgendarMin = Math.max(0, minRestantesMeta - minJaAgendadosFuturos);
-        if (faltaAgendarMin < 5) return;
-
-        for (let dIdx = 0; dIdx < diasAlvo.length && faltaAgendarMin >= 5; dIdx++) {
-          const diaStr = diasAlvo[dIdx];
-          let tentativasDia = 0;
-          while (faltaAgendarMin >= 5 && tentativasDia < 6) {
-            tentativasDia++;
-            const slot = encontrarProximoSlotLivreNoDia_(diaStr, faltaAgendarMin, (AG_STATE.configExpediente?.horaInicio || 8) * 60);
-            if (!slot) break;
-
-            const duracaoBloco = Math.min(faltaAgendarMin, slot.duracaoCabivelMin);
-            t.blocos.push({
-              id: gerarId_('AG_B'),
-              data: diaStr,
-              inicioMin: slot.inicioMin,
-              duracaoMin: duracaoBloco,
-              segundosNoBloco: 0,
-              concluido: false
-            });
-            faltaAgendarMin -= duracaoBloco;
-            blocosCriados++;
-          }
-        }
-      });
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-
-      if (blocosCriados > 0) {
-        notificar(`${blocosCriados} horário(s) distribuído(s) automaticamente (1º Aquecimento → 2º Conteúdo → 3º Questões).`);
-      } else {
-        notificar('Todas as tarefas pendentes já possuem horário definido na agenda.');
-      }
-    }
-
-    function verificarERealizarRolloverAutomaticoDiario_(hojeYMD) {
-      if (AG_STATE.ultimoDiaRollover === hojeYMD) return;
-
-      let transferidasCount = 0;
-      AG_STATE.tarefas.forEach(t => {
-        if (t.concluida) return;
-
-        const minRealizados = Math.floor((t.segundosEstudados || 0) / 60);
-        const minRestantesTotal = Math.max(0, t.metaMinutos - minRealizados);
-
-        const blocosPassadosNaoConcluidos = (t.blocos || []).filter(b => b.data < hojeYMD && !b.concluido);
-        if (blocosPassadosNaoConcluidos.length > 0) {
-          t.blocos = (t.blocos || []).filter(b => !(b.data < hojeYMD && !b.concluido));
-          if (minRestantesTotal > 0) {
-            transferidasCount++;
-          }
-        }
-      });
-
-      AG_STATE.ultimoDiaRollover = hojeYMD;
-      if (transferidasCount > 0) {
-        distribuirAutomaticamenteTarefasAgenda();
-      } else {
-        salvarEstadoAgendaStorage_();
-      }
-    }
-
-    function reorganizarPendenciasParaProximoDia(acaoManual = false) {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const amanhaYMD = somarDiasYMD_(hojeYMD, 1);
-      const diasFuturos = [
-        amanhaYMD,
-        somarDiasYMD_(hojeYMD, 2),
-        somarDiasYMD_(hojeYMD, 3)
-      ];
-
-      const pendentes = AG_STATE.tarefas
-        .filter(t => !t.concluida)
-        .slice()
-        .sort((a, b) => obterOrdemRecomendadaTipo_(a.tipo) - obterOrdemRecomendadaTipo_(b.tipo) || obterPesoPrioridadeAgenda_(a.prioridade) - obterPesoPrioridadeAgenda_(b.prioridade));
-
-      let realocadas = 0;
-
-      pendentes.forEach(t => {
-        const minEstudados = Math.floor((t.segundosEstudados || 0) / 60);
-        const minRestantes = Math.max(0, t.metaMinutos - minEstudados);
-
-        if (minRestantes <= 0) {
-          t.concluida = true;
-          return;
-        }
-
-        const tinhaBlocoHojeOuAntes = (t.blocos || []).some(b => !b.concluido && b.data <= hojeYMD);
-        if (!tinhaBlocoHojeOuAntes && !acaoManual) return;
-
-        t.blocos = (t.blocos || []).filter(b => b.concluido || b.data > hojeYMD);
-
-        const minJaAgendadosAmanhaEmDiante = t.blocos
-          .filter(b => !b.concluido && b.data >= amanhaYMD)
-          .reduce((acc, b) => acc + b.duracaoMin, 0);
-
-        let faltaTransferirMin = Math.max(0, minRestantes - minJaAgendadosAmanhaEmDiante);
-        if (faltaTransferirMin <= 0) return;
-
-        for (let i = 0; i < diasFuturos.length && faltaTransferirMin > 0; i++) {
-          const dtAlvo = diasFuturos[i];
-          const slot = encontrarProximoSlotLivreNoDia_(dtAlvo, faltaTransferirMin, (AG_STATE.configExpediente?.horaInicio || 8) * 60);
-          if (slot) {
-            const dur = Math.min(faltaTransferirMin, slot.duracaoCabivelMin);
-            t.blocos.push({
-              id: gerarId_('AG_B'),
-              data: dtAlvo,
-              inicioMin: slot.inicioMin,
-              duracaoMin: dur,
-              segundosNoBloco: 0,
-              concluido: false
-            });
-            faltaTransferirMin -= dur;
-            realocadas++;
-          }
-        }
-      });
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-      notificar(realocadas > 0
-        ? `Tempo restante de ${realocadas} atividade(s) transferido para os horários livres de amanhã (${formatarDataBR(amanhaYMD)}).`
-        : 'Nenhuma pendência precisou ser transferida.');
-    }
-
-    /* ==========================================================================
-     * 11.5 CRONÔMETRO INTEGRADO E ATUALIZAÇÃO DE MÉDIA MIN/PÁGINA
-     * ========================================================================== */
-    function iniciarOuFocarTimerAgenda(taskId, blockId = null, event = null) {
-      if (event) event.stopPropagation();
-      const tarefa = AG_STATE.tarefas.find(t => t.id === taskId);
-      if (!tarefa) return;
-
-      if (AG_TIMER.ativo && AG_TIMER.taskId === taskId && AG_TIMER.blockId === blockId) {
-        pausarTimerAgenda_();
-        renderizarAgendaCompletaUI();
-        return;
-      }
-
-      pausarTimerAgenda_();
-
-      let blocoAlvoId = blockId;
-      if (!blocoAlvoId && tarefa.blocos && tarefa.blocos.length > 0) {
-        const bPend = tarefa.blocos.find(b => !b.concluido) || tarefa.blocos[0];
-        blocoAlvoId = bPend.id;
-      }
-
-      AG_TIMER.taskId = taskId;
-      AG_TIMER.blockId = blocoAlvoId;
-      AG_TIMER.ativo = true;
-      AG_TIMER.ultimoTickMs = Date.now();
-
-      AG_TIMER.intervalId = setInterval(() => {
-        tickCronometroAgenda_();
-      }, 1000);
-
-      atualizarPainelTimerTopoUI_();
-      renderizarAgendaCompletaUI();
-    }
-
-    function pausarTimerAgenda_() {
-      if (AG_TIMER.intervalId) {
-        clearInterval(AG_TIMER.intervalId);
-        AG_TIMER.intervalId = null;
-      }
-      AG_TIMER.ativo = false;
-      salvarEstadoAgendaStorage_();
-      atualizarPainelTimerTopoUI_();
-    }
-
-    function alternarPlayPauseTimerAgenda() {
-      if (!AG_TIMER.taskId) return;
-      if (AG_TIMER.ativo) {
-        pausarTimerAgenda_();
-        renderizarAgendaCompletaUI();
-      } else {
-        iniciarOuFocarTimerAgenda(AG_TIMER.taskId, AG_TIMER.blockId);
-      }
-    }
-
-    function tickCronometroAgenda_() {
-      if (!AG_TIMER.ativo || !AG_TIMER.taskId) return;
-      const agora = Date.now();
-      const deltaSeg = Math.max(1, Math.round((agora - AG_TIMER.ultimoTickMs) / 1000));
-      AG_TIMER.ultimoTickMs = agora;
-
-      const tarefa = AG_STATE.tarefas.find(t => t.id === AG_TIMER.taskId);
-      if (!tarefa) {
-        pausarTimerAgenda_();
-        return;
-      }
-
-      tarefa.segundosEstudados = (tarefa.segundosEstudados || 0) + deltaSeg;
-
-      if (AG_TIMER.blockId && tarefa.blocos) {
-        const bloco = tarefa.blocos.find(b => b.id === AG_TIMER.blockId);
-        if (bloco) {
-          bloco.segundosNoBloco = (bloco.segundosNoBloco || 0) + deltaSeg;
-          if (bloco.segundosNoBloco >= bloco.duracaoMin * 60 && !bloco.concluido) {
-            bloco.concluido = true;
-          }
-        }
-      }
-
-      const metaSegundos = (tarefa.metaMinutos || 60) * 60;
-      if (tarefa.segundosEstudados >= metaSegundos && !tarefa.concluida) {
-        alternarConclusaoTarefaAgenda(tarefa.id, true);
-        notificar(`Meta atingida! "${tarefa.materia}" concluída.`);
-        return;
-      }
-
-      atualizarPainelTimerTopoUI_();
-      atualizarKpisSuperioresAgenda_();
-    }
-
-    function concluirBlocoOuTarefaPeloTimer() {
-      if (!AG_TIMER.taskId) return;
-      const tarefa = AG_STATE.tarefas.find(t => t.id === AG_TIMER.taskId);
-      if (!tarefa) return;
-
-      pausarTimerAgenda_();
-      alternarConclusaoTarefaAgenda(tarefa.id, true);
-    }
-
-    function atualizarPainelTimerTopoUI_() {
-      const btnPlay = document.getElementById('btnAgTimerPlayPause');
-      const btnConc = document.getElementById('btnAgTimerConcluir');
-      const display = document.getElementById('agTimerDisplayDigital');
-      const nomeEl = document.getElementById('agTimerNomeTarefaAtiva');
-      const restEl = document.getElementById('agTimerMetaRestanteTxt');
-      const indVisual = document.getElementById('agTimerIndicadorVisual');
-      const badgeMediaTopo = document.getElementById('agBadgeMediaMinPaginaTopo');
-      const badgeMediaSide = document.getElementById('agBadgeMediaLeituraSidebar');
-
-      const infoRitmo = obterInfoMediaTempoPorPagina_();
-      if (badgeMediaTopo) badgeMediaTopo.textContent = infoRitmo.textoCurto;
-      if (badgeMediaSide) badgeMediaSide.textContent = infoRitmo.textoCurto;
-
-      const tarefa = AG_TIMER.taskId ? AG_STATE.tarefas.find(t => t.id === AG_TIMER.taskId) : null;
-      if (!tarefa) {
-        if (btnPlay) { btnPlay.disabled = true; btnPlay.textContent = 'Iniciar'; }
-        if (btnConc) btnConc.disabled = true;
-        if (display) display.textContent = '00:00:00';
-        if (nomeEl) nomeEl.textContent = 'Nenhuma tarefa ativa no cronômetro';
-        if (restEl) restEl.textContent = 'Clique em ▶ em qualquer tarefa';
-        if (indVisual) indVisual.className = 'w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center text-[11px] font-bold text-slate-300';
-        return;
-      }
-
-      if (btnPlay) {
-        btnPlay.disabled = false;
-        btnPlay.textContent = AG_TIMER.ativo ? 'Pausar' : 'Continuar';
-        btnPlay.className = `px-2.5 py-1 rounded-lg font-extrabold text-[11px] transition ${
-          AG_TIMER.ativo ? 'bg-amber-500 text-slate-950' : 'bg-emerald-600 text-white'
-        }`;
-      }
-      if (btnConc) btnConc.disabled = false;
-
-      const segEstudados = tarefa.segundosEstudados || 0;
-      const segMeta = (tarefa.metaMinutos || 60) * 60;
-      const segRestantes = Math.max(0, segMeta - segEstudados);
-
-      if (display) display.textContent = formatarSegundosDigital_(segEstudados);
-      if (nomeEl) nomeEl.textContent = `${obterLabelCurtoTipoGrade_(tarefa.tipo)} • ${tarefa.materia}`;
-      if (restEl) {
-        restEl.textContent = `Falta: ${formatarSegundosDigital_(segRestantes)}`;
-      }
-      if (indVisual) {
-        indVisual.className = `w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-bold text-white ${
-          AG_TIMER.ativo ? 'bg-emerald-600 gcal-timer-active-ring' : 'bg-indigo-600'
-        }`;
-      }
-    }
-
-    function alternarConclusaoTarefaAgenda(taskId, forcarValor = null, ev = null) {
-      if (ev) ev.stopPropagation();
-      const t = AG_STATE.tarefas.find(x => x.id === taskId);
-      if (!t) return;
-
-      const novoStatus = forcarValor !== null ? Boolean(forcarValor) : !t.concluida;
-      t.concluida = novoStatus;
-
-      if (novoStatus) {
-        if ((t.segundosEstudados || 0) === 0) {
-          t.segundosEstudados = (t.metaMinutos || 30) * 60;
-        }
-        if ((t.metaUnidades || 0) > 0 && (t.unidadesConcluidas || 0) === 0) {
-          t.unidadesConcluidas = t.metaUnidades;
-        }
-        // Se for tarefa de Conteúdo do Dia (ESTUDO), incorpora ao histórico acumulado de ritmo min/página
-        if (t.tipo === 'ESTUDO' && (t.unidadesConcluidas || 0) > 0 && !t.contabilizadoNoHistoricoLeitura) {
-          AG_STATE.historicoLeitura.segundosTotais = (AG_STATE.historicoLeitura.segundosTotais || 0) + (t.segundosEstudados || 0);
-          AG_STATE.historicoLeitura.paginasTotais = (AG_STATE.historicoLeitura.paginasTotais || 0) + Number(t.unidadesConcluidas);
-          t.contabilizadoNoHistoricoLeitura = true;
-        }
-        (t.blocos || []).forEach(b => { b.concluido = true; });
-        if (AG_TIMER.taskId === t.id) pausarTimerAgenda_();
-      } else {
-        (t.blocos || []).forEach(b => { b.concluido = false; });
-      }
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-    }
-
-    /* ==========================================================================
-     * 11.6 RENDERIZAÇÃO DAS 3 GAVETAS DO DIA E GRADE LIMPA EM TELA CHEIA
-     * ========================================================================== */
-    function renderizarAgendaCompletaUI() {
-      const secAgenda = document.getElementById('area-agenda');
-      if (!secAgenda) return;
-
-      atualizarKpisSuperioresAgenda_();
-      atualizarPainelTimerTopoUI_();
-      renderizarSidebar3AreasDoDia_();
-      renderizarGradeGoogleCalendar4Dias_();
-    }
-
-    function calcularMetricasDoDiaAgenda_(dataYMD) {
-      let minPlanejados = 0;
-      let segRealizadosNoDia = 0;
-      let qtdBlocos = 0;
-
-      AG_STATE.tarefas.forEach(t => {
-        const blocosDia = (t.blocos || []).filter(b => b.data === dataYMD);
-        blocosDia.forEach(b => {
-          qtdBlocos++;
-          minPlanejados += (b.duracaoMin || 0);
-          if (b.segundosNoBloco > 0) {
-            segRealizadosNoDia += b.segundosNoBloco;
-          } else if (b.concluido || t.concluida) {
-            segRealizadosNoDia += (b.duracaoMin || 0) * 60;
-          }
-        });
-      });
-
-      const minRealizados = Math.round(segRealizadosNoDia / 60);
-      const minRestantes = Math.max(0, minPlanejados - minRealizados);
-      const janelaTotalMin = Math.max(60, ((AG_STATE.configExpediente?.horaFim || 21) - (AG_STATE.configExpediente?.horaInicio || 8)) * 60);
-      const minLivres = Math.max(0, janelaTotalMin - minPlanejados);
-      const metaDia = AG_STATE.configExpediente?.metaMinutosDia || 240;
-      const percMeta = metaDia > 0 ? Math.min(100, Math.round((minRealizados / metaDia) * 100)) : 0;
-
-      return {
-        minPlanejados,
-        minRealizados,
-        minRestantes,
-        minLivres,
-        metaDia,
-        percMeta,
-        qtdBlocos
-      };
-    }
-
-    function atualizarKpisSuperioresAgenda_() {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const mHoje = calcularMetricasDoDiaAgenda_(hojeYMD);
-
-      const elPlan = document.getElementById('agKpiPlanejadoHoje');
-      const elReal = document.getElementById('agKpiRealizadoHoje');
-      const elLivre = document.getElementById('agKpiLivreHoje');
-
-      if (elPlan) elPlan.textContent = formatarMinutosHorasCurto_(mHoje.minPlanejados);
-      if (elReal) elReal.textContent = formatarMinutosHorasCurto_(mHoje.minRealizados);
-      if (elLivre) elLivre.textContent = formatarMinutosHorasCurto_(mHoje.minLivres);
-
-      const pendentesCount = AG_STATE.tarefas.filter(t => !t.concluida).length;
-      const badgeNav = document.getElementById('badgeCountPendentesAgenda');
-      if (badgeNav) badgeNav.textContent = pendentesCount;
-    }
-
-    function gerarCardResumoSidebarHTML_(t) {
-      const cor = obterCorEfetivaTarefaAgenda_(t);
-      const isRodando = AG_TIMER.ativo && AG_TIMER.taskId === t.id;
-      const primeiroBloco = (t.blocos || [])[0];
-      const horarioTxt = primeiroBloco
-        ? `${minutosParaHoraStr_(primeiroBloco.inicioMin)} - ${minutosParaHoraStr_(primeiroBloco.inicioMin + primeiroBloco.duracaoMin)}`
-        : 'Arraste p/ horário';
-
-      let subInfoUnidades = '';
-      if (t.tipo === 'ESTUDO') {
-        const lidas = t.unidadesConcluidas || 0;
-        const totalP = t.metaUnidades || 0;
-        subInfoUnidades = totalP > 0 ? `${lidas}/${totalP} pág.` : `${formatarMinutosHorasCurto_(t.metaMinutos)}`;
-      } else if (t.tipo === 'REVISAO') {
-        const rev = t.unidadesConcluidas || 0;
-        const totalC = t.metaUnidades || 0;
-        subInfoUnidades = `${totalC} cartões (${rev} rev.)`;
-      } else {
-        const totalQ = t.metaUnidades || 0;
-        subInfoUnidades = totalQ > 0 ? `${totalQ} questões` : `${formatarMinutosHorasCurto_(t.metaMinutos)}`;
-      }
-
-      return `
-        <div draggable="true"
-             ondragstart="iniciarDragTarefaCaixaAgenda(event, '${t.id}')"
-             onclick="abrirModalTarefaAgenda('${t.id}')"
-             style="border-left: 4px solid ${cor};"
-             class="p-2.5 rounded-xl border border-slate-800 bg-slate-950/90 hover:border-slate-700 cursor-pointer transition flex items-center justify-between gap-2 ${
-               t.concluida ? 'opacity-45' : ''
-             } ${isRodando ? 'ring-1 ring-emerald-500' : ''}">
-          <div class="flex items-center gap-2 min-w-0 flex-1">
-            <input type="checkbox" ${t.concluida ? 'checked' : ''}
-                   onclick="alternarConclusaoTarefaAgenda('${t.id}', this.checked, event)"
-                   class="rounded text-emerald-600 w-3.5 h-3.5 cursor-pointer shrink-0">
-            <div class="min-w-0 flex-1">
-              <div class="text-xs font-extrabold text-white truncate ${t.concluida ? 'line-through' : ''}">
-                ${esc(t.materia)}
-              </div>
-              <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
-                <span class="font-semibold text-indigo-300">${esc(horarioTxt)}</span>
-                <span>•</span>
-                <span>${esc(subInfoUnidades)}</span>
-              </div>
-            </div>
-          </div>
-
-          <button type="button"
-                  onclick="iniciarOuFocarTimerAgenda('${t.id}', null, event)"
-                  class="px-2 py-1 rounded-lg font-extrabold text-[10px] shrink-0 transition ${
-                    isRodando ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white'
-                  }" title="Iniciar/Pausar cronômetro">
-            ${isRodando ? '⏸' : '▶'}
-          </button>
-        </div>
-      `;
-    }
-
-    function renderizarSidebar3AreasDoDia_() {
-      const contConteudo = document.getElementById('agListaAreaConteudoDia');
-      const contAquec = document.getElementById('agListaAreaAquecimento');
-      const contBat = document.getElementById('agListaAreaBaterias');
-
-      const listaConteudo = AG_STATE.tarefas.filter(t => t.tipo === 'ESTUDO');
-      const listaAquec = AG_STATE.tarefas.filter(t => t.tipo === 'REVISAO');
-      const listaBat = AG_STATE.tarefas.filter(t => t.tipo === 'QUESTOES');
-
-      const elCountAq = document.getElementById('agCountAreaAquecimento');
-      const elCountBat = document.getElementById('agCountAreaBaterias');
-      if (elCountAq) elCountAq.textContent = `${listaAquec.length} tarefa(s)`;
-      if (elCountBat) elCountBat.textContent = `${listaBat.length} bateria(s)`;
-
-      if (contConteudo) {
-        contConteudo.innerHTML = listaConteudo.length === 0
-          ? `<div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">Nenhum conteúdo teórico pendente.</div>`
-          : listaConteudo.map(gerarCardResumoSidebarHTML_).join('');
-      }
-
-      if (contAquec) {
-        contAquec.innerHTML = listaAquec.length === 0
-          ? `<div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">Nenhum aquecimento pendente.</div>`
-          : listaAquec.map(gerarCardResumoSidebarHTML_).join('');
-      }
-
-      if (contBat) {
-        contBat.innerHTML = listaBat.length === 0
-          ? `<div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400">Nenhuma bateria programada.</div>`
-          : listaBat.map(gerarCardResumoSidebarHTML_).join('');
-      }
-    }
-
-    function renderizarGradeGoogleCalendar4Dias_() {
-      const diasVisiveis = obterDiasVisiveisAgenda_();
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-
-      const lblPer = document.getElementById('agLabelPeriodoVisivel');
-      if (lblPer && diasVisiveis.length > 0) {
-        lblPer.textContent = diasVisiveis.length === 1
-          ? `${formatarDataBR(diasVisiveis[0])} (${nomeDiaSemana_(diasVisiveis[0])})`
-          : `${formatarDataBR(diasVisiveis[0])} a ${formatarDataBR(diasVisiveis[diasVisiveis.length - 1])}`;
-      }
-
-      const headerDiasEl = document.getElementById('agHeaderColunasDias');
-      const gridColsClass = diasVisiveis.length === 1 ? 'grid-cols-1' : 'grid-cols-4';
-      if (headerDiasEl) {
-        headerDiasEl.className = `flex-1 grid ${gridColsClass} divide-x divide-slate-800`;
-        headerDiasEl.innerHTML = diasVisiveis.map(dt => {
-          const isHoje = dt === hojeYMD;
-          const mDia = calcularMetricasDoDiaAgenda_(dt);
-          const partesData = dt.split('-');
-          const diaMesCurto = `${partesData[2]}/${partesData[1]}`;
-
-          return `
-            <div class="px-3 py-2 ${isHoje ? 'bg-indigo-950/35' : 'bg-slate-900'} flex items-center justify-between gap-2">
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-extrabold ${isHoje ? 'text-indigo-400' : 'text-white'}">${diaMesCurto}</span>
-                <span class="text-xs font-bold text-slate-300">${esc(nomeDiaSemana_(dt))}</span>
-                ${isHoje ? '<span class="px-1.5 py-0.2 rounded bg-indigo-600 text-white font-extrabold text-[9px] uppercase">HOJE</span>' : ''}
-              </div>
-              <div class="text-[10px] text-slate-400 font-semibold">
-                <strong class="text-emerald-400">${formatarMinutosHorasCurto_(mDia.minRealizados)}</strong> / ${formatarMinutosHorasCurto_(mDia.minPlanejados)}
-              </div>
-            </div>
-          `;
-        }).join('');
-      }
-
-      const reguaEl = document.getElementById('agColunaReguaHoras');
-      if (reguaEl) {
-        let htmlHoras = '';
-        for (let h = 0; h < 24; h++) {
-          const label = h === 0 ? '' : `${String(h).padStart(2, '0')}:00`;
-          htmlHoras += `<div class="gcal-time-slot-label">${label}</div>`;
-        }
-        reguaEl.innerHTML = htmlHoras;
-      }
-
-      const containerCols = document.getElementById('agContainerColunasDiasGrid');
-      if (!containerCols) return;
-      containerCols.className = `flex-1 grid ${gridColsClass} divide-x divide-slate-800 relative`;
-
-      containerCols.innerHTML = diasVisiveis.map(dt => {
-        const blocosDoDia = [];
-        AG_STATE.tarefas.forEach(t => {
-          (t.blocos || []).forEach((b, idxBloco) => {
-            if (b.data === dt) {
-              blocosDoDia.push({
-                tarefa: t,
-                bloco: b,
-                numeroBloco: idxBloco + 1,
-                totalBlocosTarefa: t.blocos.length
-              });
-            }
-          });
-        });
-
-        blocosDoDia.sort((a, b) => a.bloco.inicioMin - b.bloco.inicioMin);
-
-        // VISUALIZAÇÃO LIMPA NA GRADE: Exibe APENAS Horário, Tipo de Atividade e Matéria
-        const eventosHTML = blocosDoDia.map(item => {
-          const { tarefa, bloco } = item;
-          const cor = obterCorEfetivaTarefaAgenda_(tarefa);
-          const topPx = Math.round((bloco.inicioMin / 60) * AG_PX_POR_HORA);
-          const heightPx = Math.max(24, Math.round((bloco.duracaoMin / 60) * AG_PX_POR_HORA) - 2);
-          const horaIniStr = minutosParaHoraStr_(bloco.inicioMin);
-          const horaFimStr = minutosParaHoraStr_(bloco.inicioMin + bloco.duracaoMin);
-          const isConcluido = Boolean(tarefa.concluida || bloco.concluido);
-          const isTimerAtivo = AG_TIMER.ativo && AG_TIMER.taskId === tarefa.id && AG_TIMER.blockId === bloco.id;
-          const tipoCurto = obterLabelCurtoTipoGrade_(tarefa.tipo);
-
-          return `
-            <div draggable="true"
-                 ondragstart="iniciarDragBlocoNaGrade(event, '${tarefa.id}', '${bloco.id}')"
-                 onclick="abrirModalTarefaAgenda('${tarefa.id}', '${bloco.id}', event)"
-                 style="top:${topPx}px; height:${heightPx}px; background-color:${cor}28; border-color:${cor}; color:#ffffff;"
-                 class="gcal-event-block ${isConcluido ? 'gcal-event-completed' : ''} ${isTimerAtivo ? 'gcal-timer-active-ring' : ''}"
-                 title="Clique para ver tópico, páginas, cartões ou questões">
-              <div class="flex items-center justify-between gap-1.5 min-w-0">
-                <div class="min-w-0 flex-1 truncate">
-                  <span class="font-mono font-bold text-[10px]" style="color:${cor}">${horaIniStr}-${horaFimStr}</span>
-                  <span class="mx-1 text-slate-400">•</span>
-                  <span class="font-extrabold text-[10px] uppercase tracking-wide" style="color:${cor}">${esc(tipoCurto)}</span>
-                  <span class="mx-1 text-slate-400">—</span>
-                  <span class="gcal-event-title font-extrabold text-[11px] text-white">${esc(tarefa.materia)}</span>
-                </div>
-
-                <div class="flex items-center gap-1 shrink-0">
-                  <button type="button"
-                          onclick="iniciarOuFocarTimerAgenda('${tarefa.id}', '${bloco.id}', event)"
-                          class="px-1.5 py-0.5 rounded text-[9px] font-extrabold text-white transition"
-                          style="background-color:${isTimerAtivo ? '#f59e0b' : cor}"
-                          title="Iniciar/Pausar cronômetro">
-                    ${isTimerAtivo ? '⏸' : '▶'}
-                  </button>
-                  <input type="checkbox" ${isConcluido ? 'checked' : ''}
-                         onclick="alternarConclusaoBlocoIndividualAgenda('${tarefa.id}', '${bloco.id}', this.checked, event)"
-                         class="w-3.5 h-3.5 rounded cursor-pointer"
-                         title="Concluir horário">
-                </div>
-              </div>
-
-              <div class="gcal-resize-handle"
-                   onmousedown="iniciarRedimensionamentoBlocoAgenda(event, '${tarefa.id}', '${bloco.id}')"></div>
-            </div>
-          `;
-        }).join('');
-
-        return `
-          <div class="gcal-day-column"
-               data-date="${dt}"
-               ondragover="aoArrastarSobreColunaDiaAgenda(event, this)"
-               ondragleave="aoSairArrastoColunaDiaAgenda(event, this)"
-               ondrop="aoSoltarItemNaColunaDiaAgenda(event, '${dt}', this)"
-               ondblclick="aoDuploCliqueSlotVazioAgenda(event, '${dt}', this)">
-            ${eventosHTML}
-          </div>
-        `;
-      }).join('');
-
-      atualizarLinhaHoraAtualAgenda_();
-    }
-
-    function atualizarLinhaHoraAtualAgenda_() {
-      document.querySelectorAll('.gcal-now-line').forEach(el => el.remove());
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const colHoje = document.querySelector(`.gcal-day-column[data-date="${hojeYMD}"]`);
-      if (!colHoje) return;
-
-      const agora = new Date();
-      const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
-      const topPx = Math.round((minutosAgora / 60) * AG_PX_POR_HORA);
-
-      const linha = document.createElement('div');
-      linha.className = 'gcal-now-line';
-      linha.style.top = `${topPx}px`;
-      colHoje.appendChild(linha);
-    }
-
-    function alternarConclusaoBlocoIndividualAgenda(taskId, blockId, marcado, ev) {
-      if (ev) ev.stopPropagation();
-      const tarefa = AG_STATE.tarefas.find(t => t.id === taskId);
-      if (!tarefa) return;
-      const bloco = (tarefa.blocos || []).find(b => b.id === blockId);
-      if (!bloco) return;
-
-      bloco.concluido = Boolean(marcado);
-      if (marcado && (bloco.segundosNoBloco || 0) === 0) {
-        const segAdicional = bloco.duracaoMin * 60;
-        bloco.segundosNoBloco = segAdicional;
-        tarefa.segundosEstudados = Math.min(tarefa.metaMinutos * 60, (tarefa.segundosEstudados || 0) + segAdicional);
-      }
-
-      const todosConcluidos = tarefa.blocos.length > 0 && tarefa.blocos.every(b => b.concluido);
-      if (todosConcluidos) {
-        alternarConclusaoTarefaAgenda(tarefa.id, true);
-        return;
-      } else if (!marcado) {
-        tarefa.concluida = false;
-      }
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-    }
-
-    /* ==========================================================================
-     * 11.7 DRAG & DROP ENTRE GAVETA E GRADE + REDIMENSIONAMENTO DE HORÁRIOS
-     * ========================================================================== */
-    function iniciarDragTarefaCaixaAgenda(ev, taskId) {
-      ev.dataTransfer.setData('text/plain', JSON.stringify({
-        origem: 'INBOX',
-        taskId
-      }));
-    }
-
-    function iniciarDragBlocoNaGrade(ev, taskId, blockId) {
-      ev.stopPropagation();
-      const rect = ev.currentTarget.getBoundingClientRect();
-      const offsetY = ev.clientY - rect.top;
-      ev.dataTransfer.setData('text/plain', JSON.stringify({
-        origem: 'GRID',
-        taskId,
-        blockId,
-        offsetY
-      }));
-    }
-
-    function aoArrastarSobreColunaDiaAgenda(ev, colEl) {
-      ev.preventDefault();
-      colEl.classList.add('gcal-drop-hover');
-    }
-
-    function aoSairArrastoColunaDiaAgenda(ev, colEl) {
-      colEl.classList.remove('gcal-drop-hover');
-    }
-
-    function aoSoltarItemNaColunaDiaAgenda(ev, dataDestinoYMD, colEl) {
-      ev.preventDefault();
-      colEl.classList.remove('gcal-drop-hover');
-
-      let payload = null;
-      try {
-        payload = JSON.parse(ev.dataTransfer.getData('text/plain'));
-      } catch (e) { return; }
-      if (!payload || !payload.taskId) return;
-
-      const tarefa = AG_STATE.tarefas.find(t => t.id === payload.taskId);
-      if (!tarefa) return;
-
-      const rectCol = colEl.getBoundingClientRect();
-      const offsetDrag = payload.origem === 'GRID' ? (payload.offsetY || 10) : 10;
-      const yRelativo = Math.max(0, ev.clientY - rectCol.top - offsetDrag);
-
-      let inicioMin = Math.round(((yRelativo / AG_PX_POR_HORA) * 60) / 15) * 15;
-      inicioMin = Math.max(0, Math.min(23 * 60, inicioMin));
-
-      if (payload.origem === 'GRID' && payload.blockId) {
-        const bloco = (tarefa.blocos || []).find(b => b.id === payload.blockId);
-        if (bloco) {
-          bloco.data = dataDestinoYMD;
-          bloco.inicioMin = inicioMin;
-        }
-      } else {
-        const minEstudados = Math.floor((tarefa.segundosEstudados || 0) / 60);
-        const minJaAlocados = (tarefa.blocos || []).reduce((acc, b) => acc + b.duracaoMin, 0);
-        const duracaoNovoBloco = Math.max(15, tarefa.metaMinutos - Math.max(minEstudados, minJaAlocados));
-
-        tarefa.blocos = tarefa.blocos || [];
-        tarefa.blocos.push({
-          id: gerarId_('AG_B'),
-          data: dataDestinoYMD,
-          inicioMin,
-          duracaoMin: duracaoNovoBloco,
-          segundosNoBloco: 0,
-          concluido: false
-        });
-      }
-
-      salvarEstadoAgendaStorage_();
-      renderizarAgendaCompletaUI();
-    }
-
-    function iniciarRedimensionamentoBlocoAgenda(ev, taskId, blockId) {
-      ev.stopPropagation();
-      ev.preventDefault();
-
-      const tarefa = AG_STATE.tarefas.find(t => t.id === taskId);
-      if (!tarefa) return;
-      const bloco = (tarefa.blocos || []).find(b => b.id === blockId);
-      if (!bloco) return;
-
-      AG_RESIZE_STATE = {
-        taskId,
-        blockId,
-        startY: ev.clientY,
-        duracaoInicialMin: bloco.duracaoMin
-      };
-
-      const onMouseMove = (moveEv) => {
-        if (!AG_RESIZE_STATE) return;
-        const deltaY = moveEv.clientY - AG_RESIZE_STATE.startY;
-        const deltaMin = Math.round(((deltaY / AG_PX_POR_HORA) * 60) / 15) * 15;
-        const novaDuracao = Math.max(15, Math.min(8 * 60, AG_RESIZE_STATE.duracaoInicialMin + deltaMin));
-
-        bloco.duracaoMin = novaDuracao;
-        if (tarefa.blocos.length === 1) {
-          tarefa.metaMinutos = novaDuracao;
-        }
-        renderizarGradeGoogleCalendar4Dias_();
-      };
-
-      const onMouseUp = () => {
-        AG_RESIZE_STATE = null;
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        salvarEstadoAgendaStorage_();
-        renderizarAgendaCompletaUI();
-      };
-
-      window.addEventListener('mousemove', onMouseMove);
-      window.addEventListener('mouseup', onMouseUp);
-    }
-
-    function aoDuploCliqueSlotVazioAgenda(ev, dataYMD, colEl) {
-      if (ev.target !== colEl) return;
-      const rect = colEl.getBoundingClientRect();
-      const yRel = Math.max(0, ev.clientY - rect.top);
-      let inicioMin = Math.round(((yRel / AG_PX_POR_HORA) * 60) / 15) * 15;
-      inicioMin = Math.max(0, Math.min(22 * 60, inicioMin));
-
-      abrirModalTarefaAgenda(null, null, null, dataYMD, inicioMin);
-    }
-
-    /* ==========================================================================
-     * 11.8 MODAL DE DETALHES DA TAREFA (ABRE AO CLICAR NA TAREFA/BLOCO)
-     * ========================================================================== */
-    function renderizarPaletaCoresModalAgenda_() {
-      const cont = document.getElementById('agSeletorPaletaCores');
-      if (!cont) return;
-      cont.innerHTML = AG_PALETA_CORES.map(c => `
-        <button type="button"
-                onclick="selecionarCorNoModalAgenda('${c.hex}', '${c.nome}')"
-                data-hex="${c.hex}"
-                style="background-color:${c.hex}"
-                class="ag-btn-cor-paleta w-7 h-7 rounded-full border-2 border-transparent hover:scale-110 transition shadow"
-                title="${esc(c.nome)}"></button>
-      `).join('');
-    }
-
-    function selecionarCorNoModalAgenda(hex, nomeLabel = '') {
-      document.getElementById('agFormCorHex').value = hex;
-      const lbl = document.getElementById('agLabelCorSelecionada');
-      if (lbl) lbl.textContent = nomeLabel || hex;
-
-      document.querySelectorAll('.ag-btn-cor-paleta').forEach(btn => {
-        const ativo = btn.getAttribute('data-hex') === hex;
-        btn.className = `ag-btn-cor-paleta w-7 h-7 rounded-full transition shadow ${
-          ativo ? 'ring-2 ring-white scale-110 border-2 border-slate-950' : 'border-2 border-transparent opacity-80 hover:opacity-100'
-        }`;
-      });
-    }
-
-    function ajustarLabelsUnidadesModal_(tipo) {
-      const lblMeta = document.getElementById('lblAgMetaUnidades');
-      const lblConc = document.getElementById('lblAgUnidadesConcluidas');
-      if (!lblMeta || !lblConc) return;
-
-      if (tipo === 'ESTUDO') {
-        lblMeta.textContent = 'Páginas Previstas Hoje';
-        lblConc.textContent = 'Páginas Lidas (Progresso)';
-      } else if (tipo === 'REVISAO') {
-        lblMeta.textContent = 'Quantidade de Cartões da Matéria';
-        lblConc.textContent = 'Cartões Revisados / Dominados';
-      } else {
-        lblMeta.textContent = 'Quantidade de Questões na Bateria';
-        lblConc.textContent = 'Questões Resolvidas';
-      }
-    }
-
-    function aoMudarTipoTarefaModalAgenda() {
-      const tipo = document.getElementById('agFormTipo').value;
-      const corPadraoTipo = AG_STATE.coresPadrao?.[tipo] || '#4f46e5';
-      selecionarCorNoModalAgenda(corPadraoTipo);
-      ajustarLabelsUnidadesModal_(tipo);
-    }
-
-    function abrirModalTarefaAgenda(taskId = null, blockId = null, ev = null, dataDefault = null, inicioMinDefault = null) {
-      if (ev) ev.stopPropagation();
-
-      const dl = document.getElementById('datalistMateriasAgenda');
-      if (dl && ESTADO?.materias) {
-        dl.innerHTML = ESTADO.materias.map(m => `<option value="${esc(m.nome)}">`).join('');
-      }
-
-      const hojeYMD = dataDefault || (ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date()));
-      const btnExcluir = document.getElementById('btnAgExcluirTarefaModal');
-      const painelContexto = document.getElementById('modalAgPainelContextoEspecifico');
-      const badgeCat = document.getElementById('modalAgBadgeCategoria');
-      const infoRitmo = obterInfoMediaTempoPorPagina_();
-
-      if (taskId) {
-        const t = AG_STATE.tarefas.find(x => x.id === taskId);
-        if (!t) return;
-
-        ajustarLabelsUnidadesModal_(t.tipo || 'ESTUDO');
-        document.getElementById('modalAgTarefaTitulo').textContent = `${t.materia} — ${t.titulo}`;
-        document.getElementById('agFormTaskId').value = t.id;
-        document.getElementById('agFormBlockId').value = blockId || '';
-        document.getElementById('agFormTitulo').value = t.titulo;
-        document.getElementById('agFormMateria').value = t.materia;
-        document.getElementById('agFormTipo').value = t.tipo || 'ESTUDO';
-        document.getElementById('agFormPrioridade').value = t.prioridade || 'MEDIA';
-        document.getElementById('agFormMetaMinutos').value = t.metaMinutos || 60;
-        document.getElementById('agFormRepeticao').value = t.repeticao || 'NENHUMA';
-        document.getElementById('agFormDescricao').value = t.descricao || '';
-        document.getElementById('agFormMetaUnidades').value = t.metaUnidades || 0;
-        document.getElementById('agFormUnidadesConcluidas').value = t.unidadesConcluidas || 0;
-        document.getElementById('agFormMinutosRealizados').value = Math.floor((t.segundosEstudados || 0) / 60);
-        document.getElementById('agFormConcluida').checked = Boolean(t.concluida);
-
-        if (badgeCat) {
-          badgeCat.textContent = t.tipo === 'ESTUDO'
-            ? 'Área A • Conteúdo do Dia'
-            : t.tipo === 'REVISAO'
-              ? 'Área B • Aquecimento de Cartões da Bateria'
-              : 'Área C • Bateria de Questões';
-        }
-
-        // Renderiza o painel de informações detalhadas sob demanda (exibido apenas ao clicar na tarefa)
-        if (painelContexto) {
-          painelContexto.classList.remove('hidden');
-          const pctUnid = (t.metaUnidades || 0) > 0
-            ? Math.min(100, Math.round(((t.unidadesConcluidas || 0) / t.metaUnidades) * 100))
-            : 0;
-
-          if (t.tipo === 'ESTUDO') {
-            painelContexto.innerHTML = `
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div class="font-extrabold text-white text-xs">Tópico: ${esc(t.topicoEspecifico || t.descricao || t.titulo)}</div>
-                  <div class="text-[11px] text-slate-300 mt-0.5">
-                    Páginas previstas hoje: <strong>${t.metaUnidades || 0} pág.</strong> |
-                    Lidas: <strong class="text-emerald-400">${t.unidadesConcluidas || 0} pág. (${pctUnid}%)</strong> |
-                    Ritmo: <strong class="text-indigo-300">${esc(infoRitmo.textoDetalhado)}</strong>
-                  </div>
-                </div>
-                <button type="button" onclick="fecharModalTarefaAgenda(); iniciarOuFocarTimerAgenda('${t.id}');" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">
-                  ▶ Iniciar Cronômetro de Leitura
-                </button>
-              </div>
-            `;
-          } else if (t.tipo === 'REVISAO') {
-            painelContexto.innerHTML = `
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div class="font-extrabold text-white text-xs">Aquecimento vinculado à Bateria de: ${esc(t.materia)}</div>
-                  <div class="text-[11px] text-slate-300 mt-0.5">
-                    Tópico da Bateria: <strong>${esc(t.topicoEspecifico || 'Geral')}</strong> |
-                    Cartões disponíveis: <strong>${t.metaUnidades || 0} cartões</strong> |
-                    Progresso: <strong class="text-emerald-400">${t.unidadesConcluidas || 0} revisados (${pctUnid}%)</strong>
-                  </div>
-                </div>
-                ${t.idMateriaSistema ? `
-                  <button type="button" onclick="fecharModalTarefaAgenda(); selecionarTopicoEIniciarFC('${t.idMateriaSistema}', '${t.idTopicoSistema || ''}');" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs">
-                    Abrir Player de Cartões →
-                  </button>
-                ` : ''}
-              </div>
-            `;
-          } else {
-            painelContexto.innerHTML = `
-              <div class="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <div class="font-extrabold text-white text-xs">Bateria de Questões: ${esc(t.materia)}</div>
-                  <div class="text-[11px] text-slate-300 mt-0.5">
-                    Tópico: <strong>${esc(t.topicoEspecifico || t.descricao || 'Geral')}</strong> |
-                    Quantidade prevista: <strong class="text-emerald-400">${t.metaUnidades || 15} questões</strong>
-                  </div>
-                </div>
-                ${t.idMateriaSistema && t.idTopicoSistema ? `
-                  <button type="button" onclick="fecharModalTarefaAgenda(); atalhoRegistrarEstudo('${t.idMateriaSistema}', '${t.idTopicoSistema}', ${t.metaUnidades || 15});" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">
-                    Registrar Resolução da Bateria →
-                  </button>
-                ` : ''}
-              </div>
-            `;
-          }
-        }
-
-        selecionarCorNoModalAgenda(obterCorEfetivaTarefaAgenda_(t));
-        AG_MODAL_BLOCOS_TEMP = (t.blocos || []).map(b => ({ ...b }));
-        if (btnExcluir) btnExcluir.classList.remove('hidden');
-      } else {
-        ajustarLabelsUnidadesModal_('ESTUDO');
-        if (badgeCat) badgeCat.textContent = 'Nova Atividade';
-        if (painelContexto) painelContexto.classList.add('hidden');
-
-        document.getElementById('modalAgTarefaTitulo').textContent = 'Criar Nova Tarefa na Agenda';
-        document.getElementById('agFormTaskId').value = '';
-        document.getElementById('agFormBlockId').value = '';
-        document.getElementById('agFormTitulo').value = '';
-        document.getElementById('agFormMateria').value = '';
-        document.getElementById('agFormTipo').value = 'ESTUDO';
-        document.getElementById('agFormPrioridade').value = 'ALTA';
-        document.getElementById('agFormMetaMinutos').value = 60;
-        document.getElementById('agFormRepeticao').value = 'NENHUMA';
-        document.getElementById('agFormDescricao').value = '';
-        document.getElementById('agFormMetaUnidades').value = 20;
-        document.getElementById('agFormUnidadesConcluidas').value = 0;
-        document.getElementById('agFormMinutosRealizados').value = 0;
-        document.getElementById('agFormConcluida').checked = false;
-
-        selecionarCorNoModalAgenda(AG_STATE.coresPadrao?.ESTUDO || '#3b82f6');
-
-        const ini = inicioMinDefault !== null ? inicioMinDefault : 8 * 60;
-        AG_MODAL_BLOCOS_TEMP = [
-          { id: gerarId_('AG_B'), data: hojeYMD, inicioMin: ini, duracaoMin: 60, segundosNoBloco: 0, concluido: false }
-        ];
-        if (btnExcluir) btnExcluir.classList.add('hidden');
-      }
-
-      renderizarLinhasBlocosNoModalAgenda_();
-      document.getElementById('modalTarefaAgenda').classList.remove('hidden');
-    }
-
-    function fecharModalTarefaAgenda() {
-      document.getElementById('modalTarefaAgenda').classList.add('hidden');
-    }
-
-    function renderizarLinhasBlocosNoModalAgenda_() {
-      const cont = document.getElementById('agContainerLinhasBlocosModal');
-      const resumoEl = document.getElementById('agResumoSomaBlocosModal');
-      const metaMin = Number(document.getElementById('agFormMetaMinutos')?.value || 60);
-
-      const somaBlocos = AG_MODAL_BLOCOS_TEMP.reduce((acc, b) => acc + Number(b.duracaoMin || 0), 0);
-      if (resumoEl) {
-        resumoEl.innerHTML = `Meta Total: <strong class="text-white">${formatarMinutosHorasCurto_(metaMin)}</strong> | Soma dos horários: <strong class="${somaBlocos === metaMin ? 'text-emerald-400' : 'text-amber-400'}">${formatarMinutosHorasCurto_(somaBlocos)}</strong>`;
-      }
-
-      if (AG_MODAL_BLOCOS_TEMP.length === 0) {
-        cont.innerHTML = `<div class="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 text-center">Sem horário fixo na grade (Arraste da barra lateral quando desejar).</div>`;
-        return;
-      }
-
-      cont.innerHTML = AG_MODAL_BLOCOS_TEMP.map((b, idx) => {
-        const hIni = minutosParaHoraStr_(b.inicioMin);
-        const hFim = minutosParaHoraStr_(b.inicioMin + b.duracaoMin);
-        return `
-          <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-slate-900 p-2 rounded-lg border border-slate-800">
-            <div class="sm:col-span-2 font-extrabold text-indigo-400 text-[11px]">
-              Bloco ${idx + 1}/${AG_MODAL_BLOCOS_TEMP.length}
-            </div>
-            <div class="sm:col-span-3">
-              <input type="date" value="${b.data}" onchange="atualizarBlocoTempModal(${idx}, 'data', this.value)" class="w-full rounded border px-2 py-1 text-[11px]">
-            </div>
-            <div class="sm:col-span-2">
-              <input type="time" value="${hIni}" onchange="atualizarBlocoTempModal(${idx}, 'horaIni', this.value)" class="w-full rounded border px-2 py-1 text-[11px]">
-            </div>
-            <div class="sm:col-span-2">
-              <input type="time" value="${hFim}" onchange="atualizarBlocoTempModal(${idx}, 'horaFim', this.value)" class="w-full rounded border px-2 py-1 text-[11px]">
-            </div>
-            <div class="sm:col-span-2 flex items-center gap-1">
-              <input type="number" min="5" max="480" step="5" value="${b.duracaoMin}" oninput="atualizarBlocoTempModal(${idx}, 'duracaoMin', this.value)" class="w-16 rounded border px-1.5 py-1 text-[11px] font-bold text-center">
-              <span class="text-[10px] text-slate-400">min</span>
-            </div>
-            <div class="sm:col-span-1 text-right">
-              <button type="button" onclick="removerBlocoTempModal(${idx})" class="text-rose-400 hover:text-rose-300 font-bold text-xs">✕</button>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function atualizarBlocoTempModal(idx, campo, valor) {
-      const b = AG_MODAL_BLOCOS_TEMP[idx];
-      if (!b) return;
-      if (campo === 'data') {
-        b.data = valor;
-      } else if (campo === 'horaIni') {
-        b.inicioMin = horaStrParaMinutos_(valor);
-      } else if (campo === 'horaFim') {
-        const fimMin = horaStrParaMinutos_(valor);
-        if (fimMin > b.inicioMin) {
-          b.duracaoMin = fimMin - b.inicioMin;
-        }
-      } else if (campo === 'duracaoMin') {
-        b.duracaoMin = Math.max(5, Number(valor || 30));
-      }
-      renderizarLinhasBlocosNoModalAgenda_();
-    }
-
-    function adicionarBlocoHorarioNoModal() {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const metaMin = Number(document.getElementById('agFormMetaMinutos')?.value || 60);
-      const somaAtual = AG_MODAL_BLOCOS_TEMP.reduce((acc, b) => acc + Number(b.duracaoMin || 0), 0);
-      const restanteSugerido = Math.max(30, metaMin - somaAtual);
-      const ultimoBloco = AG_MODAL_BLOCOS_TEMP[AG_MODAL_BLOCOS_TEMP.length - 1];
-      const novoInicio = ultimoBloco ? Math.min(22 * 60, ultimoBloco.inicioMin + ultimoBloco.duracaoMin + 60) : 14 * 60;
-
-      AG_MODAL_BLOCOS_TEMP.push({
-        id: gerarId_('AG_B'),
-        data: ultimoBloco ? ultimoBloco.data : hojeYMD,
-        inicioMin: novoInicio,
-        duracaoMin: restanteSugerido,
-        segundosNoBloco: 0,
-        concluido: false
-      });
-      renderizarLinhasBlocosNoModalAgenda_();
-    }
-
-    function dividirAutomaticamenteEm2BlocosModal() {
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const metaMin = Math.max(20, Number(document.getElementById('agFormMetaMinutos')?.value || 120));
-      const metade1 = Math.floor(metaMin / 2);
-      const metade2 = metaMin - metade1;
-      const dataBase = AG_MODAL_BLOCOS_TEMP[0]?.data || hojeYMD;
-
-      AG_MODAL_BLOCOS_TEMP = [
-        { id: gerarId_('AG_B'), data: dataBase, inicioMin: 8 * 60, duracaoMin: metade1, segundosNoBloco: 0, concluido: false },
-        { id: gerarId_('AG_B'), data: dataBase, inicioMin: 15 * 60, duracaoMin: metade2, segundosNoBloco: 0, concluido: false }
-      ];
-      renderizarLinhasBlocosNoModalAgenda_();
-    }
-
-    function removerBlocoTempModal(idx) {
-      AG_MODAL_BLOCOS_TEMP.splice(idx, 1);
-      renderizarLinhasBlocosNoModalAgenda_();
-    }
-
-    function sincronizarBlocosComMetaNoModal() {
-      const metaMin = Math.max(5, Number(document.getElementById('agFormMetaMinutos')?.value || 60));
-      if (AG_MODAL_BLOCOS_TEMP.length === 1) {
-        AG_MODAL_BLOCOS_TEMP[0].duracaoMin = metaMin;
-      }
-      renderizarLinhasBlocosNoModalAgenda_();
-    }
-
-    function salvarTarefaAgendaModal(e) {
-      e.preventDefault();
-      const id = document.getElementById('agFormTaskId').value.trim();
-      const titulo = document.getElementById('agFormTitulo').value.trim();
-      const materia = document.getElementById('agFormMateria').value.trim();
-      const tipo = document.getElementById('agFormTipo').value;
-      const prioridade = document.getElementById('agFormPrioridade').value;
-      const metaMinutos = Math.max(5, Number(document.getElementById('agFormMetaMinutos').value || 60));
-      const repeticao = document.getElementById('agFormRepeticao').value;
-      const descricao = document.getElementById('agFormDescricao').value.trim();
-      const metaUnidades = Math.max(0, Number(document.getElementById('agFormMetaUnidades').value || 0));
-      const unidadesConcluidas = Math.max(0, Number(document.getElementById('agFormUnidadesConcluidas').value || 0));
-      const corHex = document.getElementById('agFormCorHex').value || '#3b82f6';
-      const minRealizadosInput = Math.max(0, Number(document.getElementById('agFormMinutosRealizados').value || 0));
-      const concluida = Boolean(document.getElementById('agFormConcluida').checked);
-
-      const radioEscopo = document.querySelector('input[name="agEscopoCor"]:checked')?.value || 'SOMENTE_DIA';
-
-      if (radioEscopo === 'PADRAO_CATEGORIA') {
-        AG_STATE.coresPadrao[tipo] = corHex;
-        if (materia) {
-          AG_STATE.coresPadrao.materias[materia.toLowerCase()] = corHex;
-        }
-      }
-
-      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      let tarefaAlvo = id ? AG_STATE.tarefas.find(t => t.id === id) : null;
-
-      if (tarefaAlvo) {
-        tarefaAlvo.titulo = titulo;
-        tarefaAlvo.materia = materia;
-        tarefaAlvo.tipo = tipo;
-        tarefaAlvo.prioridade = prioridade;
-        tarefaAlvo.metaMinutos = metaMinutos;
-        tarefaAlvo.repeticao = repeticao;
-        tarefaAlvo.descricao = descricao;
-        tarefaAlvo.metaUnidades = metaUnidades;
-        tarefaAlvo.unidadesConcluidas = unidadesConcluidas;
-        tarefaAlvo.corPersonalizada = radioEscopo === 'SOMENTE_DIA' ? corHex : null;
-        tarefaAlvo.segundosEstudados = minRealizadosInput * 60;
-        tarefaAlvo.concluida = concluida;
-        tarefaAlvo.blocos = AG_MODAL_BLOCOS_TEMP.map(b => ({
-          ...b,
-          concluido: concluida ? true : Boolean(b.concluido)
-        }));
-      } else {
-        const novaTarefa = {
-          id: gerarId_('AG_T'),
-          titulo,
-          materia,
-          topicoEspecifico: descricao,
-          tipo,
-          prioridade,
-          metaMinutos,
-          segundosEstudados: minRealizadosInput * 60,
-          metaUnidades,
-          unidadesConcluidas,
-          corPersonalizada: radioEscopo === 'SOMENTE_DIA' ? corHex : null,
-          descricao,
-          repeticao,
-          concluida,
-          dataReferencia: hojeYMD,
-          blocos: AG_MODAL_BLOCOS_TEMP.map(b => ({
-            ...b,
-            concluido: concluida ? true : Boolean(b.concluido)
-          }))
-        };
-        AG_STATE.tarefas.push(novaTarefa);
-
-        if (repeticao === 'DIARIA' || repeticao === 'DIAS_UTEIS') {
-          for (let d = 1; d <= 3; d++) {
-            const dtFutura = somarDiasYMD_(hojeYMD, d);
-            const diaSem = parseDataYMD_(dtFutura)?.getDay();
-            if (repeticao === 'DIAS_UTEIS' && (diaSem === 0 || diaSem === 6)) continue;
-
-            AG_STATE.tarefas.push({
-              ...novaTarefa,
-              id: gerarId_('AG_T'),
-              segundosEstudados: 0,
-              unidadesConcluidas: 0,
-              concluida: false,
-              dataReferencia: dtFutura,
-              blocos: (novaTarefa.blocos || []).map(b => ({
-                ...b,
-                id: gerarId_('AG_B'),
-                data: dtFutura,
-                segundosNoBloco: 0,
-                concluido: false
-              }))
-            });
-          }
-        }
-      }
-
-      salvarEstadoAgendaStorage_();
-      fecharModalTarefaAgenda();
-      renderizarAgendaCompletaUI();
-      notificar('Tarefa salva na Agenda.');
-    }
-
-    function excluirTarefaAgendaDoModal() {
-      const id = document.getElementById('agFormTaskId').value.trim();
-      if (!id) return;
-      if (!confirm('Deseja realmente excluir esta tarefa da agenda?')) return;
-
-      if (AG_TIMER.taskId === id) pausarTimerAgenda_();
-      AG_STATE.tarefas = AG_STATE.tarefas.filter(t => t.id !== id);
-      salvarEstadoAgendaStorage_();
-      fecharModalTarefaAgenda();
-      renderizarAgendaCompletaUI();
-      notificar('Tarefa removida.');
-    }
-
-    function abrirModalJanelaEstudoAgenda() {
-      document.getElementById('agCfgHoraInicio').value = AG_STATE.configExpediente?.horaInicio || 8;
-      document.getElementById('agCfgHoraFim').value = AG_STATE.configExpediente?.horaFim || 21;
-      document.getElementById('agCfgMetaMinutosDia').value = AG_STATE.configExpediente?.metaMinutosDia || 240;
-      const infoRitmo = obterInfoMediaTempoPorPagina_();
-      const elInfo = document.getElementById('agModalInfoMediaPagina');
-      if (elInfo) elInfo.textContent = infoRitmo.textoDetalhado;
-      document.getElementById('modalJanelaEstudoAgenda').classList.remove('hidden');
-    }
-
-    function fecharModalJanelaEstudoAgenda() {
-      document.getElementById('modalJanelaEstudoAgenda').classList.add('hidden');
-    }
-
-    function salvarJanelaEstudoAgenda(e) {
-      e.preventDefault();
-      const ini = Math.max(5, Math.min(22, Number(document.getElementById('agCfgHoraInicio').value || 8)));
-      const fim = Math.max(ini + 1, Math.min(23, Number(document.getElementById('agCfgHoraFim').value || 21)));
-      const meta = Math.max(30, Number(document.getElementById('agCfgMetaMinutosDia').value || 240));
-
-      AG_STATE.configExpediente = { horaInicio: ini, horaFim: fim, metaMinutosDia: meta };
-      salvarEstadoAgendaStorage_();
-      fecharModalJanelaEstudoAgenda();
-      renderizarAgendaCompletaUI();
-      notificar('Expediente e meta diária salvos.');
     }
   </script>
 
