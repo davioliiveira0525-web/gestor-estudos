@@ -14270,5 +14270,1457 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     });
   </script>
 
+
+<script>
+/* ==========================================================================
+ * CORREÇÕES E MELHORIAS — Gestor de Estudos
+ * Colar dentro de uma tag script no FINAL do body (depois de todos os outros scripts)
+ * ou salvar como arquivo externo e referenciar com script src.
+ *
+ *  1. Cartões: classificação Certo/Errado auditada, uma ideia por afirmação,
+ *     limite de palavras ajustável, prompt de IA e validação na importação.
+ *  2. Navegação geral: sem "Estilo Anki", edição individual/em massa com
+ *     formatação, revisão de qualidade, exportação CSV e TXT (com reimportação).
+ *  3. Cronograma: conclusão por PARTE de cada PDF, independente, com
+ *     pendências preservadas e histórico real.
+ * ========================================================================== */
+(function () {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+  const hojeYMD = () => formatarDataYMD_(new Date());
+  const nn = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const fmtData = (d) => (typeof formatarDataBR === 'function' ? formatarDataBR(d) : d);
+  const aviso = (msg, erro) => { try { notificar(msg, Boolean(erro)); } catch (e) { console.log(msg); } };
+
+  function envolver(nome, fn) {
+    const orig = window[nome];
+    window[nome] = function () {
+      return fn.apply(this, [typeof orig === 'function' ? orig.bind(this) : function () {}].concat(Array.prototype.slice.call(arguments)));
+    };
+  }
+
+  /* ========================================================================
+   * A. MARCAÇÃO DE TEXTO (negrito, destaque, cores) — usada nos cartões
+   *    **negrito**  ==destaque==  __sublinhado__  ~~itálico~~
+   *    {{vm::texto}} vermelho · {{vd::}} verde · {{az::}} azul · {{lj::}} laranja · {{rx::}} roxo · {{cz::}} cinza
+   * ======================================================================== */
+  const COR_CODES = ['vm', 'vd', 'az', 'lj', 'rx', 'cz'];
+  const RE_TEM_MARKUP = /\*\*|==|__|~~|\{\{(?:vm|vd|az|lj|rx|cz)::/;
+
+  function aplicarMarkupEscapado(s) {
+    return String(s)
+      .replace(/\{\{(vm|vd|az|lj|rx|cz)::([\s\S]*?)\}\}/g, '<span class="fc-mk-$1">$2</span>')
+      .replace(/\*\*([\s\S]+?)\*\*/g, '<span class="fc-destaque-conceito">$1</span>')
+      .replace(/==([\s\S]+?)==/g, '<mark class="fc-mk-hl">$1</mark>')
+      .replace(/__([\s\S]+?)__/g, '<u>$1</u>')
+      .replace(/~~([\s\S]+?)~~/g, '<em>$1</em>');
+  }
+
+  function textoPuro(s) {
+    return String(s || '')
+      .replace(/\{\{c\d+::([\s\S]*?)\}\}/gi, '$1')
+      .replace(/\{\{(?:vm|vd|az|lj|rx|cz)::([\s\S]*?)\}\}/g, '$1')
+      .replace(/\*\*|__|==|~~/g, '')
+      .replace(/[\[\]]/g, '');
+  }
+
+  window.fcxAplicarMarkupEscapado = aplicarMarkupEscapado;
+
+  window.formatarTextoDidaticoEmAula_ = function (textoBruto) {
+    if (!textoBruto) return '';
+    const linhas = String(textoBruto).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    return linhas.map((linha) => {
+      let f = esc(linha).replace(/\[([^\]]+)\]/g, '<span class="fc-destaque-correto">$1</span>');
+      f = aplicarMarkupEscapado(f);
+      if (/^(\-|\•|\*|\d+[\.\)])\s+/.test(linha)) {
+        return '<div class="pl-3.5 border-l-2 border-indigo-500/60 py-0.5 text-slate-200">' + f + '</div>';
+      }
+      return '<p class="text-slate-100 leading-relaxed">' + f + '</p>';
+    }).join('');
+  };
+
+  envolver('formatarTextoCloze_', (orig, texto, revelar) => aplicarMarkupEscapado(orig(texto, revelar)));
+
+  envolver('renderizarCardAtualNoPlayerFC_', (orig) => {
+    orig();
+    try {
+      const c = FC_SESSAO && FC_SESSAO.cardAtual;
+      const el = $('fcCardFrente');
+      if (c && el && !/\{\{c\d+::/i.test(c.frente) && RE_TEM_MARKUP.test(c.frente)) {
+        el.innerHTML = aplicarMarkupEscapado(esc(c.frente));
+      }
+    } catch (e) { /* sem efeito visual */ }
+  });
+
+  /* ========================================================================
+   * B. LEITURA / MONTAGEM DOS CAMPOS DO VERSO
+   * ======================================================================== */
+  const CAMPO_POR_ROTULO = {
+    gabarito: 'gabarito', explicacao: 'explicacao', endereco: 'fundamento', fundamento: 'fundamento',
+    artigo: 'fundamento', dispositivo: 'fundamento', 'frase corrigida': 'frase', correcao: 'frase',
+    conceito: 'frase', exemplo: 'exemplo'
+  };
+
+  function normGab(v) {
+    const t = nn(v);
+    if (!t) return '';
+    if (/^(e|i|f)/.test(t)) return 'ERRADO';
+    if (/^(c|v)/.test(t)) return 'CERTO';
+    return '';
+  }
+
+  function parseVersoCampos(verso) {
+    const campos = { gabarito: '', explicacao: '', fundamento: '', frase: '', exemplo: '' };
+    const s = String(verso || '').trim();
+    const partes = s.split('|').map((p) => p.trim()).filter((p) => p !== '');
+    let ultimo = null;
+    let rotulado = false;
+    partes.forEach((p) => {
+      const m = p.match(/^(gabarito|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo)\s*:\s*([\s\S]*)$/i);
+      if (m) {
+        rotulado = true;
+        const chave = CAMPO_POR_ROTULO[nn(m[1])];
+        if (chave) {
+          campos[chave] = campos[chave] ? campos[chave] + ' / ' + m[2].trim() : m[2].trim();
+          ultimo = chave;
+        }
+      } else if (ultimo) {
+        campos[ultimo] += ' / ' + p;
+      } else {
+        campos.explicacao = campos.explicacao ? campos.explicacao + ' / ' + p : p;
+      }
+    });
+    if (!rotulado) campos.explicacao = s;
+    campos.gabarito = normGab(campos.gabarito);
+    return { campos, rotulado };
+  }
+
+  const ehCE = (tipo) => tipo === 'PDF_BASE' || tipo === 'CADERNO_ERROS';
+
+  function montarVerso(tipo, c) {
+    const L = (s) => String(s || '').replace(/\s*\|\s*/g, ' / ').trim();
+    const p = [];
+    if (ehCE(tipo)) p.push('Gabarito: ' + (c.gabarito === 'ERRADO' ? 'ERRADO' : 'CERTO'));
+    p.push('Explicação: ' + L(c.explicacao));
+    if (L(c.fundamento)) p.push('Fundamento: ' + L(c.fundamento));
+    if (L(c.frase)) p.push('Frase Corrigida: ' + L(c.frase));
+    if (L(c.exemplo)) p.push('Exemplo: ' + L(c.exemplo));
+    return p.join(' | ');
+  }
+
+  /* ========================================================================
+   * C. QUALIDADE DA AFIRMAÇÃO: gabarito x explicação, tamanho, múltiplas ideias
+   * ======================================================================== */
+  const FC_LIM_KEY = 'GR_FC_LIMITE_PALAVRAS';
+  function limitePalavras() {
+    const v = Number(localStorage.getItem(FC_LIM_KEY));
+    return v >= 8 && v <= 120 ? v : 30;
+  }
+
+  const VERBOS = ('é|são|era|eram|foi|serão|será|pode|podem|poderá|poderão|deve|devem|deverá|deverão|cabe|cabem|caberá|compete|competem|tem|têm|terá|possui|possuem|admite|admitem|exige|exigem|depende|dependem|ocorre|ocorrem|configura|configuram|constitui|constituem|prescreve|prescrevem|veda|vedam|proíbe|proíbem|permite|permitem|garante|garantem|assegura|asseguram|extingue|extinguem|inicia|iniciam|começa|começam|cessa|cessam|há|haverá|existe|existem|incide|incidem|aplica|aplicam|aplica-se|aplicam-se|responde|respondem|prevê|preveem|estabelece|estabelecem|dispõe|dispõem|determina|determinam|autoriza|autorizam|impede|impedem|afasta|afastam|exclui|excluem|inclui|incluem|abrange|abrangem|decorre|decorrem|nasce|nascem|consiste|consistem|subsiste|persiste|produz|produzem|gera|geram|cumpre|cumprem|fica|ficam|equivale|equivalem|vigora|prevalece|prevalecem|basta|bastam|independe|independem|impõe|impõem|vincula|vinculam|protege|protegem|passa|passam|corresponde|correspondem|inicia-se|extingue-se|conta-se|contam-se|computa-se|considera-se|consideram-se|reputa-se|reputam-se|realiza-se|realizam-se|processa-se|processam-se|julga-se|julgam-se|dá-se|dão-se|faz-se|fazem-se|torna-se|tornam-se|opera-se|operam-se')
+    .split('|').sort((a, b) => b.length - a.length).join('|');
+  let RE_VERBO;
+  try { RE_VERBO = new RegExp('(?<![\\p{L}-])(?:' + VERBOS + ')(?![\\p{L}])', 'iu'); } catch (e) { RE_VERBO = new RegExp('(?:^|\\s)(?:' + VERBOS + ')(?=\\s|[,.;]|$)', 'i'); }
+
+  function estimarIdeias(frente) {
+    const t = textoPuro(frente).replace(/\s+/g, ' ').trim();
+    if (!t) return { n: 0, motivo: '' };
+    const motivos = [];
+    let frases;
+    try { frases = t.split(/(?<=[.!?])\s+(?=\p{Lu})/u).filter((x) => x.trim()); } catch (e) { frases = [t]; }
+    if (frases.length >= 2) motivos.push(frases.length + ' frases');
+    if (/;/.test(t)) motivos.push('ponto e vírgula');
+    let oracoes = 0;
+    frases.forEach((f) => {
+      const blocos = f.split(/;|,\s*(?:e|mas|por[ée]m|contudo|todavia|enquanto|sendo|podendo|devendo|desde que)\s|\s(?:bem como|al[ée]m de|ao passo que|e tamb[ée]m|mas tamb[ée]m)\s/i);
+      blocos.forEach((b) => {
+        const sub = b.split(/\s+e\s+/i);
+        if (sub.length > 1) oracoes += sub.filter((x) => RE_VERBO.test(x)).length;
+        else if (RE_VERBO.test(b)) oracoes += 1;
+      });
+    });
+    if (oracoes >= 2) motivos.push(oracoes + ' orações com verbo');
+    return { n: motivos.length ? 2 : 1, motivo: motivos.join(', ') };
+  }
+
+  function inferirGabaritoExplicacao(exp) {
+    const t = String(exp || '').replace(/\*\*|__|==|~~/g, '').trim().slice(0, 220);
+    if (!t) return '';
+    const NEG = '(?:incorreta|incorreto|errada|errado|falsa|falso|improcedente|inexata|inexato)';
+    const POS = '(?:correta|correto|certa|certo|verdadeira|verdadeiro|procedente|exata|exato)';
+    const SUJ = '(?:(?:a|o|esta|este|essa|esse)\\s+)?(?:afirma[cç][aã]o|assertiva|alternativa|proposi[cç][aã]o|item|frase|senten[cç]a|enunciado)';
+    const com = (r) => new RegExp(r, 'i');
+    const fim = '(?![a-zà-ú])';
+    if (com('^\\W*' + SUJ + '\\s+(?:est[aá]|[eé]|se mostra)\\s+(?:totalmente\\s+)?' + NEG + fim).test(t)) return 'ERRADO';
+    if (com('^\\W*' + SUJ + '\\s+(?:est[aá]|[eé]|se mostra)\\s+(?:totalmente\\s+)?' + POS + fim).test(t)) return 'CERTO';
+    if (com('^\\W*' + NEG + fim).test(t)) return 'ERRADO';
+    if (com('^\\W*' + POS + fim).test(t)) return 'CERTO';
+    return '';
+  }
+
+  function tokensSim(s) {
+    return nn(textoPuro(s)).split(/[^a-z0-9]+/).filter((w) => w.length > 2);
+  }
+  function similaridade(a, b) {
+    const A = new Set(tokensSim(a));
+    const B = new Set(tokensSim(b));
+    if (!A.size || !B.size) return 1;
+    let inter = 0;
+    A.forEach((w) => { if (B.has(w)) inter++; });
+    return inter / (A.size + B.size - inter);
+  }
+
+  function analisarCartaoCompleto(c) {
+    const ce = ehCE(c.tipo);
+    const { campos, rotulado } = parseVersoCampos(c.verso);
+    const problemas = [];
+    const frente = String(c.frente || '');
+    const palavras = textoPuro(frente).trim().split(/\s+/).filter(Boolean).length;
+    let gabaritoAtual = '';
+    let sugestaoGabarito = '';
+
+    if (!frente.trim()) problemas.push({ nivel: 'erro', codigo: 'FRENTE_VAZIA', msg: 'Frente vazia.' });
+
+    if (ce) {
+      const explicito = campos.gabarito;
+      const inferido = inferirGabaritoExplicacao(campos.explicacao);
+      gabaritoAtual = explicito || inferido || 'CERTO';
+      if (!explicito) {
+        problemas.push({ nivel: 'aviso', codigo: 'SEM_GABARITO', msg: 'Sem "Gabarito:" explícito — o sistema assumiu ' + gabaritoAtual + '.' });
+      }
+      if (explicito && inferido && explicito !== inferido) {
+        sugestaoGabarito = inferido;
+        problemas.push({ nivel: 'erro', codigo: 'GABARITO_X_EXPLICACAO', msg: 'Gabarito ' + explicito + ', mas a explicação indica ' + inferido + '.', sugestao: inferido });
+      }
+      if (campos.frase && frente.trim()) {
+        const sim = similaridade(frente, campos.frase);
+        if (gabaritoAtual === 'CERTO' && sim < 0.45) {
+          problemas.push({ nivel: 'aviso', codigo: 'FRASE_DIVERGE', msg: 'Gabarito CERTO, mas a "Frase Corrigida" difere muito da afirmação (possível ERRADO).' });
+          if (!sugestaoGabarito) sugestaoGabarito = 'ERRADO';
+        }
+        if (gabaritoAtual === 'ERRADO' && sim > 0.97) {
+          problemas.push({ nivel: 'aviso', codigo: 'FRASE_IGUAL', msg: 'Gabarito ERRADO, mas a "Frase Corrigida" é idêntica à afirmação (possível CERTO).' });
+          if (!sugestaoGabarito) sugestaoGabarito = 'CERTO';
+        }
+      }
+      const lim = limitePalavras();
+      if (palavras > lim) problemas.push({ nivel: 'aviso', codigo: 'LONGA', msg: palavras + ' palavras (limite ' + lim + ').' });
+      const ideias = estimarIdeias(frente);
+      if (ideias.n >= 2) problemas.push({ nivel: 'aviso', codigo: 'VARIAS_IDEIAS', msg: 'Possível mais de uma ideia: ' + ideias.motivo + '.' });
+    }
+    return { problemas, palavras, gabaritoAtual, sugestaoGabarito, campos, rotulado };
+  }
+
+  /* Leitura do gabarito usada pelo player e pela normalização dos cartões */
+  window.extrairDadosEstruturadosCertoErrado_ = function (frenteStr, versoStr, tagsStr) {
+    const verso = String(versoStr || '');
+    const { campos, rotulado } = parseVersoCampos(verso);
+    let gabaritoCE = campos.gabarito;
+    if (!gabaritoCE) gabaritoCE = inferirGabaritoExplicacao(rotulado ? campos.explicacao : verso);
+    if (!gabaritoCE) {
+      if (/^\W*(ERRADO|INCORRETO|FALSO)\b/i.test(verso)) gabaritoCE = 'ERRADO';
+      else if (/\bERRADO\b/i.test(String(tagsStr || ''))) gabaritoCE = 'ERRADO';
+      else gabaritoCE = 'CERTO';
+    }
+    let explicacao = verso;
+    let endereco = campos.fundamento;
+    if (rotulado) {
+      explicacao = campos.explicacao || verso;
+    } else {
+      explicacao = verso.replace(/^(CERTO|ERRADO|CORRETO|INCORRETO)[\.\:\-\s]*/i, '').trim();
+      const matchArt = verso.match(/(\b(Art\.?|Artigo|Súmula|Lei|CF\/88|CP|CPP|CPC|CTN|CLT)[^.;\n]*)/i);
+      endereco = matchArt ? matchArt[1].trim() : '';
+    }
+    return { gabaritoCE, explicacao, endereco, fraseCorrigida: campos.frase, exemplo: campos.exemplo };
+  };
+
+  /* ========================================================================
+   * D. PROMPT PARA IA E VALIDAÇÃO NA IMPORTAÇÃO
+   * ======================================================================== */
+  window.preencherPromptPadraoIA_ = function () {
+    const txtEl = $('txtPromptPadraoIA');
+    if (!txtEl) return;
+    const idMat = ($('fcImportDefaultMateria') || {}).value || '';
+    const idTop = ($('fcImportDefaultTopico') || {}).value || '';
+    const matObj = (ESTADO && ESTADO.materias || []).find((m) => m.id === idMat);
+    const topObj = (ESTADO && ESTADO.topicos || []).find((t) => t.id === idTop);
+    const nomeMat = matObj ? matObj.nome : 'Direito Constitucional';
+    const nomeTop = topObj ? topObj.topico : 'Direitos e Garantias Fundamentais';
+    const lim = limitePalavras();
+    txtEl.value = `ATUE COMO ESPECIALISTA EM CONCURSOS JURÍDICOS E GERE CARTÕES DE ESTUDO NO FORMATO ABAIXO (${nomeMat} — ${nomeTop}).
+
+REGRA CENTRAL: CADA CARTÃO = UMA AFIRMAÇÃO = UMA ÚNICA IDEIA.
+- Proibido reunir duas ou mais ideias independentes na mesma afirmação (nada de "X, e Y", "além de", "bem como", ponto e vírgula).
+- Se o conteúdo tiver várias ideias, crie VÁRIOS cartões, um para cada ideia.
+- Máximo de ${lim} palavras por afirmação (PDF_BASE e CADERNO_ERROS), sem perder a precisão jurídica.
+- Afirmação objetiva, clara e adequada à revisão rápida.
+
+COERÊNCIA DO GABARITO (OBRIGATÓRIA):
+- Antes de responder, confira cada cartão: o GABARITO precisa corresponder objetivamente à afirmação da FRENTE.
+- A EXPLICAÇÃO deve COMEÇAR confirmando o gabarito: "Certo." ou "Errado." (nunca contradizer o campo Gabarito).
+- Cartão ERRADO: a "Frase Corrigida" traz a versão correta, com o trecho corrigido entre [colchetes].
+- Cartão CERTO: a "Frase Corrigida" repete a ideia da afirmação (ou fica em branco).
+- Em dúvida jurídica, não invente: omita o cartão.
+
+FORMATAÇÃO DO ARQUIVO (ZERO ERRO DE IMPORTAÇÃO):
+- Entregue dentro de um bloco de código puro. Cada cartão em UMA ÚNICA LINHA.
+- Separador exclusivo: ponto e vírgula (;) com 4 colunas: TIPO;FRENTE;VERSO;TAGS
+- NUNCA use ";" dentro dos textos (use vírgula, dois-pontos ou "|" apenas para separar campos do verso).
+- Mantenha a ordem lógica do conteúdo.
+
+TIPOS PERMITIDOS: PDF_BASE (afirmação C/E do PDF) · CADERNO_ERROS (pegadinha de prova convertida em C/E) · LEI_SECA (texto literal, lacunas {{c1::termo}}) · DECOREBA (pergunta direta sobre prazo, lista, quórum, competência).
+
+VERSO — PDF_BASE e CADERNO_ERROS:
+Gabarito: CERTO ou ERRADO | Explicação: Certo./Errado. + explicação curta | Fundamento: Art. X da Lei Y | Frase Corrigida: frase com o [conceito correto]
+VERSO — LEI_SECA e DECOREBA:
+Explicação: resposta direta e esquematizada | Fundamento: Art. X da Lei Y | Frase Corrigida: [resumo literal]
+
+FORMATAÇÃO OPCIONAL DO TEXTO: **negrito** · ==destaque== · __sublinhado__ · ~~itálico~~ · {{vm::vermelho}} {{vd::verde}} {{az::azul}} {{lj::laranja}} {{rx::roxo}}
+
+EXEMPLO (cada linha é um cartão, uma ideia por afirmação):
+PDF_BASE;O ingresso em domicílio por ordem judicial só pode ocorrer durante o dia.;Gabarito: CERTO | Explicação: Certo. A Constituição admite o ingresso sem consentimento, por determinação judicial, apenas durante o dia. | Fundamento: Art. 5º, XI, da CF/88 | Frase Corrigida: O ingresso por ordem judicial só pode ocorrer [durante o dia].;Inviolabilidade Domiciliar
+PDF_BASE;A casa é inviolável mesmo em caso de flagrante delito.;Gabarito: ERRADO | Explicação: Errado. Em flagrante delito, desastre ou para prestar socorro, o ingresso é permitido a qualquer hora. | Fundamento: Art. 5º, XI, da CF/88 | Frase Corrigida: Em [flagrante delito] o ingresso na casa é permitido a qualquer hora.;Inviolabilidade Domiciliar
+LEI_SECA;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum praticado {{c2::antes da naturalização}}.;Explicação: O brasileiro nato jamais é extraditado. | Fundamento: Art. 5º, LI, da CF/88 | Frase Corrigida: Nato: [nunca extraditado].;Extradição
+DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado solto no CPP?;Explicação: **30 dias**, prorrogáveis. | Fundamento: Art. 10 do CPP | Frase Corrigida: CPP solto: [30 dias].;Prazos IP`;
+  };
+
+  function diagnosticarItemPrevia(item) {
+    item._conflito = '';
+    item.avisos = [];
+    if (ehCE(item.tipo) && item.frente && item.verso) {
+      const a = analisarCartaoCompleto({ tipo: item.tipo, frente: item.frente, verso: item.verso, tags: item.tags });
+      item.avisos = a.problemas;
+      const conf = a.problemas.find((p) => p.codigo === 'GABARITO_X_EXPLICACAO');
+      if (conf) item._conflito = conf.msg + ' Corrija antes de importar.';
+    }
+  }
+
+  function htmlDiagnosticoPrevia(item) {
+    const pill = item.erroValidacao
+      ? '<span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">' + esc(item.erroValidacao) + '</span>'
+      : '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]">OK • Validado</span>';
+    const extras = (item.avisos || []).filter((p) => p.codigo !== 'GABARITO_X_EXPLICACAO')
+      .map((p) => '<div class="text-[10px] text-amber-300 mt-0.5 text-left whitespace-normal">• ' + esc(p.msg) + '</div>').join('');
+    return pill + (extras ? '<div style="max-width:240px;margin:0 auto">' + extras + '</div>' : '');
+  }
+
+  function decorarTabelaPrevia() {
+    const linhas = document.querySelectorAll('#tbodyPreviaImportacaoCartoes tr');
+    linhas.forEach((tr, idx) => {
+      const item = FC_PREVIA_LOTE_ITENS[idx];
+      const td = tr.lastElementChild;
+      if (item && td) td.innerHTML = htmlDiagnosticoPrevia(item);
+    });
+  }
+
+  envolver('renderizarTabelaPreviaImportacao_', (orig) => {
+    FC_PREVIA_LOTE_ITENS.forEach((it) => {
+      diagnosticarItemPrevia(it);
+      if (it._conflito && !it.erroValidacao) {
+        it.erroValidacao = it._conflito;
+        it.selecionado = false;
+      }
+    });
+    orig();
+    decorarTabelaPrevia();
+  });
+
+  envolver('atualizarItemPreviaImportacao', (orig, idx, campo, valor) => {
+    orig(idx, campo, valor);
+    const it = FC_PREVIA_LOTE_ITENS[idx];
+    if (!it) return;
+    diagnosticarItemPrevia(it);
+    if (it._conflito && !it.erroValidacao) it.erroValidacao = it._conflito;
+    if (campo === 'frente' || campo === 'verso') {
+      const tr = document.querySelectorAll('#tbodyPreviaImportacaoCartoes tr')[idx];
+      if (tr && tr.lastElementChild) tr.lastElementChild.innerHTML = htmlDiagnosticoPrevia(it);
+      const btn = $('btnConfirmarImportacaoFinal');
+      const validos = FC_PREVIA_LOTE_ITENS.filter((i) => i.selecionado && !i.erroValidacao).length;
+      if (btn) { btn.disabled = validos === 0; btn.textContent = 'Confirmar e Cadastrar ' + validos + ' Cartão(ões)'; }
+    }
+  });
+
+  /* ========================================================================
+   * E. EXPORTAÇÃO (CSV / TXT) E REIMPORTAÇÃO DO TXT
+   * ======================================================================== */
+  const flat = (s) => String(s == null ? '' : s).replace(/\r?\n/g, ' / ').trim();
+  const flatCSV = (s) => flat(s).replace(/;/g, ',');
+  const celulaCSV = (v) => {
+    const s = flat(v);
+    return /[";]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  function baixarArquivo(nome, conteudo, mime) {
+    const blob = new Blob(['﻿' + conteudo], { type: mime + ';charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nome;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function cartoesParaExportar() {
+    const selecionados = FC_DECK.filter((c) => ANKI_SELECIONADOS_SET.has(String(c.id)));
+    if (selecionados.length > 0) return { lista: selecionados.sort((a, b) => a.ordemCriacao - b.ordemCriacao), escopo: 'selecionados' };
+    return { lista: obterCartoesFiltradosNavegadorAnki_(), escopo: 'filtro atual' };
+  }
+
+  function nomesDoCartao(c) {
+    const t = (ESTADO && ESTADO.topicos || []).find((x) => x.id === c.idTopico);
+    return { materia: t ? t.materia : c.idMateria, topico: t ? t.topico : c.idTopico };
+  }
+
+  function montarCSVPlanilha(lista) {
+    const cab = ['ordem', 'id', 'materia', 'topico', 'tipo', 'gabarito', 'frente', 'explicacao', 'fundamento', 'frase_corrigida', 'exemplo', 'tags', 'vezes_estudado', 'acertos', 'erros', 'taxa_acerto_pct'];
+    const linhas = lista.map((c) => {
+      const { campos } = parseVersoCampos(c.verso);
+      const n = nomesDoCartao(c);
+      return [c.ordemCriacao, c.id, n.materia, n.topico, c.tipo, ehCE(c.tipo) ? (campos.gabarito || c.gabaritoCE) : '',
+        c.frente, campos.explicacao, campos.fundamento, campos.frase, campos.exemplo, c.tags,
+        c.totalRevisoes, c.totalAcertos, c.totalErros, c.taxaAcerto].map(celulaCSV).join(';');
+    });
+    return [cab.join(';')].concat(linhas).join('\r\n');
+  }
+
+  function montarCSVReimportavel(lista) {
+    const linhas = lista.map((c) => {
+      const n = nomesDoCartao(c);
+      return [n.materia, n.topico, c.tipo, c.frente, c.verso, c.tags].map(flatCSV).join(';');
+    });
+    return ['materia;topico;tipo;frente;verso;tags'].concat(linhas).join('\r\n');
+  }
+
+  function montarTXT(lista) {
+    const lim = limitePalavras();
+    const hoje = fmtData(hojeYMD());
+    const cab = [
+      '# EXPORTAÇÃO DE CARTÕES — Gestor de Estudos',
+      '# Total: ' + lista.length + ' cartão(ões) • Exportado em ' + hoje,
+      '#',
+      '# INSTRUÇÕES PARA REVISÃO POR IA (ChatGPT / Claude):',
+      '# 1. Mantenha EXATAMENTE a estrutura de cada bloco: linha "### CARTÃO ..." e os campos TIPO, FRENTE, GABARITO, EXPLICAÇÃO, FUNDAMENTO, FRASE CORRIGIDA, EXEMPLO, TAGS.',
+      '# 2. Em PDF_BASE e CADERNO_ERROS, cada FRENTE traz UMA única afirmação com UMA única ideia (máx. ' + lim + ' palavras), sem perder a precisão jurídica.',
+      '# 3. O GABARITO deve corresponder objetivamente à afirmação; a EXPLICAÇÃO começa com "Certo." ou "Errado." coerente com o GABARITO.',
+      '# 4. Se uma afirmação reunir mais de uma ideia, desdobre em novos blocos "### CARTÃO" (um por ideia).',
+      '# 5. Não use ";" nem "|" dentro dos campos.',
+      '# 6. Formatação permitida: **negrito** ==destaque== __sublinhado__ ~~itálico~~ {{vm::vermelho}} {{vd::verde}} {{az::azul}} {{lj::laranja}} {{rx::roxo}} e {{c1::lacuna}} (somente LEI_SECA).',
+      '# 7. Devolva TODOS os cartões no mesmo formato, dentro de um bloco de código.',
+      ''
+    ];
+    const blocos = lista.map((c) => {
+      const { campos } = parseVersoCampos(c.verso);
+      const n = nomesDoCartao(c);
+      const l = [
+        '### CARTÃO ' + c.ordemCriacao + ' | ID: ' + c.id,
+        'TIPO: ' + c.tipo,
+        'MATÉRIA: ' + flat(n.materia),
+        'TÓPICO: ' + flat(n.topico),
+        'FRENTE: ' + flat(c.frente)
+      ];
+      if (ehCE(c.tipo)) l.push('GABARITO: ' + (campos.gabarito || c.gabaritoCE));
+      l.push('EXPLICAÇÃO: ' + flat(campos.explicacao));
+      l.push('FUNDAMENTO: ' + flat(campos.fundamento));
+      l.push('FRASE CORRIGIDA: ' + flat(campos.frase));
+      l.push('EXEMPLO: ' + flat(campos.exemplo));
+      l.push('TAGS: ' + flat(c.tags));
+      return l.join('\n');
+    });
+    return cab.join('\n') + '\n' + blocos.join('\n\n---\n\n') + '\n';
+  }
+
+  /* TXT (blocos "### CARTÃO") -> linhas "TIPO;FRENTE;VERSO;TAGS" aceitas pelo importador */
+  function converterTXTParaLinhas(txt) {
+    const partes = String(txt || '').split(/^###\s*CART[ÃA]O/im).slice(1);
+    const linhas = [];
+    const RE = /^(TIPO|MAT[ÉE]RIA|T[ÓO]PICO|FRENTE|GABARITO|EXPLICA[ÇC][ÃA]O|FUNDAMENTO|FRASE CORRIGIDA|EXEMPLO|TAGS|ID)\s*:\s*(.*)$/i;
+    partes.forEach((bloco) => {
+      const f = {};
+      let ultimo = null;
+      bloco.split(/\r?\n/).slice(1).forEach((ln) => {
+        if (/^\s*---\s*$/.test(ln) || /^\s*#(?!##)/.test(ln)) return;
+        const m = ln.match(RE);
+        if (m) { ultimo = nn(m[1]).toUpperCase().replace(/\s+/g, '_'); f[ultimo] = (m[2] || '').trim(); }
+        else if (ultimo && ln.trim()) f[ultimo] = (f[ultimo] ? f[ultimo] + ' / ' : '') + ln.trim();
+      });
+      const tipo = (f.TIPO || 'PDF_BASE').trim();
+      if (!f.FRENTE) return;
+      const verso = montarVerso(tipo, {
+        gabarito: normGab(f.GABARITO), explicacao: f.EXPLICACAO || '', fundamento: f.FUNDAMENTO || '',
+        frase: f.FRASE_CORRIGIDA || '', exemplo: f.EXEMPLO || ''
+      });
+      linhas.push([tipo, f.FRENTE, verso, f.TAGS || ''].map(flatCSV).join(';'));
+    });
+    return linhas.join('\n');
+  }
+
+  envolver('analisarLoteEIrParaPrevia', (orig) => {
+    const ta = $('fcInputCSVBruto');
+    if (ta && /###\s*CART[ÃA]O/i.test(ta.value)) {
+      const conv = converterTXTParaLinhas(ta.value);
+      if (conv) { ta.value = conv; aviso('Formato TXT reconhecido e convertido para a pré-visualização.'); }
+    }
+    return orig();
+  });
+
+  function exportarCartoes(formato) {
+    const { lista, escopo } = cartoesParaExportar();
+    if (lista.length === 0) { aviso('Nenhum cartão para exportar.', true); return; }
+    const data = hojeYMD();
+    if (formato === 'TXT') baixarArquivo('Cartoes_' + data + '.txt', montarTXT(lista), 'text/plain');
+    else if (formato === 'CSV_REIMPORTAVEL') baixarArquivo('Cartoes_reimportavel_' + data + '.csv', montarCSVReimportavel(lista), 'text/csv');
+    else baixarArquivo('Cartoes_planilha_' + data + '.csv', montarCSVPlanilha(lista), 'text/csv');
+    aviso(lista.length + ' cartão(ões) exportado(s) (' + escopo + ').');
+  }
+  window.fcxExportarCartoes = exportarCartoes;
+
+  /* ========================================================================
+   * F. EDITOR DE CARTÕES (INDIVIDUAL E EM MASSA) COM FORMATAÇÃO
+   * ======================================================================== */
+  const ED = { itens: [], pagina: 0, porPagina: 6, focado: null };
+
+  function rotuloTipo(t) {
+    return { PDF_BASE: '1. PDF-Base (C/E)', CADERNO_ERROS: '2. Caderno de Erros (C/E)', LEI_SECA: '3. Lei Seca', DECOREBA: '4. Decoreba' }[t] || t;
+  }
+
+  async function abrirEditorCartoes(ids) {
+    const cartoes = ids.map((id) => FC_DECK.find((c) => String(c.id) === String(id))).filter(Boolean);
+    if (cartoes.length === 0) { aviso('Selecione ao menos um cartão para editar.', true); return; }
+
+    const tagsBrutas = {};
+    try {
+      for (let i = 0; i < cartoes.length; i += 100) {
+        const fatia = cartoes.slice(i, i + 100).map((c) => c.id);
+        const { data } = await supabaseClient.from('flashcards').select('id,tags').in('id', fatia);
+        (data || []).forEach((r) => { tagsBrutas[String(r.id)] = String(r.tags || ''); });
+      }
+    } catch (e) { /* segue sem as tags brutas */ }
+
+    ED.itens = cartoes.map((c) => {
+      const { campos } = parseVersoCampos(c.verso);
+      const bruta = tagsBrutas[String(c.id)] !== undefined ? tagsBrutas[String(c.id)] : c.tags;
+      const seq = (bruta.match(/#SEQ_\d+/i) || [''])[0];
+      const tagsUsuario = bruta.replace(/#SEQ_\d+\s*,?\s*/gi, '').trim();
+      const n = nomesDoCartao(c);
+      const it = {
+        id: c.id, seq: c.ordemCriacao, seqTag: seq, rotuloTopico: n.materia + ' • ' + n.topico,
+        tipo: c.tipo, frente: c.frente, gabarito: campos.gabarito || (ehCE(c.tipo) ? c.gabaritoCE : ''),
+        explicacao: campos.explicacao, fundamento: campos.fundamento, frase: campos.frase, exemplo: campos.exemplo,
+        tags: tagsUsuario
+      };
+      it.orig = JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags });
+      return it;
+    });
+    ED.pagina = 0;
+    ED.focado = null;
+    $('fcxEditorModal').classList.remove('hidden');
+    edRender();
+  }
+  window.abrirEditorCartoes = abrirEditorCartoes;
+
+  function edAlterado(it) {
+    return JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags }) !== it.orig;
+  }
+
+  function edBlocoHTML(it, idx) {
+    const ce = ehCE(it.tipo);
+    const opt = (v) => '<option value="' + v + '"' + (it.tipo === v ? ' selected' : '') + '>' + rotuloTipo(v) + '</option>';
+    const campo = (nome, rot, linhas) => '<div><label class="block text-[10px] font-extrabold uppercase text-slate-400 mb-0.5">' + rot + '</label>' +
+      (linhas ? '<textarea rows="' + linhas + '" data-ed="' + idx + '|' + nome + '" class="fcx-campo w-full rounded-lg border px-2 py-1.5 text-xs">' + esc(it[nome]) + '</textarea>'
+        : '<input type="text" data-ed="' + idx + '|' + nome + '" value="' + esc(it[nome]) + '" class="fcx-campo w-full rounded-lg border px-2 py-1.5 text-xs">') + '</div>';
+    return '<div class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-2" data-ed-bloco="' + idx + '">' +
+      '<div class="flex flex-wrap items-center justify-between gap-2">' +
+      '<span class="font-mono text-[11px] font-bold text-slate-300">#' + it.seq + ' • ' + esc(it.rotuloTopico) + (edAlterado(it) ? ' <span class="text-amber-300">● alterado</span>' : '') + '</span>' +
+      '<div class="flex items-center gap-1.5">' +
+      '<select data-edsel="' + idx + '|tipo" class="rounded border px-2 py-1 text-[11px] font-bold">' + opt('PDF_BASE') + opt('CADERNO_ERROS') + opt('LEI_SECA') + opt('DECOREBA') + '</select>' +
+      (ce ? '<select data-edsel="' + idx + '|gabarito" class="rounded border px-2 py-1 text-[11px] font-extrabold"><option value="CERTO"' + (it.gabarito !== 'ERRADO' ? ' selected' : '') + '>Gabarito: CERTO</option><option value="ERRADO"' + (it.gabarito === 'ERRADO' ? ' selected' : '') + '>Gabarito: ERRADO</option></select>' : '') +
+      '</div></div>' +
+      campo('frente', 'Frente (afirmação com uma única ideia)', 2) +
+      campo('explicacao', 'Explicação', 3) +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' + campo('fundamento', 'Fundamento / dispositivo', 0) + campo('frase', 'Frase corrigida / conceito-chave', 0) + '</div>' +
+      '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' + campo('exemplo', 'Exemplo prático', 0) + campo('tags', 'Tags', 0) + '</div>' +
+      '<div data-ed-q="' + idx + '" class="flex flex-wrap gap-1"></div>' +
+      '<div data-ed-prev="' + idx + '" class="p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs space-y-1"></div>' +
+      '</div>';
+  }
+
+  function edAtualizarBloco(idx) {
+    const it = ED.itens[idx];
+    if (!it) return;
+    const prev = document.querySelector('[data-ed-prev="' + idx + '"]');
+    if (prev) {
+      prev.innerHTML = '<div class="text-[10px] font-extrabold uppercase text-indigo-400">Pré-visualização</div>' +
+        '<div class="font-bold text-white">' + formatarTextoCloze_(it.frente || '—', true) + '</div>' +
+        (ehCE(it.tipo) ? '<div class="text-[11px] font-extrabold ' + (it.gabarito === 'ERRADO' ? 'text-rose-400' : 'text-emerald-400') + '">Gabarito: ' + (it.gabarito === 'ERRADO' ? 'ERRADO' : 'CERTO') + '</div>' : '') +
+        formatarTextoDidaticoEmAula_(it.explicacao) +
+        (it.frase ? '<div class="text-[11px] text-emerald-300">' + formatarTextoDidaticoEmAula_(it.frase) + '</div>' : '');
+    }
+    const q = document.querySelector('[data-ed-q="' + idx + '"]');
+    if (q) {
+      const a = analisarCartaoCompleto({ tipo: it.tipo, frente: it.frente, verso: montarVerso(it.tipo, it), tags: it.tags });
+      const chips = [];
+      if (ehCE(it.tipo)) chips.push('<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">' + a.palavras + ' / ' + limitePalavras() + ' palavras</span>');
+      a.problemas.forEach((p) => {
+        chips.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-bold ' + (p.nivel === 'erro' ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-amber-950 text-amber-300 border border-amber-800') + '">' + (p.nivel === 'erro' ? '⛔ ' : '⚠ ') + esc(p.msg) + '</span>');
+      });
+      if (!a.problemas.length && ehCE(it.tipo)) chips.push('<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">✓ Sem alertas</span>');
+      q.innerHTML = chips.join('');
+    }
+    const cab = document.querySelector('[data-ed-bloco="' + idx + '"] .font-mono');
+    if (cab) cab.innerHTML = '#' + it.seq + ' • ' + esc(it.rotuloTopico) + (edAlterado(it) ? ' <span class="text-amber-300">● alterado</span>' : '');
+    edAtualizarContador();
+  }
+
+  function edAtualizarContador() {
+    const n = ED.itens.filter(edAlterado).length;
+    const el = $('fcxEdContador');
+    if (el) el.textContent = n + ' alterado(s) de ' + ED.itens.length;
+    const btn = $('fcxEdSalvar');
+    if (btn) btn.disabled = n === 0;
+  }
+
+  function edRender() {
+    const total = ED.itens.length;
+    const paginas = Math.max(1, Math.ceil(total / ED.porPagina));
+    ED.pagina = Math.max(0, Math.min(ED.pagina, paginas - 1));
+    const ini = ED.pagina * ED.porPagina;
+    const cont = $('fcxEdLista');
+    cont.innerHTML = ED.itens.slice(ini, ini + ED.porPagina).map((it, k) => edBlocoHTML(it, ini + k)).join('');
+    $('fcxEdPagina').textContent = 'Página ' + (ED.pagina + 1) + ' de ' + paginas;
+    $('fcxEdAnt').disabled = ED.pagina === 0;
+    $('fcxEdProx').disabled = ED.pagina >= paginas - 1;
+    for (let i = ini; i < Math.min(total, ini + ED.porPagina); i++) edAtualizarBloco(i);
+    edAtualizarContador();
+  }
+
+  function edInserir(ta, texto) {
+    ta.focus();
+    let ok = false;
+    try { ok = document.execCommand('insertText', false, texto); } catch (e) { ok = false; }
+    if (!ok) {
+      ta.setRangeText(texto, ta.selectionStart, ta.selectionEnd, 'end');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+
+  function edEnvolver(abre, fecha) {
+    const ta = ED.focado;
+    if (!ta) { aviso('Clique em um campo de texto e selecione o trecho.', true); return; }
+    const ini = ta.selectionStart;
+    const fim = ta.selectionEnd;
+    if (ini === fim) { aviso('Selecione o trecho que deseja formatar.', true); return; }
+    const sel = ta.value.slice(ini, fim);
+    const antes = ta.value.slice(Math.max(0, ini - abre.length), ini);
+    const depois = ta.value.slice(fim, fim + fecha.length);
+    if (antes === abre && depois === fecha) {
+      ta.setSelectionRange(ini - abre.length, fim + fecha.length);
+      edInserir(ta, sel);
+      ta.setSelectionRange(ini - abre.length, ini - abre.length + sel.length);
+    } else {
+      edInserir(ta, abre + sel + fecha);
+      ta.setSelectionRange(ini + abre.length, ini + abre.length + sel.length);
+    }
+  }
+
+  function edCor(code) {
+    const ta = ED.focado;
+    if (!ta) { aviso('Clique em um campo de texto e selecione o trecho.', true); return; }
+    const ini = ta.selectionStart;
+    const fim = ta.selectionEnd;
+    if (ini === fim) { aviso('Selecione o trecho que deseja colorir.', true); return; }
+    const sel = ta.value.slice(ini, fim);
+    const antes = ta.value.slice(0, ini);
+    const m = antes.match(/\{\{(vm|vd|az|lj|rx|cz)::$/);
+    if (m && ta.value.slice(fim, fim + 2) === '}}') {
+      const ini0 = ini - m[0].length;
+      ta.setSelectionRange(ini0, fim + 2);
+      const novo = m[1] === code ? sel : '{{' + code + '::' + sel + '}}';
+      edInserir(ta, novo);
+      const off = m[1] === code ? 0 : code.length + 4;
+      ta.setSelectionRange(ini0 + off, ini0 + off + sel.length);
+    } else {
+      edInserir(ta, '{{' + code + '::' + sel + '}}');
+      ta.setSelectionRange(ini + code.length + 3, ini + code.length + 3 + sel.length);
+    }
+  }
+
+  function edLimpar() {
+    const ta = ED.focado;
+    if (!ta) { aviso('Clique em um campo de texto.', true); return; }
+    const limpa = (s) => String(s)
+      .replace(/\{\{(?:vm|vd|az|lj|rx|cz)::([\s\S]*?)\}\}/g, '$1')
+      .replace(/\*\*|==|__|~~/g, '');
+    if (ta.selectionStart === ta.selectionEnd) { ta.select(); }
+    edInserir(ta, limpa(ta.value.slice(ta.selectionStart, ta.selectionEnd)));
+  }
+
+  function edLacuna() {
+    const ta = ED.focado;
+    if (!ta) { aviso('Clique no campo da Frente e selecione o termo.', true); return; }
+    const usados = (ta.value.match(/\{\{c(\d+)::/g) || []).map((x) => Number(x.replace(/\D/g, '')));
+    const prox = (usados.length ? Math.max.apply(null, usados) : 0) + 1;
+    edEnvolver('{{c' + prox + '::', '}}');
+  }
+
+  async function edSalvarTodos() {
+    const alterados = ED.itens.filter(edAlterado);
+    if (alterados.length === 0) { aviso('Nenhuma alteração para salvar.'); return; }
+    const invalidos = alterados.filter((it) => !String(it.frente).trim() || !String(it.explicacao).trim());
+    if (invalidos.length) { aviso('Há ' + invalidos.length + ' cartão(ões) com Frente ou Explicação vazia.', true); return; }
+    const conflitos = alterados.filter((it) => ehCE(it.tipo) && analisarCartaoCompleto({ tipo: it.tipo, frente: it.frente, verso: montarVerso(it.tipo, it), tags: it.tags }).problemas.some((p) => p.codigo === 'GABARITO_X_EXPLICACAO'));
+    if (conflitos.length && !confirm(conflitos.length + ' cartão(ões) ainda têm o gabarito contradizendo a explicação. Salvar mesmo assim?')) return;
+
+    const btn = $('fcxEdSalvar');
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    let ok = 0;
+    let falhas = 0;
+    for (const it of alterados) {
+      const tags = [it.seqTag, String(it.tags || '').trim()].filter(Boolean).join(', ');
+      const { error } = await supabaseClient.from('flashcards').update({
+        tipo: it.tipo, frente: String(it.frente).trim(), verso: montarVerso(it.tipo, it), tags
+      }).eq('id', it.id);
+      if (error) falhas++; else ok++;
+    }
+    btn.textContent = 'Salvar alterações';
+    if (ok > 0) {
+      await carregarFlashcardsSupabase();
+      if (typeof renderizarNavegadorAnki === 'function') renderizarNavegadorAnki();
+    }
+    if (falhas === 0) {
+      $('fcxEditorModal').classList.add('hidden');
+      aviso(ok + ' cartão(ões) atualizado(s).');
+    } else {
+      aviso(ok + ' salvo(s) e ' + falhas + ' com erro. Tente novamente.', true);
+      btn.disabled = false;
+    }
+  }
+
+  /* ========================================================================
+   * G. REVISÃO DE QUALIDADE (GABARITO, TAMANHO, MÚLTIPLAS IDEIAS)
+   * ======================================================================== */
+  function abrirRevisaoQualidade() {
+    $('fcxRevisaoModal').classList.remove('hidden');
+    $('fcxLimPalavras').value = limitePalavras();
+    renderizarRevisaoQualidade();
+  }
+
+  function renderizarRevisaoQualidade() {
+    const base = obterCartoesFiltradosNavegadorAnki_().filter((c) => ehCE(c.tipo));
+    const filtro = ($('fcxRevFiltro') || {}).value || 'TODOS';
+    const itens = base.map((c) => ({ c, a: analisarCartaoCompleto(c) })).filter((x) => x.a.problemas.length > 0);
+    const cont = (cod) => itens.filter((x) => x.a.problemas.some((p) => p.codigo === cod)).length;
+    $('fcxRevResumo').innerHTML =
+      '<span class="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">' + base.length + ' afirmações C/E analisadas</span>' +
+      '<span class="px-2 py-1 rounded bg-rose-950 border border-rose-800 text-rose-300 font-bold">⛔ ' + cont('GABARITO_X_EXPLICACAO') + ' gabarito x explicação</span>' +
+      '<span class="px-2 py-1 rounded bg-amber-950 border border-amber-800 text-amber-300 font-bold">⚠ ' + (cont('FRASE_DIVERGE') + cont('FRASE_IGUAL')) + ' frase corrigida suspeita</span>' +
+      '<span class="px-2 py-1 rounded bg-amber-950 border border-amber-800 text-amber-300 font-bold">' + cont('LONGA') + ' longas</span>' +
+      '<span class="px-2 py-1 rounded bg-amber-950 border border-amber-800 text-amber-300 font-bold">' + cont('VARIAS_IDEIAS') + ' com várias ideias</span>' +
+      '<span class="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 font-bold">' + cont('SEM_GABARITO') + ' sem gabarito explícito</span>';
+
+    const filtrados = itens.filter((x) => {
+      if (filtro === 'TODOS') return true;
+      const mapa = { GABARITO: ['GABARITO_X_EXPLICACAO', 'FRASE_DIVERGE', 'FRASE_IGUAL', 'SEM_GABARITO'], LONGAS: ['LONGA'], IDEIAS: ['VARIAS_IDEIAS'] };
+      return x.a.problemas.some((p) => (mapa[filtro] || []).includes(p.codigo));
+    });
+    const lista = $('fcxRevLista');
+    if (filtrados.length === 0) { lista.innerHTML = '<div class="p-6 text-center text-slate-400 text-xs">Nenhum alerta neste filtro.</div>'; return; }
+    lista.innerHTML = filtrados.slice(0, 150).map((x) => {
+      const sug = x.a.sugestaoGabarito;
+      return '<div class="p-3 rounded-xl border border-slate-800 bg-slate-950 space-y-1.5">' +
+        '<div class="flex flex-wrap items-center justify-between gap-2"><span class="font-mono text-[11px] font-bold text-slate-400">#' + x.c.ordemCriacao + '</span>' +
+        '<span class="px-2 py-0.5 rounded text-[10px] font-extrabold ' + (x.a.gabaritoAtual === 'ERRADO' ? 'bg-rose-600' : 'bg-emerald-600') + ' text-white">Gabarito atual: ' + x.a.gabaritoAtual + '</span></div>' +
+        '<div class="text-xs font-bold text-white">' + formatarTextoCloze_(x.c.frente, true) + '</div>' +
+        '<div class="space-y-0.5">' + x.a.problemas.map((p) => '<div class="text-[11px] ' + (p.nivel === 'erro' ? 'text-rose-300' : 'text-amber-300') + '">' + (p.nivel === 'erro' ? '⛔ ' : '⚠ ') + esc(p.msg) + '</div>').join('') + '</div>' +
+        '<div class="flex flex-wrap items-center gap-1.5 pt-1">' +
+        '<button type="button" onclick="abrirEditorCartoes([\'' + x.c.id + '\'])" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">Editar</button>' +
+        (sug ? '<button type="button" onclick="fcxDefinirGabarito(\'' + x.c.id + '\',\'' + sug + '\')" class="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px]">Aplicar gabarito sugerido (' + sug + ')</button>' : '') +
+        '<button type="button" onclick="fcxDefinirGabarito(\'' + x.c.id + '\',\'' + (x.a.gabaritoAtual === 'CERTO' ? 'ERRADO' : 'CERTO') + '\')" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold text-[11px]">Inverter gabarito</button>' +
+        '</div></div>';
+    }).join('') + (filtrados.length > 150 ? '<div class="text-center text-[11px] text-slate-400 py-2">Exibindo 150 de ' + filtrados.length + '. Use os filtros do navegador para refinar.</div>' : '');
+  }
+
+  window.fcxDefinirGabarito = async function (id, novo) {
+    const c = FC_DECK.find((x) => String(x.id) === String(id));
+    if (!c) return;
+    const { campos } = parseVersoCampos(c.verso);
+    campos.gabarito = novo;
+    const verso = montarVerso(c.tipo, campos);
+    const { error } = await supabaseClient.from('flashcards').update({ verso }).eq('id', c.id);
+    if (error) { aviso('Erro ao salvar: ' + error.message, true); return; }
+    await carregarFlashcardsSupabase();
+    renderizarRevisaoQualidade();
+    aviso('Gabarito do cartão #' + c.ordemCriacao + ' definido como ' + novo + '. Confira se a explicação continua coerente.');
+  };
+
+  /* ========================================================================
+   * H. INTERFACE: REMOVE "ESTILO ANKI", BOTÕES, MODAIS E MENU DE EXPORTAÇÃO
+   * ======================================================================== */
+  function decorarNavegador() {
+    document.querySelectorAll('#ankiContainerListaCartoes button[onclick^="excluirFlashcardIndividual("]').forEach((btn) => {
+      if (btn.dataset.fcxOk) return;
+      btn.dataset.fcxOk = '1';
+      const m = btn.getAttribute('onclick').match(/'([^']+)'/);
+      if (!m) return;
+      const id = m[1];
+      const card = FC_DECK.find((c) => String(c.id) === id);
+      if (card && ehCE(card.tipo)) {
+        const a = analisarCartaoCompleto(card);
+        if (a.problemas.length) {
+          const b = document.createElement('span');
+          const erro = a.problemas.some((p) => p.nivel === 'erro');
+          b.className = 'px-1.5 py-0.5 rounded text-[10px] font-extrabold mr-1 ' + (erro ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-amber-950 text-amber-300 border border-amber-800');
+          b.textContent = (erro ? '⛔ ' : '⚠ ') + a.problemas.length;
+          b.title = a.problemas.map((p) => p.msg).join('\n');
+          btn.parentNode.insertBefore(b, btn);
+        }
+      }
+      const eb = document.createElement('button');
+      eb.type = 'button';
+      eb.textContent = 'Editar';
+      eb.className = 'px-2 py-0.5 rounded border border-indigo-700 text-indigo-300 hover:bg-indigo-950 text-[10px] font-bold mr-1';
+      eb.onclick = () => abrirEditorCartoes([id]);
+      btn.parentNode.insertBefore(eb, btn);
+    });
+  }
+
+  envolver('renderizarNavegadorAnki', (orig) => { orig(); decorarNavegador(); });
+
+  envolver('atualizarContadorSelecionadosExclusaoUI_', (orig) => {
+    orig();
+    const b = $('fcxBadgeEdSel');
+    if (b) b.textContent = ANKI_SELECIONADOS_SET.size;
+  });
+
+  function removerEstiloAnki() {
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    const nos = [];
+    while (w.nextNode()) { if (/Estilo Anki/i.test(w.currentNode.nodeValue)) nos.push(w.currentNode); }
+    nos.forEach((n) => { n.nodeValue = n.nodeValue.replace(/\s*\(Estilo Anki\)/gi, '').replace(/\s*Estilo Anki/gi, ''); });
+  }
+
+  function injetarCSS() {
+    const st = document.createElement('style');
+    st.textContent = '.fc-mk-vm{color:#fb7185;font-weight:700}.fc-mk-vd{color:#4ade80;font-weight:700}.fc-mk-az{color:#60a5fa;font-weight:700}' +
+      '.fc-mk-lj{color:#fb923c;font-weight:700}.fc-mk-rx{color:#c084fc;font-weight:700}.fc-mk-cz{color:#94a3b8;font-weight:700}' +
+      'html:not(.dark) .fc-mk-vm{color:#be123c}html:not(.dark) .fc-mk-vd{color:#15803d}html:not(.dark) .fc-mk-az{color:#1d4ed8}' +
+      'html:not(.dark) .fc-mk-lj{color:#c2410c}html:not(.dark) .fc-mk-rx{color:#7e22ce}html:not(.dark) .fc-mk-cz{color:#475569}' +
+      'mark.fc-mk-hl{background:#fde047;color:#1c1917;padding:0 .2rem;border-radius:.2rem}' +
+      '.fcx-tb button{min-width:28px;height:28px}.fcx-cor{width:20px;height:20px;border-radius:9999px;border:2px solid rgba(255,255,255,.5)}';
+    document.head.appendChild(st);
+  }
+
+  function criarModais() {
+    const cores = { vm: '#f43f5e', vd: '#22c55e', az: '#3b82f6', lj: '#f97316', rx: '#a855f7', cz: '#94a3b8' };
+    const nomes = { vm: 'Vermelho', vd: 'Verde', az: 'Azul', lj: 'Laranja', rx: 'Roxo', cz: 'Cinza' };
+    const editor = document.createElement('div');
+    editor.id = 'fcxEditorModal';
+    editor.className = 'fixed inset-0 hidden bg-black/80 flex items-center justify-center p-2 sm:p-4 no-print';
+    editor.style.zIndex = '70';
+    editor.innerHTML =
+      '<div class="bg-slate-900 text-slate-100 rounded-xl w-full max-w-4xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col" style="max-height:94vh">' +
+      '<div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">' +
+      '<div><h3 class="text-xs font-extrabold uppercase text-white">Editar cartões</h3><p id="fcxEdContador" class="text-[11px] text-slate-400"></p></div>' +
+      '<button type="button" onclick="document.getElementById(\'fcxEditorModal\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button></div>' +
+      '<div class="fcx-tb px-3 py-2 bg-slate-900 border-b border-slate-800 flex flex-wrap items-center gap-1.5 text-xs" onmousedown="event.preventDefault()">' +
+      '<button type="button" onclick="fcxFmt(\'**\',\'**\')" class="rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 font-extrabold" title="Negrito">B</button>' +
+      '<button type="button" onclick="fcxFmt(\'~~\',\'~~\')" class="rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 italic font-bold" title="Itálico">I</button>' +
+      '<button type="button" onclick="fcxFmt(\'__\',\'__\')" class="rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 underline font-bold" title="Sublinhado">U</button>' +
+      '<button type="button" onclick="fcxFmt(\'==\',\'==\')" class="rounded px-2 font-bold" style="background:#fde047;color:#1c1917" title="Destacar (marca-texto)">Destaque</button>' +
+      '<span class="text-[10px] text-slate-400 mx-1">Cor:</span>' +
+      Object.keys(cores).map((k) => '<button type="button" onclick="fcxCor(\'' + k + '\')" class="fcx-cor" style="background:' + cores[k] + '" title="' + nomes[k] + '"></button>').join('') +
+      '<button type="button" onclick="fcxFmt(\'[\',\']\')" class="rounded bg-emerald-900 hover:bg-emerald-800 border border-emerald-700 text-emerald-200 font-bold px-2" title="Conceito em verde">[conceito]</button>' +
+      '<button type="button" onclick="fcxLacuna()" class="rounded bg-indigo-900 hover:bg-indigo-800 border border-indigo-700 text-indigo-200 font-bold px-2" title="Lacuna da Lei Seca">Lacuna</button>' +
+      '<button type="button" onclick="fcxLimpar()" class="rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold px-2" title="Remover formatação do trecho (ou do campo)">Limpar</button>' +
+      '<span class="text-[10px] text-slate-500 ml-auto">Selecione o trecho no campo e aplique</span></div>' +
+      '<div id="fcxEdLista" class="flex-1 overflow-y-auto p-3 space-y-3"></div>' +
+      '<div class="px-4 py-3 bg-slate-950 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">' +
+      '<div class="flex items-center gap-2 text-xs"><button type="button" id="fcxEdAnt" class="px-2.5 py-1 rounded border border-slate-700 text-slate-200 disabled:opacity-40">◀</button><span id="fcxEdPagina" class="text-slate-300 font-bold"></span><button type="button" id="fcxEdProx" class="px-2.5 py-1 rounded border border-slate-700 text-slate-200 disabled:opacity-40">▶</button></div>' +
+      '<div class="flex items-center gap-2"><button type="button" onclick="document.getElementById(\'fcxEditorModal\').classList.add(\'hidden\')" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 font-bold text-xs">Cancelar</button>' +
+      '<button type="button" id="fcxEdSalvar" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-extrabold text-xs">Salvar alterações</button></div></div></div>';
+    document.body.appendChild(editor);
+
+    const rev = document.createElement('div');
+    rev.id = 'fcxRevisaoModal';
+    rev.className = 'fixed inset-0 hidden bg-black/80 flex items-center justify-center p-2 sm:p-4 no-print';
+    rev.style.zIndex = '65';
+    rev.innerHTML =
+      '<div class="bg-slate-900 text-slate-100 rounded-xl w-full max-w-4xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col" style="max-height:94vh">' +
+      '<div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">' +
+      '<div><h3 class="text-xs font-extrabold uppercase text-white">Revisão de qualidade dos cartões</h3><p class="text-[11px] text-slate-400">Confere gabarito x explicação, tamanho e mais de uma ideia na mesma afirmação (respeita os filtros do navegador).</p></div>' +
+      '<button type="button" onclick="document.getElementById(\'fcxRevisaoModal\').classList.add(\'hidden\')" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button></div>' +
+      '<div class="px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center gap-2 text-xs">' +
+      '<label class="font-bold text-slate-300">Limite de palavras por afirmação:</label><input type="number" id="fcxLimPalavras" min="8" max="120" class="w-20 rounded border px-2 py-1 font-bold">' +
+      '<select id="fcxRevFiltro" class="rounded border px-2 py-1 font-semibold"><option value="TODOS">Todos os alertas</option><option value="GABARITO">Gabarito</option><option value="LONGAS">Longas</option><option value="IDEIAS">Várias ideias</option></select></div>' +
+      '<div id="fcxRevResumo" class="px-4 py-2.5 flex flex-wrap gap-1.5 text-[11px] border-b border-slate-800"></div>' +
+      '<div id="fcxRevLista" class="flex-1 overflow-y-auto p-3 space-y-2"></div></div>';
+    document.body.appendChild(rev);
+
+    $('fcxEdAnt').onclick = () => { ED.pagina--; edRender(); };
+    $('fcxEdProx').onclick = () => { ED.pagina++; edRender(); };
+    $('fcxEdSalvar').onclick = edSalvarTodos;
+    $('fcxLimPalavras').onchange = (e) => {
+      const v = Math.max(8, Math.min(120, Number(e.target.value || 30)));
+      localStorage.setItem(FC_LIM_KEY, String(v));
+      e.target.value = v;
+      renderizarRevisaoQualidade();
+      if (typeof renderizarNavegadorAnki === 'function') renderizarNavegadorAnki();
+    };
+    $('fcxRevFiltro').onchange = renderizarRevisaoQualidade;
+
+    const lista = $('fcxEdLista');
+    lista.addEventListener('input', (e) => {
+      const k = e.target.getAttribute && e.target.getAttribute('data-ed');
+      if (!k) return;
+      const [i, campo] = k.split('|');
+      ED.itens[Number(i)][campo] = e.target.value;
+      edAtualizarBloco(Number(i));
+    });
+    lista.addEventListener('change', (e) => {
+      const k = e.target.getAttribute && e.target.getAttribute('data-edsel');
+      if (!k) return;
+      const [i, campo] = k.split('|');
+      const it = ED.itens[Number(i)];
+      it[campo] = e.target.value;
+      if (campo === 'tipo' && ehCE(it.tipo) && !it.gabarito) it.gabarito = 'CERTO';
+      edRender();
+    });
+    lista.addEventListener('focusin', (e) => { if (e.target.matches && e.target.matches('textarea[data-ed], input[data-ed]')) ED.focado = e.target; });
+  }
+
+  window.fcxFmt = edEnvolver;
+  window.fcxCor = edCor;
+  window.fcxLimpar = edLimpar;
+  window.fcxLacuna = edLacuna;
+
+  function injetarBotoesNavegador() {
+    const btnExcluir = document.querySelector('button[onclick="excluirCartoesSelecionadosEmLote()"]');
+    if (!btnExcluir) return;
+    const bar = btnExcluir.parentElement;
+    const mk = (html, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.innerHTML = html; b.onclick = fn; return b; };
+    const editar = mk('<span>Editar Selecionados</span> <span id="fcxBadgeEdSel" class="px-1.5 rounded bg-black/30 text-[10px]">0</span>',
+      'px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold transition flex items-center gap-1.5',
+      () => {
+        const ids = Array.from(ANKI_SELECIONADOS_SET);
+        if (!ids.length) { aviso('Marque um ou mais cartões (ou use "Marcar Todos Filtrados") para editar.', true); return; }
+        abrirEditorCartoes(ids);
+      });
+    const revisar = mk('Revisar Qualidade', 'px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold transition', abrirRevisaoQualidade);
+
+    const wrap = document.createElement('div');
+    wrap.className = 'relative';
+    const bExp = mk('Exportar ▾', 'px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold transition', (ev) => { ev.stopPropagation(); menu.classList.toggle('hidden'); });
+    const menu = document.createElement('div');
+    menu.className = 'hidden absolute right-0 mt-1 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl py-1 text-xs';
+    menu.style.zIndex = '60';
+    menu.innerHTML =
+      '<div class="px-3 py-1 text-[10px] text-slate-400">Exporta os selecionados (ou o filtro atual, se nada estiver marcado)</div>' +
+      '<button type="button" data-fmt="CSV" class="w-full text-left px-3 py-2 hover:bg-slate-800 font-semibold text-slate-200">CSV — planilha (colunas separadas)</button>' +
+      '<button type="button" data-fmt="CSV_REIMPORTAVEL" class="w-full text-left px-3 py-2 hover:bg-slate-800 font-semibold text-slate-200">CSV — pronto para reimportar</button>' +
+      '<button type="button" data-fmt="TXT" class="w-full text-left px-3 py-2 hover:bg-slate-800 font-semibold text-slate-200">TXT — bloco de notas / revisão por IA</button>';
+    menu.querySelectorAll('button').forEach((b) => { b.onclick = (ev) => { ev.stopPropagation(); menu.classList.add('hidden'); exportarCartoes(b.getAttribute('data-fmt')); }; });
+    wrap.appendChild(bExp);
+    wrap.appendChild(menu);
+    document.addEventListener('click', () => menu.classList.add('hidden'));
+
+    bar.insertBefore(editar, btnExcluir);
+    bar.insertBefore(revisar, btnExcluir);
+    bar.insertBefore(wrap, btnExcluir);
+
+    const dica = bar.parentElement && bar.parentElement.parentElement && Array.from(bar.parentElement.parentElement.querySelectorAll('h2'))[0];
+    if (dica) dica.textContent = 'Conferência de Frente e Verso, Filtros, Edição e Exclusão Seletiva';
+  }
+
+  function inicializarUI() {
+    injetarCSS();
+    removerEstiloAnki();
+    criarModais();
+    injetarBotoesNavegador();
+    if (typeof atualizarContadorSelecionadosExclusaoUI_ === 'function') atualizarContadorSelecionadosExclusaoUI_();
+    decorarNavegador();
+  }
+
+  /* ========================================================================
+   * I. CRONOGRAMA — CONCLUSÃO INDIVIDUAL POR PARTE DE CADA PDF
+   *    Unidade de controle = (meta, parte do dia, PDF/assunto).
+   *    st.partesStatus[p] = { concluida, data } · detalhesPartes[p].dataInicio
+   * ======================================================================== */
+  function cotaCelula(st, n, p) {
+    const pag = Math.max(0, Number(st.paginas || 0));
+    return Math.floor(pag / n) + (p < (pag % n) ? 1 : 0);
+  }
+  function celulaExigida(st, n, p) {
+    return Number(st.paginas || 0) === 0 ? true : cotaCelula(st, n, p) > 0;
+  }
+
+  function normalizarPartesPorPdf(m) {
+    if (!Array.isArray(m.subtopicos) || m.subtopicos.length === 0) m.subtopicos = gerarSubtopicosPadraoDaMeta_(m.topico, m.paginasTotal);
+    const n = Math.max(1, Number(m.totalPartes || 1));
+    m.totalPartes = n;
+    if (!Array.isArray(m.detalhesPartes)) m.detalhesPartes = [];
+    for (let p = m.detalhesPartes.length; p < n; p++) m.detalhesPartes.push({ parte: p + 1, descricao: 'Parte ' + (p + 1) + '/' + n, concluida: false, dataConclusaoParte: '' });
+    m.subtopicos.forEach((st) => {
+      const antigo = Array.isArray(st.partesStatus) ? st.partesStatus : null;
+      if (antigo && antigo.length === n) {
+        st.partesStatus = antigo.map((x) => ({ concluida: Boolean(x && x.concluida), data: (x && x.data) || '' }));
+        return;
+      }
+      const novo = [];
+      for (let p = 0; p < n; p++) {
+        let c = false;
+        let d = '';
+        if (antigo && antigo[p]) { c = Boolean(antigo[p].concluida); d = antigo[p].data || ''; }
+        else if (!antigo) {
+          if (st.concluido) { c = true; d = st.dataConclusao || m.dataConclusao || ''; }
+          else if (m.detalhesPartes[p] && m.detalhesPartes[p].concluida) { c = true; d = m.detalhesPartes[p].dataConclusaoParte || ''; }
+        }
+        novo.push({ concluida: c, data: d });
+      }
+      st.partesStatus = novo;
+    });
+  }
+
+  function derivarStatusMeta(m) {
+    normalizarPartesPorPdf(m);
+    const n = m.totalPartes;
+    const hoje = hojeYMD();
+    m.subtopicos.forEach((st) => {
+      let todas = true;
+      let ultima = '';
+      for (let p = 0; p < n; p++) {
+        const cel = st.partesStatus[p];
+        if (celulaExigida(st, n, p) && !cel.concluida) todas = false;
+        if (cel.concluida && cel.data && cel.data > ultima) ultima = cel.data;
+      }
+      st.concluido = todas;
+      st.dataConclusao = todas ? (ultima || st.dataConclusao || '') : '';
+    });
+    m.detalhesPartes.forEach((pt, p) => {
+      let todas = true;
+      let ultima = '';
+      let minData = '';
+      let algum = false;
+      m.subtopicos.forEach((st) => {
+        if (!celulaExigida(st, n, p)) return;
+        const cel = st.partesStatus[p];
+        if (!cel.concluida) { todas = false; return; }
+        algum = true;
+        if (cel.data && cel.data > ultima) ultima = cel.data;
+        if (cel.data && (!minData || cel.data < minData)) minData = cel.data;
+      });
+      pt.concluida = todas;
+      pt.dataConclusaoParte = todas ? (ultima || pt.dataConclusaoParte || '') : '';
+      if (!algum) pt.dataInicio = '';
+      else if (!pt.dataInicio) pt.dataInicio = minData || '';
+    });
+    m.partesConcluidas = m.detalhesPartes.filter((p) => p.concluida).length;
+    const completa = m.partesConcluidas >= n && m.subtopicos.every((s) => s.concluido);
+    const alguem = m.subtopicos.some((st) => st.partesStatus.some((c, p) => c.concluida && celulaExigida(st, n, p)));
+    m.status = completa ? 'Concluído' : (alguem ? 'Em Andamento' : 'Pendente');
+    if (completa) {
+      if (!m.dataConclusao) {
+        const datas = m.subtopicos.map((s) => s.dataConclusao).filter(Boolean).sort();
+        m.dataConclusao = datas.length ? datas[datas.length - 1] : hoje;
+      }
+    } else {
+      m.dataConclusao = '';
+    }
+  }
+  window.fcxDerivarStatusMeta = derivarStatusMeta;
+
+  function progressoPdf(st, n) {
+    let lidas = 0;
+    let total = 0;
+    for (let p = 0; p < n; p++) {
+      const q = cotaCelula(st, n, p);
+      total += q;
+      if (st.partesStatus[p].concluida) lidas += q;
+    }
+    return { lidas, total, pct: total > 0 ? Math.round((lidas / total) * 100) : (st.concluido ? 100 : 0) };
+  }
+
+  /* Plano do dia: pendências de partes iniciadas em dias anteriores + parte de hoje */
+  function planoDeHoje() {
+    const hoje = hojeYMD();
+    const pendencias = [];
+    let hojeSel = null;
+    CRON_METAS.forEach((m) => {
+      derivarStatusMeta(m);
+      if (m.status === 'Concluído') return;
+      m.detalhesPartes.forEach((pt, p) => {
+        if (pt.concluida) return;
+        if (pt.dataInicio && pt.dataInicio < hoje) {
+          m.subtopicos.forEach((st, i) => {
+            if (celulaExigida(st, m.totalPartes, p) && !st.partesStatus[p].concluida) {
+              pendencias.push({ m, p, i, st, pag: cotaCelula(st, m.totalPartes, p), desde: pt.dataInicio });
+            }
+          });
+        } else if (!hojeSel) {
+          hojeSel = { m, p };
+        }
+      });
+    });
+    return { pendencias, hoje: hojeSel, meta: hojeSel ? hojeSel.m : (pendencias[0] ? pendencias[0].m : null) };
+  }
+  window.fcxPlanoDeHoje = planoDeHoje;
+
+  function aplicarEmCelulas(m, filtro, marcado) {
+    normalizarPartesPorPdf(m);
+    const hoje = hojeYMD();
+    const n = m.totalPartes;
+    m.subtopicos.forEach((st, i) => {
+      for (let p = 0; p < n; p++) {
+        if (!filtro(st, i, p) || !celulaExigida(st, n, p)) continue;
+        const cel = st.partesStatus[p];
+        if (Boolean(marcado) === cel.concluida) continue;
+        st.partesStatus[p] = { concluida: Boolean(marcado), data: marcado ? hoje : '' };
+        if (!Array.isArray(st.historicoConclusao)) st.historicoConclusao = [];
+        st.historicoConclusao.push({ acao: marcado ? 'PARTE_CONCLUIDA' : 'PARTE_REABERTA', parte: p + 1, data: hoje, em: new Date().toISOString() });
+        if (marcado && !m.detalhesPartes[p].dataInicio) m.detalhesPartes[p].dataInicio = hoje;
+      }
+    });
+  }
+
+  async function finalizarAlteracaoMeta(m, mensagem) {
+    const anterior = window.__fcxStatusAnterior;
+    recalcularStatusMetaCronograma_(m);
+    const completou = m.status === 'Concluído' && anterior !== 'Concluído';
+    await persistirMetaIndividualSupabase_(m);
+    await recalcularDatasCronogramaDinamico(true);
+    if (completou && m.tipoSemana !== 'REVISAO') await integrarMetaConcluidaNaFilaDeRevisoes_(m);
+    else if (mensagem) aviso(mensagem);
+  }
+
+  window.recalcularStatusMetaCronograma_ = function (m) {
+    const ant = m.status;
+    derivarStatusMeta(m);
+    return m.status === 'Concluído' && ant !== 'Concluído';
+  };
+
+  window.alternarConclusaoCelulaCron = async function (idMeta, p, i, marcado) {
+    const m = CRON_METAS.find((x) => x.id === idMeta);
+    if (!m) return;
+    normalizarPartesPorPdf(m);
+    window.__fcxStatusAnterior = m.status;
+    const st = m.subtopicos[i];
+    aplicarEmCelulas(m, (s, idx, parte) => idx === i && parte === p, marcado);
+    await finalizarAlteracaoMeta(m, marcado
+      ? '"' + st.nome + '" — parte ' + (p + 1) + ' concluída. As demais atividades continuam como estavam.'
+      : '"' + st.nome + '" — parte ' + (p + 1) + ' voltou a ficar pendente.');
+  };
+
+  window.alternarConclusaoParteMeta = async function (idMeta, idxParte, marcado) {
+    const m = CRON_METAS.find((x) => x.id === idMeta);
+    if (!m) return;
+    normalizarPartesPorPdf(m);
+    window.__fcxStatusAnterior = m.status;
+    aplicarEmCelulas(m, (s, idx, parte) => parte === idxParte, marcado);
+    await finalizarAlteracaoMeta(m, 'Parte ' + (idxParte + 1) + (marcado ? ' concluída em todos os assuntos.' : ' reaberta em todos os assuntos.'));
+  };
+
+  window.alternarConclusaoPdfMeta = async function (idMeta, idxPdf, marcado) {
+    const m = CRON_METAS.find((x) => x.id === idMeta);
+    if (!m) return;
+    if (marcado && !confirm('Concluir TODAS as partes deste PDF de uma só vez?')) return;
+    normalizarPartesPorPdf(m);
+    window.__fcxStatusAnterior = m.status;
+    aplicarEmCelulas(m, (s, idx) => idx === idxPdf, marcado);
+    await finalizarAlteracaoMeta(m, marcado ? 'PDF concluído (todas as partes).' : 'PDF reaberto.');
+  };
+
+  window.concluirMetaInteiraCronograma = async function (idMeta) {
+    const m = CRON_METAS.find((x) => x.id === idMeta);
+    if (!m) return;
+    if (!confirm('Isto conclui TODAS as partes de TODOS os PDFs da meta de uma só vez. Para registrar só o que estudou, use "Concluí esta parte" em cada atividade. Confirmar?')) return;
+    normalizarPartesPorPdf(m);
+    window.__fcxStatusAnterior = m.status;
+    aplicarEmCelulas(m, () => true, true);
+    await finalizarAlteracaoMeta(m, 'Meta ' + m.numeroMeta + ' concluída.');
+  };
+
+  window.reabrirMetaCronograma = async function (idMeta) {
+    const m = CRON_METAS.find((x) => x.id === idMeta);
+    if (!m) return;
+    normalizarPartesPorPdf(m);
+    window.__fcxStatusAnterior = m.status;
+    aplicarEmCelulas(m, () => true, false);
+    m.dataConclusao = '';
+    await finalizarAlteracaoMeta(m, 'Meta reaberta e datas futuras recalculadas.');
+  };
+
+  envolver('normalizarMetaCronograma_', (orig, r) => { const m = orig(r); derivarStatusMeta(m); return m; });
+  envolver('carregarSeedLocalNaMemoria_', (orig) => { orig(); CRON_METAS.forEach(derivarStatusMeta); });
+
+  envolver('parseTextoSubtopicosParaArray_', (orig, texto, topFallback, pagFallback) => {
+    const arr = orig(texto, topFallback, pagFallback);
+    const id = window.__CRON_EDIT_ID;
+    const m = id ? CRON_METAS.find((x) => x.id === id) : null;
+    if (m && Array.isArray(m.subtopicos)) {
+      arr.forEach((novo) => {
+        const ant = m.subtopicos.find((s) => nn(s.nome) === nn(novo.nome));
+        if (ant && Array.isArray(ant.partesStatus)) novo.partesStatus = JSON.parse(JSON.stringify(ant.partesStatus));
+      });
+    }
+    return arr;
+  });
+  envolver('salvarEdicaoMetaCronograma', async (orig, e) => {
+    window.__CRON_EDIT_ID = ($('editCronId') || {}).value || '';
+    try { return await orig(e); } finally { window.__CRON_EDIT_ID = ''; }
+  });
+
+  /* ---------- Renderização ---------- */
+  function htmlLinhaCelula(m, p, i, contexto) {
+    const st = m.subtopicos[i];
+    const n = m.totalPartes;
+    const cel = st.partesStatus[p];
+    if (!celulaExigida(st, n, p)) {
+      return '<div class="px-2 py-1 rounded border border-slate-800 text-[10px] text-slate-500">' + esc(st.nome) + ': sem páginas nesta parte</div>';
+    }
+    const pag = cotaCelula(st, n, p);
+    const c = cel.concluida;
+    const prog = progressoPdf(st, n);
+    return '<div class="p-2 rounded-lg border ' + (c ? 'bg-emerald-950/25 border-emerald-800/70' : 'bg-slate-900 border-slate-800') + ' flex items-center justify-between gap-2">' +
+      '<div class="min-w-0 flex-1">' +
+      '<div class="text-xs font-extrabold truncate ' + (c ? 'text-emerald-300 line-through opacity-80' : 'text-white') + '" title="' + esc(st.nome) + '">' + esc(st.nome) + '</div>' +
+      '<div class="text-[10px] text-slate-400">' + (pag > 0 ? pag + ' pág. nesta parte' : 'Parte sem contagem de páginas') +
+      (c && cel.data ? ' • concluída em ' + fmtData(cel.data) : '') + (contexto ? ' • ' + esc(contexto) : '') + '</div>' +
+      '<div class="text-[10px] text-slate-500">PDF: ' + prog.lidas + '/' + prog.total + ' pág. (' + prog.pct + '%)</div></div>' +
+      '<button type="button" onclick="alternarConclusaoCelulaCron(\'' + m.id + '\',' + p + ',' + i + ',' + (!c) + ')" class="px-2 py-1 rounded-lg text-[10px] font-extrabold shrink-0 ' +
+      (c ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white') + '">' + (c ? 'Desfazer' : 'Concluí esta parte') + '</button></div>';
+  }
+
+  function htmlCartaoParte(m, p, destaque) {
+    const pt = m.detalhesPartes[p];
+    const n = m.totalPartes;
+    let feitas = 0;
+    let total = 0;
+    let pagsTot = 0;
+    m.subtopicos.forEach((st) => {
+      if (!celulaExigida(st, n, p)) return;
+      total++;
+      pagsTot += cotaCelula(st, n, p);
+      if (st.partesStatus[p].concluida) feitas++;
+    });
+    const todas = total > 0 && feitas === total;
+    const dataTxt = pt.concluida ? (pt.dataConclusaoParte ? 'Concluída em ' + fmtData(pt.dataConclusaoParte) : 'Concluída') : (pt.dataPrevistaParte ? fmtData(pt.dataPrevistaParte) : '');
+    return '<div class="p-3 rounded-xl border flex flex-col gap-2 ' + (pt.concluida ? 'bg-emerald-950/25 border-emerald-800/70' : (destaque ? 'bg-indigo-950/50 border-indigo-500 ring-1 ring-indigo-500/60' : 'bg-slate-900 border-slate-800')) + '">' +
+      '<div class="flex items-center justify-between gap-1.5"><span class="px-2 py-0.5 rounded font-extrabold text-[10px] uppercase ' + (pt.concluida ? 'bg-emerald-600 text-white' : (destaque ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-200 border border-slate-700')) + '">META ' + m.numeroMeta + ' — PARTE ' + (p + 1) + ' — DIA ' + String(pt.numeroDiaExecucao || (p + 1)).padStart(2, '0') + '</span>' +
+      '<span class="text-[10px] font-bold ' + (pt.concluida ? 'text-emerald-400' : 'text-indigo-300') + '">' + dataTxt + '</span></div>' +
+      '<div class="text-[11px] font-extrabold uppercase text-indigo-400">' + esc(m.materia) + '</div>' +
+      '<div class="space-y-1">' + m.subtopicos.map((st, i) => htmlLinhaCelula(m, p, i, '')).join('') + '</div>' +
+      '<div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px]"><span class="text-slate-300 font-semibold">' + feitas + '/' + total + ' atividade(s) • ' + pagsTot + ' pág.</span>' +
+      (total > 0 ? '<button type="button" onclick="alternarConclusaoParteMeta(\'' + m.id + '\',' + p + ',' + (!todas) + ')" class="px-2 py-0.5 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 text-[10px] font-bold">' + (todas ? 'Desfazer todas' : 'Concluir todas desta parte') + '</button>' : '') + '</div></div>';
+  }
+
+  function atualizarPainelDoDia() {
+    const plano = planoDeHoje();
+    const meta = plano.meta;
+    const set = (id, txt) => { const el = $(id); if (el) el.textContent = txt; };
+    const hojeCel = [];
+    if (plano.hoje) {
+      const { m, p } = plano.hoje;
+      m.subtopicos.forEach((st, i) => { if (celulaExigida(st, m.totalPartes, p)) hojeCel.push({ m, p, i, st }); });
+    }
+    const pagHoje = hojeCel.reduce((a, x) => a + (x.st.partesStatus[x.p].concluida ? 0 : cotaCelula(x.st, x.m.totalPartes, x.p)), 0);
+    const pagPend = plano.pendencias.reduce((a, x) => a + x.pag, 0);
+
+    if (plano.hoje) {
+      const { m, p } = plano.hoje;
+      set('cronDiaMetaIdentificador', 'META ' + m.numeroMeta + ' — PARTE ' + (p + 1) + ' — DIA ' + String(m.detalhesPartes[p].numeroDiaExecucao || (p + 1)).padStart(2, '0'));
+    } else {
+      set('cronDiaMetaIdentificador', plano.pendencias.length ? 'SOMENTE PENDÊNCIAS' : 'SEM ATIVIDADES');
+    }
+    set('cronDiaTotalPaginas', pagHoje + ' páginas hoje');
+    if (meta) {
+      const prog = meta.subtopicos.reduce((a, st) => { const r = progressoPdf(st, meta.totalPartes); return { l: a.l + r.lidas, t: a.t + r.total }; }, { l: 0, t: 0 });
+      set('cronDiaIntervaloPaginas', 'Pendências anteriores: ' + pagPend + ' pág. • Meta: ' + prog.l + ' de ' + prog.t + ' pág. concluídas');
+      set('cronTextoTopicoMetaAtual', meta.materia);
+      set('cronTextoSemanaEMetaAtual', 'Semana ' + String(meta.numeroSemana).padStart(2, '0') + ' de 50 • Meta ' + meta.numeroMeta + ' (' + meta.partesConcluidas + '/' + meta.totalPartes + ' partes concluídas)');
+      set('cronDiaLeiSecaTexto', meta.leiSeca || 'Leitura focada no PDF da meta.');
+      set('cronDiaSumulasTexto', meta.sumulas || 'Consulte os destaques jurisprudenciais do material.');
+      const ed = $('btnEditarMetaDoDiaAtalho');
+      if (ed) ed.onclick = () => abrirModalEditarMetaCronograma(meta.id);
+    }
+    set('cronDiaTotalMetaPaginasBadge', hojeCel.length + ' atividade(s) hoje | ' + plano.pendencias.length + ' pendência(s)');
+
+    const lista = $('cronDiaListaTopicosIndividualizados');
+    if (lista) {
+      let html = '';
+      if (plano.pendencias.length) {
+        html += '<div class="text-[10px] font-extrabold uppercase text-amber-400">Pendências de dias anteriores (' + plano.pendencias.length + ')</div>' +
+          plano.pendencias.map((x) => htmlLinhaCelula(x.m, x.p, x.i, x.m.materia + ' • Meta ' + x.m.numeroMeta + ' • iniciada em ' + fmtData(x.desde))).join('');
+      }
+      if (plano.hoje) {
+        html += '<div class="text-[10px] font-extrabold uppercase text-indigo-400 pt-1">Hoje — Meta ' + plano.hoje.m.numeroMeta + ' • Parte ' + (plano.hoje.p + 1) + '</div>' +
+          hojeCel.map((x) => htmlLinhaCelula(x.m, x.p, x.i, '')).join('');
+      }
+      if (!html) html = '<div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-center text-slate-400">Nenhuma atividade de leitura pendente.</div>';
+      lista.innerHTML = html;
+    }
+
+    const btn = $('btnConcluirParteDoDia');
+    if (btn) {
+      const abertas = hojeCel.filter((x) => !x.st.partesStatus[x.p].concluida);
+      if (abertas.length) {
+        btn.disabled = false;
+        btn.textContent = 'Concluir todas as atividades de hoje (' + pagHoje + ' pág.)';
+        btn.onclick = () => alternarConclusaoParteMeta(plano.hoje.m.id, plano.hoje.p, true);
+      } else {
+        btn.disabled = true;
+        btn.textContent = plano.hoje ? 'Atividades de hoje concluídas' : 'Sem atividade de hoje';
+      }
+    }
+
+    const grid = $('cronGridDivisaoPorDiaSemanaAtual');
+    if (grid && meta) {
+      const cards = [];
+      CRON_METAS.filter((x) => x.numeroSemana === meta.numeroSemana).forEach((m) => {
+        m.detalhesPartes.forEach((pt, p) => cards.push(htmlCartaoParte(m, p, Boolean(plano.hoje && plano.hoje.m.id === m.id && plano.hoje.p === p))));
+      });
+      grid.innerHTML = cards.join('');
+    }
+  }
+
+  envolver('renderizarDashboardCronograma', (orig) => {
+    if (CRON_METAS) CRON_METAS.forEach(derivarStatusMeta);
+    orig();
+    try { atualizarPainelDoDia(); } catch (e) { console.warn('Painel do dia:', e); }
+  });
+
+  window.renderizarListaSemanasCronograma = function () {
+    const cont = $('cronContainerSemanas');
+    if (!cont || !CRON_METAS) return;
+    CRON_METAS.forEach(derivarStatusMeta);
+    const filtroSem = ($('cronSelectSemanaFiltro') || {}).value || 'ATUAL';
+    const filtroStatus = ($('cronSelectStatusFiltro') || {}).value || '';
+    const termo = (($('cronInputBuscaTopico') || {}).value || '').trim().toLowerCase();
+    const plano = planoDeHoje();
+    const primeiraPend = CRON_METAS.find((m) => m.status !== 'Concluído');
+    const semanaAtual = plano.meta ? plano.meta.numeroSemana : (primeiraPend ? primeiraPend.numeroSemana : 4);
+
+    const metas = CRON_METAS.filter((m) => {
+      if (CRON_BLOCO_FILTRO > 0) {
+        const sIni = (CRON_BLOCO_FILTRO - 1) * 5 + 1;
+        if (m.numeroSemana < sIni || m.numeroSemana > CRON_BLOCO_FILTRO * 5) return false;
+      } else if (filtroSem === 'ATUAL') {
+        if (m.numeroSemana !== semanaAtual && m.numeroSemana !== semanaAtual + 1) return false;
+      } else if (filtroSem !== 'TODAS' && m.numeroSemana !== Number(filtroSem)) return false;
+      if (filtroStatus === 'PENDENTE' && m.status === 'Concluído') return false;
+      if (filtroStatus === 'CONCLUIDO' && m.status !== 'Concluído') return false;
+      if (termo) {
+        const alvo = (m.materia + ' ' + m.topico + ' ' + m.subtopicos.map((s) => s.nome).join(' ') + ' ' + m.leiSeca).toLowerCase();
+        if (!alvo.includes(termo)) return false;
+      }
+      return true;
+    });
+    if (metas.length === 0) { cont.innerHTML = '<div class="bg-slate-900 rounded-xl border border-slate-800 p-6 text-center text-xs text-slate-400">Nenhuma meta localizada para este filtro.</div>'; return; }
+
+    const porSemana = {};
+    metas.forEach((m) => { (porSemana[m.numeroSemana] = porSemana[m.numeroSemana] || []).push(m); });
+    cont.innerHTML = Object.keys(porSemana).map(Number).sort((a, b) => a - b).map((num) => {
+      const todas = CRON_METAS.filter((x) => x.numeroSemana === num);
+      const conc = todas.filter((x) => x.status === 'Concluído').length;
+      const pct = todas.length ? Math.round((conc / todas.length) * 100) : 0;
+      const totPag = todas.reduce((a, x) => a + (x.paginasTotal || 0), 0);
+      const rev = num % 5 === 0;
+      const ult = todas[todas.length - 1];
+      const fim = ult ? fmtData(ult.dataPrevista || ult.dataConclusao) : '—';
+      return '<div class="bg-slate-900 rounded-xl border ' + (num === semanaAtual ? 'border-indigo-500' : 'border-slate-800') + ' shadow-sm overflow-hidden">' +
+        '<div class="px-4 py-2.5 ' + (rev ? 'bg-amber-950/60 border-b border-amber-800/70' : 'bg-slate-950 border-b border-slate-800') + ' flex flex-wrap items-center justify-between gap-2">' +
+        '<div class="flex flex-wrap items-center gap-2"><span class="px-2.5 py-0.5 rounded ' + (rev ? 'bg-amber-500 text-slate-950' : 'bg-indigo-600 text-white') + ' font-extrabold text-xs uppercase">Semana ' + String(num).padStart(2, '0') + (rev ? ' • REVISÃO DE BLOCO' : '') + '</span>' +
+        (num === semanaAtual ? '<span class="px-2 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[10px] uppercase">SEMANA EM CURSO</span>' : '') +
+        '<span class="text-xs font-bold text-slate-300">' + conc + '/' + todas.length + ' Metas (' + pct + '%)</span>' +
+        (totPag > 0 ? '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold">Total da Semana: ' + totPag + ' páginas</span>' : '') + '</div>' +
+        '<div class="text-xs font-semibold text-slate-300">Previsão de término: <strong class="text-indigo-400">' + fim + '</strong></div></div>' +
+        '<div class="p-3.5 space-y-3 text-xs">' + porSemana[num].map((m) => {
+          const isConc = m.status === 'Concluído';
+          const andamento = m.status === 'Em Andamento';
+          const resumoPdf = m.subtopicos.map((st) => { const r = progressoPdf(st, m.totalPartes); return '<span class="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-bold ' + (st.concluido ? 'text-emerald-400' : 'text-slate-300') + '">' + esc(st.nome) + ': ' + r.lidas + '/' + r.total + ' pág. (' + r.pct + '%)</span>'; }).join('');
+          return '<div class="p-3.5 rounded-xl border ' + (isConc ? 'bg-emerald-950/20 border-emerald-800/70' : (andamento ? 'bg-indigo-950/30 border-indigo-700' : 'bg-slate-950/80 border-slate-800')) + ' space-y-2.5">' +
+            '<div class="flex flex-wrap items-start justify-between gap-3"><div class="space-y-1.5 flex-1">' +
+            '<div class="flex flex-wrap items-center gap-1.5"><span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 font-extrabold text-[10px]">META ' + m.numeroMeta + '</span>' +
+            '<span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px] uppercase">' + esc(m.materia) + '</span>' +
+            '<span class="px-2 py-0.5 rounded font-bold text-[10px] ' + (isConc ? 'bg-emerald-600 text-white' : (andamento ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400')) + '">' + esc(m.status) + ' (' + m.partesConcluidas + '/' + m.totalPartes + ' partes)</span>' +
+            '<span class="px-2 py-0.5 rounded bg-slate-900 text-emerald-400 border border-slate-800 font-extrabold text-[10px]">Soma da Meta: ' + (m.paginasTotal || 0) + ' páginas</span></div>' +
+            '<div class="flex flex-wrap gap-1">' + resumoPdf + '</div>' +
+            (m.leiSeca ? '<div class="text-[11px] text-indigo-300 font-medium"><strong>Lei Seca do Dia:</strong> ' + esc(m.leiSeca) + '</div>' : '') +
+            (m.sumulas ? '<div class="text-[11px] text-slate-400"><strong>Súmulas / Obs:</strong> ' + esc(m.sumulas) + '</div>' : '') + '</div>' +
+            '<div class="text-right space-y-1.5 shrink-0"><div class="text-[11px] font-bold ' + (isConc ? 'text-emerald-400' : 'text-indigo-300') + '">' + (isConc ? 'Concluída: ' + fmtData(m.dataConclusao || m.dataPrevista) : 'Prevista: ' + fmtData(m.dataPrevista)) + '</div>' +
+            '<div class="flex flex-wrap items-center justify-end gap-1.5">' +
+            '<button type="button" onclick="abrirModalEditarMetaCronograma(\'' + m.id + '\')" class="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-[11px]">Assuntos e Páginas</button>' +
+            (!isConc ? '<button type="button" onclick="concluirMetaInteiraCronograma(\'' + m.id + '\')" class="px-2.5 py-1 rounded-lg border border-emerald-800 text-emerald-300 hover:bg-emerald-950 font-bold text-[11px]" title="Conclui tudo de uma vez (pede confirmação)">Concluir tudo…</button>'
+              : '<button type="button" onclick="atalhoCriarFlashcardsDaMeta(\'' + m.id + '\')" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">Cartões</button>' +
+                '<button type="button" onclick="reabrirMetaCronograma(\'' + m.id + '\')" class="px-2 py-1 rounded-lg border border-rose-800 text-rose-400 hover:bg-rose-950 text-[10px]">Reabrir</button>') +
+            '</div></div></div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 pt-2 border-t border-slate-800/80">' +
+            m.detalhesPartes.map((pt, p) => htmlCartaoParte(m, p, Boolean(plano.hoje && plano.hoje.m.id === m.id && plano.hoje.p === p))).join('') + '</div></div>';
+        }).join('') + '</div></div>';
+    }).join('');
+  };
+
+  /* Agenda: usa a conclusão por parte/PDF e inclui as pendências no dia */
+  envolver('obterStatusConclusaoAtividade_', (orig, a) => {
+    const v = a && a.vinculo;
+    if (v && v.area === 'CRONOGRAMA' && !a.concluidaLegado && Number.isInteger(v.idxParte) && Number.isInteger(v.idxPdf) && typeof CRON_METAS !== 'undefined') {
+      const m = CRON_METAS.find((x) => x.id === v.idMeta);
+      if (m) {
+        normalizarPartesPorPdf(m);
+        if (m.status === 'Concluído') return { concluida: true, fonte: 'Cronograma', vinculada: true };
+        const st = m.subtopicos[v.idxPdf];
+        const cel = st && st.partesStatus && st.partesStatus[v.idxParte];
+        if (st && cel) return { concluida: Boolean(cel.concluida) || !celulaExigida(st, m.totalPartes, v.idxParte), fonte: 'Cronograma (parte do PDF)', vinculada: true };
+      }
+    }
+    return orig(a);
+  });
+
+  envolver('montarCandidatosDoDia_', (orig) => {
+    const base = orig().filter((c) => !(c.vinculo && c.vinculo.area === 'CRONOGRAMA'));
+    try {
+      const plano = planoDeHoje();
+      const info = obterInfoMediaTempoPorPagina_();
+      const lista = [];
+      const mk = (m, p, i, st, pag, desde) => ({
+        tipo: 'ESTUDO', titulo: st.nome, materia: m.materia, paginas: pag, questoes: 0,
+        duracaoMin: Math.max(20, Math.min(240, Math.round((Math.max(1, pag) * info.minutosPorPagina) / 5) * 5)),
+        origemSistemaId: 'SYS_CONT_' + m.id + '_' + i + '_P' + p,
+        vinculo: { area: 'CRONOGRAMA', idMeta: m.id, idxParte: p, idxPdf: i },
+        detalhe: (desde ? 'Pendência desde ' + fmtData(desde) + ' • ' : '') + 'Semana ' + String(m.numeroSemana).padStart(2, '0') + ' • Meta ' + m.numeroMeta + ' • Parte ' + (p + 1) + '/' + m.totalPartes
+      });
+      plano.pendencias.forEach((x) => lista.push(mk(x.m, x.p, x.i, x.st, x.pag, x.desde)));
+      if (plano.hoje) {
+        const { m, p } = plano.hoje;
+        m.subtopicos.forEach((st, i) => {
+          if (celulaExigida(st, m.totalPartes, p) && !st.partesStatus[p].concluida) lista.push(mk(m, p, i, st, cotaCelula(st, m.totalPartes, p), ''));
+        });
+      }
+      return lista.concat(base);
+    } catch (e) { return orig(); }
+  });
+
+  /* ========================================================================
+   * INICIALIZAÇÃO
+   * ======================================================================== */
+  window.__FCX__ = {
+    parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
+    aplicarMarkupEscapado, montarCSVPlanilha, montarCSVReimportavel, montarTXT, converterTXTParaLinhas,
+    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, cotaCelula, celulaExigida, limitePalavras, textoPuro
+  };
+
+  if (!window.__FCX_SEM_UI__) {
+    inicializarUI();
+    if (typeof renderizarDashboardCronograma === 'function' && CRON_METAS && CRON_METAS.length) {
+      CRON_METAS.forEach(derivarStatusMeta);
+      renderizarDashboardCronograma();
+      renderizarListaSemanasCronograma();
+    }
+  }
+})();
+
+</script>
+
 </body>
 </html>
