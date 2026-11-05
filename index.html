@@ -13107,6 +13107,26 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       return ordenados;
     }
 
+    /* Janela visual da agenda: 05:00 até 03:00 do dia seguinte (22h). Os dados continuam em 24h. */
+    const AG_VIS_INI_MIN = 300;
+    const AG_VIS_TOTAL_MIN = 1320;
+    const AG_VIS_PROX_DIA_OFFSET = AG_MIN_DIA - AG_VIS_INI_MIN; /* 1140 */
+    const AG_VIS_PROX_DIA_LIMITE = AG_VIS_TOTAL_MIN - AG_VIS_PROX_DIA_OFFSET; /* 180 = 03:00 */
+
+    function obterSegmentosVisiveisDoDia_(dia) {
+      const lista = [];
+      obterSegmentosDoDia_(dia).forEach(s => {
+        if (s.fim <= AG_VIS_INI_MIN) return;
+        lista.push(Object.assign({}, s, { ini: Math.max(s.ini, AG_VIS_INI_MIN) - AG_VIS_INI_MIN, fim: s.fim - AG_VIS_INI_MIN, offVis: AG_VIS_INI_MIN, diaReal: dia }));
+      });
+      const prox = somarDiasYMD_(dia, 1);
+      obterSegmentosDoDia_(prox).forEach(s => {
+        if (s.ini >= AG_VIS_PROX_DIA_LIMITE) return;
+        lista.push(Object.assign({}, s, { ini: s.ini + AG_VIS_PROX_DIA_OFFSET, fim: Math.min(s.fim, AG_VIS_PROX_DIA_LIMITE) + AG_VIS_PROX_DIA_OFFSET, offVis: -AG_VIS_PROX_DIA_OFFSET, diaReal: prox }));
+      });
+      return lista.sort((x, y) => x.ini - y.ini || (x.tipoItem === 'CMP' ? -1 : 1));
+    }
+
     function obterPxPorHoraAgenda_() {
       const mobile = window.innerWidth < 768;
       if (AG_STATE.modoVisao === '4DIAS') return mobile ? 44 : 46;
@@ -13145,15 +13165,16 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       }).join('');
 
       let htmlHoras = '';
-      for (let h = 0; h < 24; h++) {
-        htmlHoras += `<div class="gcal-time-slot-label">${h === 0 ? '' : `${String(h).padStart(2, '0')}:00`}</div>`;
+      for (let i = 0; i < AG_VIS_TOTAL_MIN / 60; i++) {
+        const h = (AG_VIS_INI_MIN / 60 + i) % 24;
+        htmlHoras += `<div class="gcal-time-slot-label">${i === 0 ? '' : `${String(h).padStart(2, '0')}:00`}</div>`;
       }
       regua.innerHTML = htmlHoras;
 
       cols.innerHTML = dias.map(dia => {
         const conflitos = obterConflitosDoDia_(dia);
         const idsConflito = new Set(conflitos.map(c => c.atv.id));
-        const segs = distribuirFaixasSobrepostas_(obterSegmentosDoDia_(dia));
+        const segs = distribuirFaixasSobrepostas_(obterSegmentosVisiveisDoDia_(dia));
 
         const blocos = segs.map(s => {
           const topPx = Math.round((s.ini / 60) * pxh);
@@ -13192,7 +13213,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           const podeArrastar = !s.continuacao;
 
           return `
-            <div data-atv-id="${a.id}" data-continuacao="${s.continuacao ? '1' : '0'}" data-dia="${dia}"
+            <div data-atv-id="${a.id}" data-continuacao="${s.continuacao ? '1' : '0'}" data-dia="${dia}" data-off="${s.offVis}"
                  onpointerdown="iniciarArrasteBlocoAgenda(event, '${a.id}', ${podeArrastar})"
                  style="${posicao} background-color:${agCorComAlfa_(cor, '30')}; border-left-color:${cor};"
                  class="ag-bloco ${compacto ? 'ag-bloco-compacto' : ''} ${concluida ? 'ag-bloco-concluido' : ''} ${idsConflito.has(a.id) ? 'ag-bloco-conflito' : ''} ${rodando ? 'gcal-timer-active-ring' : ''}"
@@ -13206,7 +13227,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         }).join('');
 
         return `
-          <div class="gcal-day-column" data-date="${dia}" ondblclick="aoDuploCliqueLinhaDoTempoAgenda(event, '${dia}', this)">
+          <div class="gcal-day-column" data-date="${dia}" style="height:calc(${AG_VIS_TOTAL_MIN / 60} * var(--ag-pxh, 56px))" ondblclick="aoDuploCliqueLinhaDoTempoAgenda(event, '${dia}', this)">
             ${blocos}
           </div>
         `;
@@ -13223,26 +13244,36 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
       if (!AG_JA_ROLOU_PARA_AGORA && scroll.offsetHeight > 0) {
         AG_JA_ROLOU_PARA_AGORA = true;
-        const alvo = dias.includes(hoje) ? agMinutosAgora_() - 60 : Number(AG_STATE.configExpediente?.horaInicio ?? 8) * 60 - 30;
+        const alvoReal = dias.includes(hoje) ? agMinutosAgora_() - 60 : Number(AG_STATE.configExpediente?.horaInicio ?? 8) * 60 - 30;
+        const alvo = alvoReal >= AG_VIS_INI_MIN ? alvoReal - AG_VIS_INI_MIN : 0;
         scroll.scrollTop = Math.max(0, (alvo / 60) * pxh);
       }
     }
 
     function atualizarLinhaHoraAtualAgenda_() {
       document.querySelectorAll('.gcal-now-line').forEach(el => el.remove());
-      const colHoje = document.querySelector(`.gcal-day-column[data-date="${agHoje_()}"]`);
+      const agora = agMinutosAgora_();
+      let diaLinha = agHoje_();
+      let minVis;
+      if (agora >= AG_VIS_INI_MIN) minVis = agora - AG_VIS_INI_MIN;
+      else if (agora < AG_VIS_PROX_DIA_LIMITE) { diaLinha = somarDiasYMD_(diaLinha, -1); minVis = agora + AG_VIS_PROX_DIA_OFFSET; }
+      else return;
+      const colHoje = document.querySelector(`.gcal-day-column[data-date="${diaLinha}"]`);
       if (!colHoje) return;
       const linha = document.createElement('div');
       linha.className = 'gcal-now-line';
-      linha.style.top = `${Math.round((agMinutosAgora_() / 60) * obterPxPorHoraAgenda_())}px`;
+      linha.style.top = `${Math.round((minVis / 60) * obterPxPorHoraAgenda_())}px`;
       colHoje.appendChild(linha);
     }
 
     function aoDuploCliqueLinhaDoTempoAgenda(ev, dia, colEl) {
       if (ev.target !== colEl) return;
       const rect = colEl.getBoundingClientRect();
-      const minutos = Math.round((((ev.clientY - rect.top) / obterPxPorHoraAgenda_()) * 60) / 15) * 15;
-      abrirModalAtividadeAgenda(null, dia, Math.max(0, Math.min(AG_MIN_DIA - 15, minutos)));
+      const minVis = Math.round((((ev.clientY - rect.top) / obterPxPorHoraAgenda_()) * 60) / 15) * 15;
+      let diaAlvo = dia;
+      let minutos = minVis + AG_VIS_INI_MIN;
+      if (minutos >= AG_MIN_DIA) { diaAlvo = somarDiasYMD_(dia, 1); minutos -= AG_MIN_DIA; }
+      abrirModalAtividadeAgenda(null, diaAlvo, Math.max(0, Math.min(AG_MIN_DIA - 15, minutos)));
     }
 
     /* ==========================================================================
@@ -13279,7 +13310,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         const deltaMin = Math.round(((dy / pxh) * 60) / 5) * 5;
         AG_DRAG.novoIni = Math.max(0, Math.min(AG_MIN_DIA - 5, AG_DRAG.iniOriginal + deltaMin));
         bloco.classList.add('ag-bloco-arrastando');
-        bloco.style.top = `${Math.round((AG_DRAG.novoIni / 60) * pxh)}px`;
+        bloco.style.top = `${Math.round(((AG_DRAG.novoIni - Number(bloco.dataset.off || 0)) / 60) * pxh)}px`;
         const horaEl = bloco.querySelector('.ag-bloco-hora');
         if (horaEl) horaEl.textContent = `${minutosParaHoraStr_(AG_DRAG.novoIni)}–${minutosParaHoraStr_(AG_DRAG.novoIni + a.duracaoMin)}`;
       };
@@ -14272,6 +14303,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
 
 <script>
+/* ===== CORREÇÕES: flashcards, edição/exportação TXT, cronograma ===== */
 /* ==========================================================================
  * CORREÇÕES E MELHORIAS — Gestor de Estudos
  * Colar dentro de uma tag script no FINAL do body (depois de todos os outros scripts)
@@ -14669,110 +14701,20 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return { lista: obterCartoesFiltradosNavegadorAnki_(), escopo: 'filtro atual' };
   }
 
+  /* Exportação: mesmo formato da importação — uma linha por cartão: TIPO;FRENTE;VERSO;TAGS (sem cabeçalho, sem instruções) */
   function nomesDoCartao(c) {
     const t = (ESTADO && ESTADO.topicos || []).find((x) => x.id === c.idTopico);
     return { materia: t ? t.materia : c.idMateria, topico: t ? t.topico : c.idTopico };
   }
 
-  function montarCSVPlanilha(lista) {
-    const cab = ['ordem', 'id', 'materia', 'topico', 'tipo', 'gabarito', 'frente', 'explicacao', 'fundamento', 'frase_corrigida', 'exemplo', 'tags', 'vezes_estudado', 'acertos', 'erros', 'taxa_acerto_pct'];
-    const linhas = lista.map((c) => {
-      const { campos } = parseVersoCampos(c.verso);
-      const n = nomesDoCartao(c);
-      return [c.ordemCriacao, c.id, n.materia, n.topico, c.tipo, ehCE(c.tipo) ? (campos.gabarito || c.gabaritoCE) : '',
-        c.frente, campos.explicacao, campos.fundamento, campos.frase, campos.exemplo, c.tags,
-        c.totalRevisoes, c.totalAcertos, c.totalErros, c.taxaAcerto].map(celulaCSV).join(';');
-    });
-    return [cab.join(';')].concat(linhas).join('\r\n');
+  function montarTextoExportacao(lista) {
+    return lista.map((c) => [c.tipo, c.frente, c.verso, c.tags].map(flatCSV).join(';')).join('\n');
   }
 
-  function montarCSVReimportavel(lista) {
-    const linhas = lista.map((c) => {
-      const n = nomesDoCartao(c);
-      return [n.materia, n.topico, c.tipo, c.frente, c.verso, c.tags].map(flatCSV).join(';');
-    });
-    return ['materia;topico;tipo;frente;verso;tags'].concat(linhas).join('\r\n');
-  }
-
-  function montarTXT(lista) {
-    const lim = limitePalavras();
-    const hoje = fmtData(hojeYMD());
-    const cab = [
-      '# EXPORTAÇÃO DE CARTÕES — Gestor de Estudos',
-      '# Total: ' + lista.length + ' cartão(ões) • Exportado em ' + hoje,
-      '#',
-      '# INSTRUÇÕES PARA REVISÃO POR IA (ChatGPT / Claude):',
-      '# 1. Mantenha EXATAMENTE a estrutura de cada bloco: linha "### CARTÃO ..." e os campos TIPO, FRENTE, GABARITO, EXPLICAÇÃO, FUNDAMENTO, FRASE CORRIGIDA, EXEMPLO, TAGS.',
-      '# 2. Em PDF_BASE e CADERNO_ERROS, cada FRENTE traz UMA única afirmação com UMA única ideia (máx. ' + lim + ' palavras), sem perder a precisão jurídica.',
-      '# 3. O GABARITO deve corresponder objetivamente à afirmação; a EXPLICAÇÃO começa com "Certo." ou "Errado." coerente com o GABARITO.',
-      '# 4. Se uma afirmação reunir mais de uma ideia, desdobre em novos blocos "### CARTÃO" (um por ideia).',
-      '# 5. Não use ";" nem "|" dentro dos campos.',
-      '# 6. Formatação permitida: **negrito** ==destaque== __sublinhado__ ~~itálico~~ {{vm::vermelho}} {{vd::verde}} {{az::azul}} {{lj::laranja}} {{rx::roxo}} e {{c1::lacuna}} (somente LEI_SECA).',
-      '# 7. Devolva TODOS os cartões no mesmo formato, dentro de um bloco de código.',
-      ''
-    ];
-    const blocos = lista.map((c) => {
-      const { campos } = parseVersoCampos(c.verso);
-      const n = nomesDoCartao(c);
-      const l = [
-        '### CARTÃO ' + c.ordemCriacao + ' | ID: ' + c.id,
-        'TIPO: ' + c.tipo,
-        'MATÉRIA: ' + flat(n.materia),
-        'TÓPICO: ' + flat(n.topico),
-        'FRENTE: ' + flat(c.frente)
-      ];
-      if (ehCE(c.tipo)) l.push('GABARITO: ' + (campos.gabarito || c.gabaritoCE));
-      l.push('EXPLICAÇÃO: ' + flat(campos.explicacao));
-      l.push('FUNDAMENTO: ' + flat(campos.fundamento));
-      l.push('FRASE CORRIGIDA: ' + flat(campos.frase));
-      l.push('EXEMPLO: ' + flat(campos.exemplo));
-      l.push('TAGS: ' + flat(c.tags));
-      return l.join('\n');
-    });
-    return cab.join('\n') + '\n' + blocos.join('\n\n---\n\n') + '\n';
-  }
-
-  /* TXT (blocos "### CARTÃO") -> linhas "TIPO;FRENTE;VERSO;TAGS" aceitas pelo importador */
-  function converterTXTParaLinhas(txt) {
-    const partes = String(txt || '').split(/^###\s*CART[ÃA]O/im).slice(1);
-    const linhas = [];
-    const RE = /^(TIPO|MAT[ÉE]RIA|T[ÓO]PICO|FRENTE|GABARITO|EXPLICA[ÇC][ÃA]O|FUNDAMENTO|FRASE CORRIGIDA|EXEMPLO|TAGS|ID)\s*:\s*(.*)$/i;
-    partes.forEach((bloco) => {
-      const f = {};
-      let ultimo = null;
-      bloco.split(/\r?\n/).slice(1).forEach((ln) => {
-        if (/^\s*---\s*$/.test(ln) || /^\s*#(?!##)/.test(ln)) return;
-        const m = ln.match(RE);
-        if (m) { ultimo = nn(m[1]).toUpperCase().replace(/\s+/g, '_'); f[ultimo] = (m[2] || '').trim(); }
-        else if (ultimo && ln.trim()) f[ultimo] = (f[ultimo] ? f[ultimo] + ' / ' : '') + ln.trim();
-      });
-      const tipo = (f.TIPO || 'PDF_BASE').trim();
-      if (!f.FRENTE) return;
-      const verso = montarVerso(tipo, {
-        gabarito: normGab(f.GABARITO), explicacao: f.EXPLICACAO || '', fundamento: f.FUNDAMENTO || '',
-        frase: f.FRASE_CORRIGIDA || '', exemplo: f.EXEMPLO || ''
-      });
-      linhas.push([tipo, f.FRENTE, verso, f.TAGS || ''].map(flatCSV).join(';'));
-    });
-    return linhas.join('\n');
-  }
-
-  envolver('analisarLoteEIrParaPrevia', (orig) => {
-    const ta = $('fcInputCSVBruto');
-    if (ta && /###\s*CART[ÃA]O/i.test(ta.value)) {
-      const conv = converterTXTParaLinhas(ta.value);
-      if (conv) { ta.value = conv; aviso('Formato TXT reconhecido e convertido para a pré-visualização.'); }
-    }
-    return orig();
-  });
-
-  function exportarCartoes(formato) {
+  function exportarCartoes() {
     const { lista, escopo } = cartoesParaExportar();
     if (lista.length === 0) { aviso('Nenhum cartão para exportar.', true); return; }
-    const data = hojeYMD();
-    if (formato === 'TXT') baixarArquivo('Cartoes_' + data + '.txt', montarTXT(lista), 'text/plain');
-    else if (formato === 'CSV_REIMPORTAVEL') baixarArquivo('Cartoes_reimportavel_' + data + '.csv', montarCSVReimportavel(lista), 'text/csv');
-    else baixarArquivo('Cartoes_planilha_' + data + '.csv', montarCSVPlanilha(lista), 'text/csv');
+    baixarArquivo('Cartoes_' + hojeYMD() + '.txt', montarTextoExportacao(lista), 'text/plain');
     aviso(lista.length + ' cartão(ões) exportado(s) (' + escopo + ').');
   }
   window.fcxExportarCartoes = exportarCartoes;
@@ -15210,25 +15152,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       });
     const revisar = mk('Revisar Qualidade', 'px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold transition', abrirRevisaoQualidade);
 
-    const wrap = document.createElement('div');
-    wrap.className = 'relative';
-    const bExp = mk('Exportar ▾', 'px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold transition', (ev) => { ev.stopPropagation(); menu.classList.toggle('hidden'); });
-    const menu = document.createElement('div');
-    menu.className = 'hidden absolute right-0 mt-1 w-72 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl py-1 text-xs';
-    menu.style.zIndex = '60';
-    menu.innerHTML =
-      '<div class="px-3 py-1 text-[10px] text-slate-400">Exporta os selecionados (ou o filtro atual, se nada estiver marcado)</div>' +
-      '<button type="button" data-fmt="CSV" class="w-full text-left px-3 py-2 hover:bg-slate-800 font-semibold text-slate-200">CSV — planilha (colunas separadas)</button>' +
-      '<button type="button" data-fmt="CSV_REIMPORTAVEL" class="w-full text-left px-3 py-2 hover:bg-slate-800 font-semibold text-slate-200">CSV — pronto para reimportar</button>' +
-      '<button type="button" data-fmt="TXT" class="w-full text-left px-3 py-2 hover:bg-slate-800 font-semibold text-slate-200">TXT — bloco de notas / revisão por IA</button>';
-    menu.querySelectorAll('button').forEach((b) => { b.onclick = (ev) => { ev.stopPropagation(); menu.classList.add('hidden'); exportarCartoes(b.getAttribute('data-fmt')); }; });
-    wrap.appendChild(bExp);
-    wrap.appendChild(menu);
-    document.addEventListener('click', () => menu.classList.add('hidden'));
+    const bExp = mk('Exportar TXT', 'px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold transition', () => exportarCartoes());
 
     bar.insertBefore(editar, btnExcluir);
     bar.insertBefore(revisar, btnExcluir);
-    bar.insertBefore(wrap, btnExcluir);
+    bar.insertBefore(bExp, btnExcluir);
 
     const dica = bar.parentElement && bar.parentElement.parentElement && Array.from(bar.parentElement.parentElement.querySelectorAll('h2'))[0];
     if (dica) dica.textContent = 'Conferência de Frente e Verso, Filtros, Edição e Exclusão Seletiva';
@@ -15706,7 +15634,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
    * ======================================================================== */
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
-    aplicarMarkupEscapado, montarCSVPlanilha, montarCSVReimportavel, montarTXT, converterTXTParaLinhas,
+    aplicarMarkupEscapado, montarTextoExportacao,
     derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
