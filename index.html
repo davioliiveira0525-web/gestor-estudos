@@ -17312,6 +17312,26 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return r;
   });
 
+  /* ---- "Feito" MANUAL: você marca e desmarca; vale mesmo quando o sistema detectou conclusão sozinho ---- */
+  envolver('obterStatusConclusaoAtividade_', (orig, a) => {
+    if (a && a.conclusaoManual === 'feito') return { concluida: true, fonte: 'Marcada como feita por você', vinculada: Boolean(a.vinculo) };
+    if (a && a.conclusaoManual === 'desfeito') return { concluida: false, fonte: 'Desmarcada por você', vinculada: Boolean(a.vinculo) };
+    return orig(a);
+  });
+  envolver('alternarConclusaoManualAgenda', (orig, atvId, marcado, ev) => {
+    try { const a = AG_STATE.atividades.find((x) => x.id === atvId); if (a) delete a.conclusaoManual; } catch (e) { /* ignora */ }
+    return orig(atvId, marcado, ev);
+  });
+  window.fcxAgFeito = function (id, on, ev) {
+    if (ev && ev.stopPropagation) ev.stopPropagation();
+    const a = (AG_STATE.atividades || []).find((x) => x.id === id);
+    if (!a) return;
+    a.conclusaoManual = on ? 'feito' : 'desfeito';
+    if (!a.vinculo) a.concluidaManual = Boolean(on);
+    salvarEstadoAgendaStorage_();
+    atualizarTudoF();
+  };
+
   /* ---- painel de pendências: você escolhe o que muda de data ---- */
   const selPend = new Set();
   function listaPendentes() {
@@ -17330,6 +17350,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         const inf = infoTarefa(a);
         return '<label class="flex items-start gap-2 p-2 rounded-lg border border-rose-700 bg-rose-950/40 text-[11px] cursor-pointer">' +
           '<input type="checkbox" ' + (selPend.has(a.id) ? 'checked ' : '') + 'onchange="fcxPendSel(\'' + a.id + '\',this.checked)" class="mt-0.5">' +
+          '<button type="button" onclick="event.preventDefault();fcxAgFeito(\'' + a.id + '\',true,event)" class="px-1.5 py-0.5 rounded border border-emerald-600 text-emerald-300 font-extrabold shrink-0" title="Marcar como feita">✓ Feito</button>' +
           '<span class="min-w-0"><span class="font-extrabold text-rose-200">' + esc(inf.rot) + '</span> <span class="text-rose-300">(' + (inf.conj === 'ESTUDOS' ? 'Estudos do dia' : inf.conj === 'BATERIA' ? 'Bateria do dia' : 'Outras') + ')</span>' +
           '<span class="block font-bold text-rose-100 truncate">' + esc(a.titulo) + (a.materia ? ' — ' + esc(a.materia) : '') + '</span></span></label>';
       }).join('')).join('');
@@ -17387,8 +17408,10 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       segs.forEach((s) => { if (s.tipoItem === 'CMP') g.FIXOS.push(s); else g[infoTarefa(s.ref).conj].push(s); });
       const linha = (s) => {
         const a = s.ref, inf = infoTarefa(a), pend = pendenteAg(a);
-        return '<div class="space-y-0.5"><div class="text-[10px] font-extrabold uppercase tracking-wide" style="color:' + inf.cor + '">' + esc(inf.rot) +
+        const feita = concluidaAg(a);
+        return '<div class="space-y-0.5"><div class="flex items-center justify-between gap-2"><div class="text-[10px] font-extrabold uppercase tracking-wide" style="color:' + inf.cor + '">' + esc(inf.rot) +
           (pend ? ' <span style="color:#f43f5e">• PENDENTE desde ' + esc(fmtData(a.data)) + '</span>' : '') + '</div>' +
+          '<label class="flex items-center gap-1 text-[11px] font-extrabold cursor-pointer" onclick="event.stopPropagation()"><input type="checkbox" ' + (feita ? 'checked ' : '') + 'onchange="fcxAgFeito(\'' + a.id + '\',this.checked,event)"> Feito</label></div>' +
           '<div' + (pend ? ' style="border-left:3px solid #f43f5e;border-radius:10px;background:rgba(244,63,94,.10)"' : '') + '>' + gerarLinhaAtividadeLista_(s, dia, conflitos, isHoje, agoraMin) + '</div></div>';
       };
       const sec = (tit, sub, arr) => arr.length ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-indigo-300">' + tit + ' <span class="text-slate-400 normal-case font-semibold">' + sub + '</span></div>' + arr.map(linha).join('') + '</div>' : '';
@@ -17406,7 +17429,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     }).join('');
   };
 
-  const VERSAO_TRILHA = 'Trilha 06/11 v13';
+  const VERSAO_TRILHA = 'Trilha 06/11 v14';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
