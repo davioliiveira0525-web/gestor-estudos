@@ -15639,35 +15639,97 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   const lerJSON = (k, pad) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? pad : v; } catch (e) { return pad; } };
   const gravarJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem armazenamento */ } };
 
-  /* K1 — progresso dos blocos persistido (a divisão em blocos em si não é alterada) */
-  const K_BLOCOS = 'GR_FCX_BLOCOS_V1';
-  let blocosSalvos = lerJSON(K_BLOCOS, {});
+  /* K1 — dados do ciclo salvos no navegador E na nuvem (tabela configuracoes):
+   *      progresso dos blocos, composição fixa dos blocos, zeradas de decoreba e vínculo de matérias */
+  const K_CICLO = 'GR_FCX_CICLO_V2';
+  const K_CICLO_NUVEM = 'GR_FCX_CICLO_JSON';
+  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {} });
+  let ciclo = Object.assign(cicloVazio(), lerJSON(K_CICLO, {}));
+  if (!ciclo.t) { /* migra a versão anterior (somente navegador) */
+    ciclo.blocos = lerJSON('GR_FCX_BLOCOS_V1', {});
+    ciclo.dec = lerJSON('GR_FCX_DEC_ZERADAS_V1', {});
+  }
+  let timerNuvemCiclo = null;
+  let ultimaConfigLida = null;
+
+  function persistirCiclo() {
+    ciclo.t = Date.now();
+    gravarJSON(K_CICLO, ciclo);
+    try {
+      if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof salvarValorConfigDB_ === 'function') {
+        if (timerNuvemCiclo) clearTimeout(timerNuvemCiclo);
+        timerNuvemCiclo = setTimeout(() => {
+          salvarValorConfigDB_(K_CICLO_NUVEM, JSON.stringify(ciclo)).catch(() => {});
+        }, 1500);
+      }
+    } catch (e) { /* ignora */ }
+  }
+
+  /* usa a cópia da nuvem quando ela for mais recente (outro aparelho) */
+  function lerCicloDaNuvem() {
+    try {
+      const cfg = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.config) || null;
+      if (!cfg || cfg === ultimaConfigLida) return;
+      ultimaConfigLida = cfg;
+      const raw = cfg[K_CICLO_NUVEM];
+      if (!raw) return;
+      const nuvem = JSON.parse(raw);
+      if (nuvem && typeof nuvem === 'object' && Number(nuvem.t || 0) > Number(ciclo.t || 0)) {
+        ciclo = Object.assign(cicloVazio(), nuvem);
+        gravarJSON(K_CICLO, ciclo);
+      }
+    } catch (e) { /* ignora */ }
+  }
 
   function salvarBlocos() {
     try {
       const mapa = (typeof FC_ESTADO_BLOCOS_MAP !== 'undefined' && FC_ESTADO_BLOCOS_MAP) || {};
       Object.keys(mapa).forEach((chave) => {
-        blocosSalvos[chave] = (mapa[chave] || []).map((b) => ({
+        ciclo.blocos[chave] = (mapa[chave] || []).map((b) => ({
           respondidosSet: b.respondidosSet || {}, acertosPorCard: b.acertosPorCard || {},
           emReforcoSet: b.emReforcoSet || {}, dominadosSet: b.dominadosSet || {}, concluido: Boolean(b.concluido)
         }));
       });
-      gravarJSON(K_BLOCOS, blocosSalvos);
+      persistirCiclo();
     } catch (e) { /* ignora */ }
   }
 
+  /* A divisão em blocos original continua igual. Aqui só se "congela" quais cartões pertencem a cada bloco,
+     para que um cartão não mude de bloco quando a ordem por erros muda; dentro do bloco a ordem segue os erros. */
   envolver('construirEstruturaBlocosFiltroAtual_', (orig, cards) => {
+    lerCicloDaNuvem();
     const chave = obterChaveFiltroAtualBlocos_();
     const existia = Boolean(FC_ESTADO_BLOCOS_MAP && FC_ESTADO_BLOCOS_MAP[chave]);
     const blocos = orig(cards);
-    const sv = blocosSalvos[chave];
-    if (!existia && blocos.length && sv && sv.length === blocos.length) {
+    if (!blocos.length) return blocos;
+    const sv = ciclo.blocos[chave];
+    if (!existia && sv && sv.length === blocos.length) {
       blocos.forEach((b, i) => {
-        const s = sv[i] || {};
-        b.respondidosSet = s.respondidosSet || {}; b.acertosPorCard = s.acertosPorCard || {};
-        b.emReforcoSet = s.emReforcoSet || {}; b.dominadosSet = s.dominadosSet || {}; b.concluido = Boolean(s.concluido);
+        const x = sv[i] || {};
+        b.respondidosSet = x.respondidosSet || {}; b.acertosPorCard = x.acertosPorCard || {};
+        b.emReforcoSet = x.emReforcoSet || {}; b.dominadosSet = x.dominadosSet || {}; b.concluido = Boolean(x.concluido);
       });
     }
+    let comp = ciclo.comp[chave];
+    if (!comp || comp.length !== blocos.length) {
+      comp = blocos.map((b) => b.cardsOriginais.map((c) => c.id));
+      ciclo.comp[chave] = comp;
+    }
+    const emAlgum = new Set();
+    comp.forEach((l) => l.forEach((id) => emAlgum.add(id)));
+    cards.forEach((c) => {
+      if (emAlgum.has(c.id)) return;
+      let k = 0;
+      comp.forEach((l, j) => { if (l.length < comp[k].length) k = j; });
+      comp[k].push(c.id);
+      emAlgum.add(c.id);
+    });
+    const pos = new Map(cards.map((c, i) => [c.id, i]));
+    const porId = new Map(cards.map((c) => [c.id, c]));
+    blocos.forEach((b, i) => {
+      b.cardsOriginais = comp[i].filter((id) => porId.has(id)).map((id) => porId.get(id)).sort((x, y) => pos.get(x.id) - pos.get(y.id));
+      b.totalBloco = b.cardsOriginais.length;
+    });
     return blocos;
   });
 
@@ -15678,8 +15740,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
   envolver('reiniciarProgressoBlocosFiltroAtual', (orig) => {
     const chave = obterChaveFiltroAtualBlocos_();
-    delete blocosSalvos[chave];
-    gravarJSON(K_BLOCOS, blocosSalvos);
+    delete ciclo.blocos[chave];
+    delete ciclo.comp[chave];
+    persistirCiclo();
     return orig();
   });
 
@@ -15697,6 +15760,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   function materiaDoSistema(nomeMateria) {
     const alvo = semAcento(nomeMateria);
     const lista = (ESTADO && ESTADO.materias) || [];
+    const manual = ciclo.mapa[alvo];
+    if (manual) { const vinc = lista.find((m) => m.id === manual); if (vinc) return vinc; }
     return lista.find((m) => semAcento(m.nome) === alvo) || lista.find((m) => alvo && (semAcento(m.nome).includes(alvo) || alvo.includes(semAcento(m.nome)))) || null;
   }
 
@@ -15708,7 +15773,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       const chave = mat ? mat.id : semAcento(nome);
       if (ja.has(chave)) return;
       ja.add(chave);
-      out.push({ nome: mat ? mat.nome : nome, id: mat ? mat.id : '', origem });
+      out.push({ nome: mat ? mat.nome : nome, nomeCron: nome, id: mat ? mat.id : '', origem });
     };
     try {
       const pl = planoDeHoje();
@@ -15765,7 +15830,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       raiz.appendChild(box);
     }
     const topicos = topicosDaBateriaHoje();
-    const reg = lerJSON(K_DEC, {});
+    const reg = ciclo.dec;
     const hoje = hojeYMD();
     if (!topicos.length) {
       box.innerHTML = '<div class="text-[11px] font-extrabold uppercase text-purple-300">Zerar decoreba por tópico da bateria de hoje</div>' +
@@ -15798,9 +15863,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   };
 
   window.fcxReiniciarContagemDecoreba = function (idTopico) {
-    const reg = lerJSON(K_DEC, {});
-    delete reg[idTopico];
-    gravarJSON(K_DEC, reg);
+    delete ciclo.dec[idTopico];
+    persistirCiclo();
     renderizarDecTopico();
     aviso('Contagem de zeradas reiniciada para este tópico.');
   };
@@ -15809,12 +15873,12 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     try {
       if (typeof FC_SESSAO !== 'undefined' && FC_SESSAO && FC_SESSAO.isModoDecoreba && window.__fcxDecTopico &&
           String(FC_SESSAO.tituloSessao || '').indexOf(TITULO_DEC_TOPICO) === 0) {
-        const reg = lerJSON(K_DEC, {});
+        const reg = ciclo.dec;
         const r = reg[window.__fcxDecTopico] || { n: 0, ult: '' };
         const hoje = hojeYMD();
         if (r.ult !== hoje) { r.n = Math.min(DEC_META_ZERADAS, (r.n || 0) + 1); r.ult = hoje; }
         reg[window.__fcxDecTopico] = r;
-        gravarJSON(K_DEC, reg);
+        persistirCiclo();
       }
     } catch (e) { /* ignora */ }
     window.__fcxDecTopico = null;
@@ -15851,13 +15915,28 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       box.className = 'rounded-xl border border-indigo-800/70 bg-indigo-950/30 p-3 space-y-2';
       painel.insertBefore(box, painel.firstChild);
     }
-    const mats = materiasDoDia().filter((m) => m.id);
+    const mats = materiasDoDia();
+    const opcoes = ((ESTADO && ESTADO.materias) || []).map((m) => '<option value="' + m.id + '">' + esc(m.nome) + '</option>').join('');
     box.innerHTML = '<div class="text-[11px] font-extrabold uppercase text-indigo-300">Revisões do dia — ciclo da matéria (PDF-Base + Caderno de Erros misturados, mais errados primeiro)</div>' +
       (mats.length
-        ? '<div class="flex flex-wrap gap-2">' + mats.map((m) =>
-          '<button type="button" onclick="fcxAbrirCicloDaMateria(\'' + m.id + '\')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Ciclo: ' + esc(m.nome) + (m.origem === 'pendente' ? ' (pendente)' : '') + '</button>').join('') + '</div>'
+        ? '<div class="space-y-1.5">' + mats.map((m) =>
+          '<div class="flex flex-wrap items-center gap-2">' +
+          (m.id ? '<button type="button" onclick="fcxAbrirCicloDaMateria(\'' + m.id + '\')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Ciclo: ' + esc(m.nome) + (m.origem === 'pendente' ? ' (pendente)' : '') + '</button>'
+                : '<span class="px-3 py-1.5 rounded-lg bg-amber-950 border border-amber-800 text-amber-300 font-bold text-xs">"' + esc(m.nomeCron) + '" ainda não está ligada a uma matéria dos cartões</span>') +
+          '<label class="text-[10px] text-slate-400">Matéria dos cartões:</label>' +
+          '<select onchange="fcxVincularMateria(\'' + esc(m.nomeCron).replace(/'/g, '') + '\', this.value)" class="rounded border px-2 py-1 text-[11px] font-bold">' +
+          '<option value="">' + (m.id ? '(automático)' : 'Escolher...') + '</option>' + opcoes.replace('value="' + m.id + '"', 'value="' + m.id + '" selected') + '</select></div>').join('') + '</div>'
         : '<div class="text-[11px] text-slate-400">Nenhuma matéria do cronograma para hoje. Use os filtros abaixo e a modalidade "Ciclo".</div>');
   }
+
+  window.fcxVincularMateria = function (nomeCron, idMateria) {
+    const chave = semAcento(nomeCron);
+    if (idMateria) ciclo.mapa[chave] = idMateria; else delete ciclo.mapa[chave];
+    persistirCiclo();
+    renderizarChipsCiclo();
+    renderizarEstudosDoDia();
+    aviso(idMateria ? 'Matéria vinculada.' : 'Vínculo removido (volta ao automático).');
+  };
 
   function renderizarEstudosDoDia() {
     const aq = $('subaba-fc-aquecimento');
@@ -15970,7 +16049,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, materiasDoDia, renderizarDecTopico, cotaCelula, celulaExigida, limitePalavras, textoPuro
+    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, materiasDoDia, renderizarDecTopico, cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
