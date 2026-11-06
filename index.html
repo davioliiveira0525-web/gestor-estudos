@@ -15408,7 +15408,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       '<div class="text-xs font-extrabold truncate ' + (c ? 'text-emerald-300 line-through opacity-80' : 'text-white') + '" title="' + esc(st.nome) + '">' + esc(st.nome) + '</div>' +
       '<div class="text-[10px] text-slate-400">' + (pag > 0 ? pag + ' pág. nesta parte' : 'Parte sem contagem de páginas') +
       (contexto ? ' • ' + esc(contexto) : '') + '</div>' +
-      (c ? '<div class="text-[10px] text-slate-400 flex flex-wrap items-center gap-1">Concluída em <input type="date" value="' + (cel.data || '') + '" max="' + hojeYMD() + '" onchange="fcxAlterarDataCelula(\'' + m.id + '\',' + p + ',' + i + ',this.value)" class="rounded border px-1 py-0 text-[10px] font-bold" style="background:#0f172a;color:#e2e8f0;border-color:#334155">' +
+      (c ? '<div class="text-[10px] text-slate-400 flex flex-wrap items-center gap-1">Concluída em <input type="date" value="' + (cel.data || '') + '" max="' + hojeYMD() + '" onchange="fcxAlterarDataCelula(\'' + m.id + '\',' + p + ',' + i + ',this.value)" class="rounded border px-1 py-0 text-[10px] font-bold">' +
         ((ciclo.inferidas && ciclo.inferidas[m.id + '|' + p + '|' + i]) ? '<span class="text-amber-400">(data estimada — corrija se precisar)</span>' : '') + '</div>' : '') +
       '<div class="text-[10px] text-slate-500">PDF: ' + prog.lidas + '/' + prog.total + ' pág. (' + prog.pct + '%)</div></div>' +
       '<button type="button" onclick="alternarConclusaoCelulaCron(\'' + m.id + '\',' + p + ',' + i + ',' + (!c) + ')" class="px-2 py-1 rounded-lg text-[10px] font-extrabold shrink-0 ' +
@@ -17496,8 +17496,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       return '<tr class="border-t border-slate-800 align-top"><td class="py-1 pr-2 font-bold ' + (r.seca ? 'text-rose-300' : 'text-white') + '">' + esc(r.nome) + (r.seca ? '<div class="text-[10px] font-normal">Lei Seca → sai da bateria (histórico preservado)</div>' : '') + (r.confirmar ? '<div class="text-[10px] font-normal text-amber-300">' + esc(r.confirmar) + '</div>' : '') + '</td>' +
         '<td class="py-1 pr-2 text-slate-300">' + st + (it.dups.length ? '<div class="text-amber-300">+ ' + it.dups.length + ' duplicado(s) a mesclar: ' + it.dups.map((d) => esc(d.topico)).join('; ') + '</div>' : '') + '</td>' +
         '<td class="py-1 text-slate-300 whitespace-nowrap">' + (r.seca ? r.res + ' de ' + r.tot + '<div class="text-[10px]">não importa</div>' :
-          '<div class="flex items-center gap-1"><input id="fcxPadRes_' + r.k + '" type="number" min="0" value="' + r.res + '" onchange="fcxPadCalc(\'' + r.k + '\',\'res\')" class="w-14 rounded border px-1 py-0.5 text-[11px] font-bold" style="background:#0f172a;color:#e2e8f0;border-color:#334155"> de ' + r.tot + '</div>' +
-          '<div class="flex items-center gap-1 text-[10px]">C <input id="fcxPadAc_' + r.k + '" type="number" min="0" value="' + r.ac + '" onchange="fcxPadCalc(\'' + r.k + '\',\'ac\')" class="w-12 rounded border px-1 py-0.5 text-[11px] font-bold" style="background:#0f172a;color:#86efac;border-color:#334155"> E <input id="fcxPadEr_' + r.k + '" type="number" min="0" value="' + (r.res - r.ac) + '" onchange="fcxPadCalc(\'' + r.k + '\',\'er\')" class="w-12 rounded border px-1 py-0.5 text-[11px] font-bold" style="background:#0f172a;color:#fca5a5;border-color:#334155"></div>' +
+          '<div class="flex items-center gap-1"><input id="fcxPadRes_' + r.k + '" type="number" min="0" value="' + r.res + '" onchange="fcxPadCalc(\'' + r.k + '\',\'res\')" class="w-14 rounded border px-1 py-0.5 text-[11px] font-bold"> de ' + r.tot + '</div>' +
+          '<div class="flex items-center gap-1 text-[10px]">C <input id="fcxPadAc_' + r.k + '" type="number" min="0" value="' + r.ac + '" onchange="fcxPadCalc(\'' + r.k + '\',\'ac\')" class="w-12 rounded border px-1 py-0.5 text-[11px] font-bold"> E <input id="fcxPadEr_' + r.k + '" type="number" min="0" value="' + (r.res - r.ac) + '" onchange="fcxPadCalc(\'' + r.k + '\',\'er\')" class="w-12 rounded border px-1 py-0.5 text-[11px] font-bold"></div>' +
           '<div class="text-[10px]">já no sistema: ' + it.jaTem + '</div>') + '</td></tr>';
     }).join('');
     const box = document.createElement('div');
@@ -17881,7 +17881,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const mats = ((ESTADO && ESTADO.materias) || []).slice();
     const orfas = topicos.filter((t) => !mats.some((m) => m.id === t.idMateria));
     if (orfas.length) mats.push({ id: '__sem__', nome: 'Sem matéria cadastrada' });
-    const inp = 'class="rounded border px-1 py-0.5 text-[11px] font-bold" style="background:#0f172a;color:#e2e8f0;border-color:#334155"';
+    const inp = 'class="rounded border px-1 py-0.5 text-[11px] font-bold"';
     let totR = 0, totA = 0;
     const blocos = mats.map((m) => {
       const lista = topicos.filter((t) => (m.id === '__sem__' ? orfas.indexOf(t) >= 0 : t.idMateria === m.id)).filter((t) => !busca || nn(t.topico).indexOf(busca) >= 0);
@@ -17900,7 +17900,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
           '<td class="py-1 whitespace-nowrap"><button type="button" onclick="fcxGtSalvar(\'' + id + '\')" class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px]">Salvar</button> ' +
           '<button type="button" onclick="fcxGtExcluir(\'' + id + '\')" class="px-2 py-1 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 font-extrabold text-[10px]">Excluir</button></td></tr>';
       }).join('');
-      return '<details open class="rounded-lg border border-slate-800 bg-slate-950/50 p-2"><summary class="cursor-pointer text-xs font-extrabold text-indigo-300">' + esc(m.nome) + ' <span class="text-slate-400 font-semibold">(' + lista.length + ' tópico' + (lista.length > 1 ? 's' : '') + ')</span></summary>' +
+      return '<details open class="rounded-lg border border-slate-800 bg-slate-900 p-2"><summary class="cursor-pointer text-xs font-extrabold text-indigo-300">' + esc(m.nome) + ' <span class="text-slate-400 font-semibold">(' + lista.length + ' tópico' + (lista.length > 1 ? 's' : '') + ')</span></summary>' +
         '<div class="overflow-x-auto"><table class="w-full text-[11px] mt-1"><thead><tr class="text-left text-slate-400"><th>Tópico</th><th>Banco</th><th>Realizadas</th><th>Acertos</th><th>Erros</th><th>Aprov.</th><th></th></tr></thead><tbody>' + linhas + '</tbody></table></div></details>';
     }).join('');
     const lix = lerJSON(K_LIXEIRA, []);
@@ -17975,4 +17975,3 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
 </body>
 </html>
-  
