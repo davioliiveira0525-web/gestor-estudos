@@ -17549,7 +17549,32 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     }).join('');
   };
 
-  const VERSAO_TRILHA = 'Trilha 06/11 v17';
+  /* ========================================================================
+   * AGENDA DIÁRIA DESATIVADA (decisão do usuário): a aba some e nada mais é gerado nela.
+   * Os dados da agenda continuam guardados (nada foi apagado) e podem ser reativados depois.
+   * ======================================================================== */
+  const semAgenda = () => 0;
+  ['sincronizarPlanejamentoDiario3Areas', 'verificarViradaERenderizarAgenda_', 'renderizarAgendaCompletaUI', 'renderizarPainelVisualAgenda_', 'executarViradaDeDiaAgenda_'].forEach((n) => { window[n] = semAgenda; });
+  envolver('irParaAreaPrincipal', (orig, area) => orig(area === 'agenda' ? 'organizacao' : area));
+  function ocultarAgenda() {
+    try {
+      const ag = $('area-agenda');
+      if (ag) { ag.classList.add('hidden'); ag.style.display = 'none'; }
+      const nav = $('nav-area-agenda');
+      if (nav) nav.style.display = 'none';
+      if (typeof document.querySelectorAll === 'function') {
+        document.querySelectorAll('[onclick*="irParaAreaPrincipal(\'agenda\')"]').forEach((el) => { el.style.display = 'none'; });
+      }
+      const md = $('mainContainerDemaisAreas');
+      if (md) md.classList.remove('hidden');
+    } catch (e) { /* ignora */ }
+  }
+  ocultarAgenda();
+  if (typeof document.addEventListener === 'function') document.addEventListener('DOMContentLoaded', ocultarAgenda);
+  setTimeout(ocultarAgenda, 500);
+  setTimeout(ocultarAgenda, 2500);
+
+  const VERSAO_TRILHA = 'Trilha 06/11 v18';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
