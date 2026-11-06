@@ -17387,6 +17387,61 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     aviso(sel.length + ' tarefa(s) reprogramada(s) para ' + fmtData(dest) + '.');
   };
 
+  /* ---- ARRASTAR NA LISTA + ESPAÇO FIXO ENTRE TAREFAS (reflete na agenda ao lado) ---- */
+  const gapPadrao = () => (ciclo.agGap !== undefined && Number(ciclo.agGap) >= 0 ? Number(ciclo.agGap) : 10);
+  function tarefasOrdenaveis(dia) {
+    return (AG_STATE.atividades || []).filter((a) => a.data === dia && a.tipo !== 'COMPROMISSO' && a.inicioMin !== null && a.inicioMin !== undefined && a.emSequencia !== false && !concluidaAg(a))
+      .sort((x, y) => x.inicioMin - y.inicioMin);
+  }
+  /* reorganiza o dia na ordem dada: mesmo início da primeira, espaço entre cada tarefa, desviando de compromissos fixos e de tarefas já feitas */
+  function reposicionarDia(dia, ordem) {
+    ordem = ordem || tarefasOrdenaveis(dia);
+    if (!ordem.length) return;
+    const obst = obterSegmentosDoDia_(dia).filter((sg) => sg.tipoItem === 'CMP' || (sg.tipoItem === 'ATV' && ordem.indexOf(sg.ref) < 0));
+    let cursor = Math.min.apply(null, ordem.map((a) => a.inicioMin));
+    ordem.forEach((a, idx) => {
+      const gap = idx === 0 ? 0 : (Number.isFinite(a.gapAntes) ? a.gapAntes : gapPadrao());
+      cursor += gap;
+      let guarda = 0, moveu = true;
+      while (moveu && guarda++ < 50) {
+        moveu = false;
+        obst.forEach((o) => { if (cursor < o.fim && cursor + a.duracaoMin > o.ini) { cursor = o.fim + gap; moveu = true; } });
+      }
+      a.inicioMin = Math.max(0, Math.min(cursor, AG_MIN_DIA - Math.min(a.duracaoMin, AG_MIN_DIA)));
+      cursor = a.inicioMin + a.duracaoMin;
+    });
+  }
+  function salvarERedesenhar() { salvarEstadoAgendaStorage_(); try { renderizarAgendaCompletaUI(); } catch (e) { /* ignora */ } }
+  window.fcxAgDrop = function (dia, idArrastado, idAlvo) {
+    const ord = tarefasOrdenaveis(dia);
+    const i = ord.findIndex((a) => a.id === idArrastado), j = ord.findIndex((a) => a.id === idAlvo);
+    if (i < 0 || j < 0 || i === j) return;
+    const x = ord.splice(i, 1)[0];
+    ord.splice(j, 0, x);
+    reposicionarDia(dia, ord);
+    salvarERedesenhar();
+  };
+  window.fcxAgDragStart = function (ev, id) { try { ev.dataTransfer.setData('text/plain', id); ev.dataTransfer.effectAllowed = 'move'; } catch (e) { /* ignora */ } };
+  window.fcxAgDropEv = function (ev, dia, idAlvo) {
+    try { ev.preventDefault(); ev.stopPropagation(); } catch (e) { /* ignora */ }
+    let id = ''; try { id = ev.dataTransfer.getData('text/plain'); } catch (e) { /* ignora */ }
+    if (id) window.fcxAgDrop(dia, id, idAlvo);
+  };
+  window.fcxAgGap = function (id, v) {
+    const a = (AG_STATE.atividades || []).find((x) => x.id === id);
+    if (!a) return;
+    a.gapAntes = Math.max(0, Math.min(240, parseInt(v, 10) || 0));
+    reposicionarDia(a.data);
+    salvarERedesenhar();
+  };
+  window.fcxAgGapDia = function (dia, v) {
+    ciclo.agGap = Math.max(0, Math.min(240, parseInt(v, 10) || 0));
+    persistirCiclo();
+    tarefasOrdenaveis(dia).forEach((a) => { delete a.gapAntes; });
+    reposicionarDia(dia);
+    salvarERedesenhar();
+  };
+
   /* ---- lista do dia em dois conjuntos independentes ---- */
   window.renderizarPlanejamentoEstruturadoAgenda_ = function () {
     const cont = document.getElementById('agListaPlanejamento');
@@ -17406,13 +17461,22 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       const isHoje = dia === hoje;
       const g = { ESTUDOS: [], BATERIA: [], OUTRAS: [], FIXOS: [] };
       segs.forEach((s) => { if (s.tipoItem === 'CMP') g.FIXOS.push(s); else g[infoTarefa(s.ref).conj].push(s); });
+      const ordDia = tarefasOrdenaveis(dia);
       const linha = (s) => {
         const a = s.ref, inf = infoTarefa(a), pend = pendenteAg(a);
+        const pos = s.continuacao ? -1 : ordDia.indexOf(a);
+        let gapHtml = '';
+        if (pos > 0) {
+          const ant = ordDia[pos - 1];
+          const real = Math.max(0, a.inicioMin - (ant.inicioMin + ant.duracaoMin));
+          gapHtml = '<label class="flex items-center gap-1 text-[10px] font-bold text-slate-400" onclick="event.stopPropagation()">espaço antes <input type="number" min="0" max="240" step="5" value="' + real + '" onchange="fcxAgGap(\'' + a.id + '\',this.value)" class="w-14 rounded border px-1 py-0.5 text-[10px] font-bold"> min</label>';
+        }
+        const arrasta = pos >= 0 ? ' draggable="true" ondragstart="fcxAgDragStart(event,\'' + a.id + '\')" ondragover="event.preventDefault()" ondrop="fcxAgDropEv(event,\'' + dia + '\',\'' + a.id + '\')" title="Arraste para reordenar o dia" style="cursor:grab"' : '';
         const feita = concluidaAg(a);
         return '<div class="space-y-0.5"><div class="flex items-center justify-between gap-2"><div class="text-[10px] font-extrabold uppercase tracking-wide" style="color:' + inf.cor + '">' + esc(inf.rot) +
           (pend ? ' <span style="color:#f43f5e">• PENDENTE desde ' + esc(fmtData(a.data)) + '</span>' : '') + '</div>' +
           '<label class="flex items-center gap-1 text-[11px] font-extrabold cursor-pointer" onclick="event.stopPropagation()"><input type="checkbox" ' + (feita ? 'checked ' : '') + 'onchange="fcxAgFeito(\'' + a.id + '\',this.checked,event)"> Feito</label></div>' +
-          '<div' + (pend ? ' style="border-left:3px solid #f43f5e;border-radius:10px;background:rgba(244,63,94,.10)"' : '') + '>' + gerarLinhaAtividadeLista_(s, dia, conflitos, isHoje, agoraMin) + '</div></div>';
+          '<div' + (pend ? ' data-pend="1"' : '') + arrasta + (pend ? ' style="border-left:3px solid #f43f5e;border-radius:10px;background:rgba(244,63,94,.10);cursor:grab"' : '') + '>' + gerarLinhaAtividadeLista_(s, dia, conflitos, isHoje, agoraMin) + '</div>' + gapHtml + '</div>';
       };
       const sec = (tit, sub, arr) => arr.length ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-indigo-300">' + tit + ' <span class="text-slate-400 normal-case font-semibold">' + sub + '</span></div>' + arr.map(linha).join('') + '</div>' : '';
       const corpo =
@@ -17425,11 +17489,14 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         '<div class="flex items-center gap-1.5 ag-dia-chip"><span class="text-xs font-extrabold ' + (isHoje ? 'text-indigo-400' : 'text-white') + '">' + agDiaSemanaCurto_(dia) + ', ' + formatarDataBR(dia).slice(0, 5) + '</span>' +
         (isHoje ? '<span class="px-1.5 rounded bg-indigo-600 text-white font-extrabold text-[9px] uppercase">Hoje</span>' : '') + '</div>' +
         '<span class="text-[10px] text-slate-400 font-semibold whitespace-nowrap">Estudo ' + formatarMinutosHorasCurto_(metr.minEstudo) + ' • Fixos ' + formatarMinutosHorasCurto_(metr.minCompromissos) + ' • Livre ' + formatarMinutosHorasCurto_(metr.minLivre) + '</span></div>' +
+        (ordDia.length ? '<div class="flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-300 p-2 rounded-lg border border-slate-800 bg-slate-900"><span>Espaço fixo entre tarefas:</span><input type="number" min="0" max="240" step="5" value="' + gapPadrao() + '" id="fcxGapDia_' + dia + '" class="w-16 rounded border px-1 py-0.5 font-bold"> min' +
+          '<button type="button" onclick="fcxAgGapDia(\'' + dia + '\',document.getElementById(\'fcxGapDia_' + dia + '\').value)" class="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold">Aplicar ao dia todo</button>' +
+          '<span class="text-slate-400 font-semibold">Arraste as tarefas para reordenar; ajuste o espaço de cada uma no campo "espaço antes".</span></div>' : '') +
         (corpo || '<div class="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 text-center">Nenhuma tarefa neste dia.</div>') + '</div>';
     }).join('');
   };
 
-  const VERSAO_TRILHA = 'Trilha 06/11 v14';
+  const VERSAO_TRILHA = 'Trilha 06/11 v15';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
