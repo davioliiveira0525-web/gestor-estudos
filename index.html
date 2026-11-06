@@ -15647,35 +15647,43 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
           if (celulaExigida(st, m.totalPartes, p) && !st.partesStatus[p].concluida) lista.push(mk(m, p, i, st, cotaCelula(st, m.totalPartes, p), ''));
         });
       });
-      /* ESTUDOS DO DIA: cartões e questões do dia, só dos tópicos da meta de hoje */
+      /* ESTUDOS DO DIA — OBRIGATÓRIO para cada conteúdo da meta de hoje: Conteúdo + Aquecimento + Questões do Dia */
       try {
-        const pl = planoTrilha(), topicosHoje = [];
+        const pl = planoTrilha(), alvos = [], vistosK = new Set();
+        const slug = (x) => nn(x).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         plano.hojeLista.concat(plano.previstasHojeConcluidas || []).forEach(({ m, p }) => {
           m.subtopicos.forEach((st) => {
             if (!celulaExigida(st, m.totalPartes, p)) return;
-            let es = pl.entradas.filter((e) => e.topico && (e.metas || []).indexOf(m) >= 0 && casa(st.nome, e.nome));
-            if (!es.length) es = pl.entradas.filter((e) => e.topico && (e.metas || []).indexOf(m) >= 0);
-            es.forEach((e) => { if (topicosHoje.indexOf(e.topico) < 0) topicosHoje.push(e.topico); });
+            const doMeta = pl.entradas.filter((x) => (x.metas || []).indexOf(m) >= 0);
+            const loose = doMeta.filter((x) => casa(st.nome, x.nome));
+            const e = doMeta.find((x) => nn(x.nome) === nn(st.nome)) || doMeta.find((x) => casa(st.nome, x.nome, true)) || (loose.length === 1 ? loose[0] : null);
+            const nome = e ? (e.grupo ? e.grupo.nome : (e.topico ? e.topico.topico : e.nome)) : st.nome;
+            let t = e ? e.topico : null;
+            if (!t) t = ((ESTADO && ESTADO.topicos) || []).find((x) => x.status === 'Ativo' && casa(x.topico, nome) && mesmaMateria(x.materia, m.materia)) || null;
+            const k = slug(nome);
+            if (vistosK.has(k)) return;
+            vistosK.add(k);
+            alvos.push({ k, nome, t, materia: t ? t.materia : m.materia, idMateria: t ? t.idMateria : '' });
           });
         });
         const nQ = Number(((ESTADO && ESTADO.config) || {}).Meta_Questoes_Dia || 0) || 10;
-        topicosHoje.forEach((t) => {
-          const nCards = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK) ? FC_DECK : []).filter((c) => c.idTopico === t.id).length;
+        alvos.forEach((al) => {
+          const nCards = al.t ? (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK) ? FC_DECK : []).filter((c) => c.idTopico === al.t.id).length : 0;
           lista.push({
-            tipo: 'REVISAO', titulo: t.topico, materia: t.materia, paginas: 0, questoes: 0, cartoes: nCards,
+            tipo: 'REVISAO', titulo: al.nome, materia: al.materia, paginas: 0, questoes: 0, cartoes: nCards,
             duracaoMin: nCards > 0 ? Math.max(10, Math.min(60, Math.ceil(nCards * 0.4 / 5) * 5)) : 15,
-            origemSistemaId: 'SYS_CRT_' + t.id + '_' + hojeAg,
-            vinculo: { area: 'CARTOES', idRevisao: 'CRT_' + t.id + '_' + hojeAg, idTopico: t.id, idMateria: t.idMateria },
-            detalhe: nCards > 0 ? 'Cartões • ' + nCards + ' cartões do tópico estudado hoje' : 'Cartões • tópico estudado hoje ainda sem cartões'
+            origemSistemaId: 'SYS_CRT_' + al.k + '_' + hojeAg,
+            vinculo: { area: 'CARTOES', idRevisao: 'CRT_' + al.k + '_' + hojeAg, idTopico: al.t ? al.t.id : null, idMateria: al.idMateria },
+            detalhe: nCards > 0 ? 'Aquecimento • zerar os ' + nCards + ' cartões do conteúdo de hoje' : 'Aquecimento • conteúdo de hoje ainda sem cartões (marque “Feito” ao concluir)'
           });
           lista.push({
-            tipo: 'QUESTOES', titulo: t.topico, materia: t.materia, paginas: 0, questoes: nQ, duracaoMin: Math.max(20, Math.round((nQ * 2) / 5) * 5),
-            origemSistemaId: 'SYS_QD_' + t.id + '_' + hojeAg,
-            vinculo: { area: 'QUESTOES', idRevisao: 'QD_' + t.id + '_' + hojeAg, idTopico: t.id, idMateria: t.idMateria },
-            detalhe: 'Questões do dia • somente do tópico estudado hoje'
+            tipo: 'QUESTOES', titulo: al.nome, materia: al.materia, paginas: 0, questoes: nQ, duracaoMin: Math.max(20, Math.round((nQ * 2) / 5) * 5),
+            origemSistemaId: 'SYS_QD_' + al.k + '_' + hojeAg,
+            vinculo: { area: 'QUESTOES', idRevisao: 'QD_' + al.k + '_' + hojeAg, idTopico: al.t ? al.t.id : null, idMateria: al.idMateria },
+            detalhe: 'Questões do dia • somente do conteúdo estudado hoje'
           });
         });
-      } catch (e) { /* sem cartões/questões do dia */ }
+      } catch (e) { /* sem aquecimento/questões do dia */ }
       return lista.concat(base);
     } catch (e) { return base; }
   }
@@ -17262,11 +17270,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
   function infoTarefa(a) {
     const o = String((a && a.origemSistemaId) || '');
-    if (/^SYS_CONT_/.test(o)) return { conj: 'ESTUDOS', rot: 'Leitura do PDF', cor: '#3b82f6' };
-    if (/^SYS_CRT_/.test(o)) return { conj: 'ESTUDOS', rot: 'Cartões', cor: '#a855f7' };
-    if (/^SYS_QD_/.test(o)) return { conj: 'ESTUDOS', rot: 'Questões do Dia', cor: '#10b981' };
-    if (/^SYS_AQ_/.test(o)) return { conj: 'BATERIA', rot: 'Aquecimento', cor: '#a855f7' };
-    if (/^SYS_BAT_/.test(o)) return { conj: 'BATERIA', rot: 'Bateria de Questões', cor: '#10b981' };
+    if (/^SYS_CONT_/.test(o)) return { conj: 'ESTUDOS', rot: 'Conteúdo', cor: '#3b82f6' };
+    if (/^SYS_CRT_/.test(o)) return { conj: 'ESTUDOS', rot: 'Aquecimento', cor: '#a855f7' };
+    if (/^SYS_QD_/.test(o)) return { conj: 'ESTUDOS', rot: 'Questões do Dia', cor: '#14b8a6' };
+    if (/^SYS_AQ_/.test(o)) return { conj: 'BATERIA', rot: 'Aquecimento', cor: '#f59e0b' };
+    if (/^SYS_BAT_/.test(o)) return { conj: 'BATERIA', rot: 'Bateria de Questões', cor: '#22c55e' };
     return { conj: 'OUTRAS', rot: 'Atividade', cor: '#64748b' };
   }
   window.__FCX_INFO_TAREFA__ = infoTarefa;
@@ -17346,13 +17354,12 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     } finally { usarCacheCand = false; cacheCand = null; }
   });
   /* cores distintas por tipo de tarefa (só quando você não escolheu uma cor) */
-  const COR_TAREFA = { 'Leitura do PDF': '#3b82f6', 'Cartões': '#a855f7', 'Questões do Dia': '#14b8a6', 'Aquecimento': '#f59e0b', 'Bateria de Questões': '#22c55e' };
   function colorirTarefas() {
     let mudou = false;
     (AG_STATE.atividades || []).forEach((a) => {
       const inf = infoTarefa(a);
       if (inf.conj === 'OUTRAS' || a.corManual) return;
-      const c = COR_TAREFA[inf.rot];
+      const c = inf.cor;
       if (c && a.cor !== c) { a.cor = c; mudou = true; }
     });
     return mudou;
@@ -17526,8 +17533,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       };
       const sec = (tit, sub, arr) => arr.length ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-indigo-300">' + tit + ' <span class="text-slate-400 normal-case font-semibold">' + sub + '</span></div>' + arr.map(linha).join('') + '</div>' : '';
       const corpo =
-        sec('Estudos do dia', 'Leitura do PDF • Cartões • Questões do Dia', g.ESTUDOS) +
-        sec('Bateria de questões do dia', 'Aquecimento • Bateria de Questões', g.BATERIA) +
+        sec('Estudos do dia', 'Conteúdo • Aquecimento • Questões do Dia (todo conteúdo da meta de hoje tem os três)', g.ESTUDOS) +
+        sec('Bateria de questões do dia', 'somente Aquecimento • Bateria de Questões', g.BATERIA) +
         sec('Outras atividades', '', g.OUTRAS) +
         (g.FIXOS.length ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-slate-400">Compromissos fixos</div>' + g.FIXOS.map(gerarLinhaCompromissoLista_).join('') + '</div>' : '');
       return '<div class="space-y-2.5">' +
@@ -17542,7 +17549,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     }).join('');
   };
 
-  const VERSAO_TRILHA = 'Trilha 06/11 v16';
+  const VERSAO_TRILHA = 'Trilha 06/11 v17';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
