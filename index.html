@@ -16772,7 +16772,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     entradas.forEach((e) => { if (!e.estudada && e.topico && temProgresso(e.topico)) e.estudada = true; });
     entradas.forEach((e) => {
       if (e.estudada) {
-        if (e.topico) { manter.push(e); if (nn(e.topico.topico) !== nn(e.nome)) renomear.push(e); }
+        if (e.topico) { manter.push(e); if (nn(e.topico.topico) !== nn(e.nome) && !(ciclo.canon && ciclo.canon[e.topico.id])) renomear.push(e); }
         else if (e.materia) criar.push(e);
         else semMateria.push(e);
       } else if (e.topico) futuros.push(e);
@@ -17035,7 +17035,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v4';
+  const VERSAO_TRILHA = 'Trilha 06/11 v5';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17301,18 +17301,186 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   envolver('renderizarAgendaCompletaUI', (orig, ...args) => { const r = orig(...args); faixaPendenciasAgenda(); pintarAtrasadasAgenda(); return r; });
   envolver('renderizarPainelVisualAgenda_', (orig, ...args) => { const r = orig(...args); pintarAtrasadasAgenda(); return r; });
 
+
+  /* ========================================================================
+   * P. PADRONIZAÇÃO DOS TÓPICOS E RECUPERAÇÃO DO DESEMPENHO (curso Delta)
+   *    Fonte: prints do curso (24 cadernos, 715 resolvidas de 3560).
+   *    Resolvidas e totais são exatos; acertos/erros por caderno são ESTIMADOS pela barra
+   *    (fechando no total real de 517 acertos / 198 erros) e ficam marcados como estimativa.
+   * ======================================================================== */
+  const CURSO = [
+    { k: 'pn', mat: 'Direito Penal', nome: 'Noções Iniciais e Princípios', re: /nocoes iniciais/, res: 40, tot: 148, ac: 28 },
+    { k: 'lp', mat: 'Direito Penal', nome: 'Lei Penal e sua Aplicação', re: /lei penal|aplicacao da lei/, res: 27, tot: 121, ac: 22 },
+    { k: 'tc', mat: 'Direito Penal', nome: 'Teoria do Crime', re: /teoria do crime/, res: 31, tot: 232, ac: 18 },
+    { k: 'ppn', mat: 'Direito Processual Penal', nome: 'Noções Iniciais e Princípios', re: /nocoes iniciais/, res: 55, tot: 156, ac: 41 },
+    { k: 'ip', mat: 'Direito Processual Penal', nome: 'Inquérito Policial', re: /inquerito/, res: 20, tot: 121, ac: 15 },
+    { k: 'ap', mat: 'Direito Processual Penal', nome: 'Ação Penal', re: /acao penal/, res: 20, tot: 141, ac: 11 },
+    { k: 'dg', mat: 'Direito Constitucional', nome: 'Direitos e Garantias Fundamentais', re: /direitos e garantias/, res: 108, tot: 324, ac: 77 },
+    { k: 'tco', mat: 'Direito Constitucional', nome: 'Teoria Constitucional', re: /teoria constitucional/, res: 63, tot: 217, ac: 42 },
+    { k: 'rc', mat: 'Direito Constitucional', nome: 'Remédios Constitucionais', re: /remedios|tutela constitucional/, res: 40, tot: 133, ac: 34, confirmar: 'Na trilha este conteúdo aparece como "Tutela Constitucional das Liberdades"; confirme que é o mesmo.' },
+    { k: 'dp', mat: 'Direito Constitucional', nome: 'Direitos Políticos', re: /direitos politicos/, res: 21, tot: 201, ac: 8 },
+    { k: 'dn', mat: 'Direito Constitucional', nome: 'Direito de Nacionalidade', re: /nacionalidade/, res: 28, tot: 244, ac: 20 },
+    { k: 'mp', mat: 'Leis Extravagantes', nome: 'Lei nº 11.340/2006 – Maria da Penha', re: /maria da penha|11\.?340/, res: 41, tot: 141, ac: 37 },
+    { k: 'ch', mat: 'Leis Extravagantes', nome: 'Lei nº 8.072/1990 – Crimes Hediondos', re: /hediondos|8\.?072|8\.?702/, res: 34, tot: 71, ac: 30 },
+    { k: 'adm', mat: 'Direito Administrativo', nome: 'Noções Iniciais e Princípios Administrativos', re: /nocoes iniciais/, res: 63, tot: 438, ac: 48 },
+    { k: 'ent', mat: 'Direito Administrativo', nome: 'Entes da Administração', re: /entes da adm/, res: 45, tot: 149, ac: 34 },
+    { k: 'id', mat: '', nome: 'Lei nº 10.741/2003 – Estatuto da Pessoa Idosa', re: /estatuto da pessoa idosa|10\.?741/, res: 17, tot: 140, ac: 13 },
+    { k: 'des', mat: '', nome: 'Lei nº 10.826/2003 – Estatuto do Desarmamento', re: /desarmamento|10\.?826/, res: 13, tot: 123, ac: 8 },
+    { k: 'ant', mat: '', nome: 'Lei nº 13.260/2016 – Antiterrorismo', re: /antiterror|13\.?260/, res: 7, tot: 7, ac: 6 },
+    { k: 'ms', mat: '', seca: true, nome: 'Lei nº 12.016/2009 – Mandado de Segurança', re: /mandado de seguranca|12\.?016/, res: 1, tot: 202, ac: 0 },
+    { k: 'pop', mat: '', seca: true, nome: 'Lei nº 4.717/1965 – Ação Popular', re: /acao popular|4\.?717/, res: 12, tot: 81, ac: 4 },
+    { k: 'mi', mat: '', seca: true, nome: 'Lei nº 13.300/2016 – Mandado de Injunção', re: /mandado de injuncao|13\.?300/, res: 10, tot: 52, ac: 8 },
+    { k: 'ag', mat: '', seca: true, nome: 'Lei nº 13.848/2019 – Agências Reguladoras', re: /agencias reguladoras|13\.?848/, res: 6, tot: 6, ac: 4 },
+    { k: 'cd', mat: '', seca: true, nome: 'Lei nº 13.934/2019 – Contrato de Desempenho', re: /contrato de desempenho|13\.?934/, res: 2, tot: 2, ac: 2 },
+    { k: 'acp', mat: '', seca: true, nome: 'Lei nº 7.347/1985 – Ação Civil Pública', re: /acao civil publica|7\.?347/, res: 11, tot: 110, ac: 7 }
+  ];
+
+  function resolvidasDoTopico(t) {
+    const ss = (ESTADO && ESTADO.sessoes) || [];
+    const dasSessoes = ss.filter((x) => x.idTopico === t.id).reduce((a, x) => a + (Number(x.resolvidas) || 0), 0);
+    return Math.max(dasSessoes, Number(t.resolvidasTotal || 0));
+  }
+
+  function planoPadronizacao() {
+    const topicos = (ESTADO && ESTADO.topicos) || [];
+    const usados = new Set();
+    return CURSO.map((row) => {
+      const cand = topicos.filter((t) => {
+        if (usados.has(t.id)) return false;
+        const matOk = row.mat ? mesmaMateria(t.materia, row.mat) : true;
+        return matOk && row.re.test(nn(t.topico));
+      });
+      cand.forEach((t) => usados.add(t.id));
+      const pontos = (t) => cardsDoTopico(t) + resolvidasDoTopico(t) * 2 + (t.status === 'Ativo' ? 1 : 0);
+      const ordenados = cand.slice().sort((a, b) => pontos(b) - pontos(a));
+      const keeper = ordenados[0] || null;
+      const dups = ordenados.slice(1);
+      const jaTem = keeper ? [keeper].concat(dups).reduce((a, t) => a + resolvidasDoTopico(t), 0) : 0;
+      const falta = Math.max(0, row.res - jaTem);
+      return { row, keeper, dups, jaTem, falta, acFalta: row.res ? Math.round(row.ac * falta / row.res) : 0 };
+    });
+  }
+
+  async function atualizarRefs(tabela, de, para, nome) {
+    try {
+      if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+      await supabaseClient.from(tabela).update({ id_topico: para.id, topico: nome }).eq('id_topico', de.id);
+    } catch (e) { /* tabela sem a coluna: ignora */ }
+  }
+
+  async function aplicarPadronizacao() {
+    const plano = planoPadronizacao();
+    const hoje = hojeYMD();
+    const p = pausa();
+    ciclo.canon = ciclo.canon || {};
+    let n = { mescl: 0, ren: 0, imp: 0, seca: 0, criados: 0 };
+    for (const it of plano) {
+      const { row } = it;
+      let k = it.keeper;
+      if (!k) {
+        const mat = ((ESTADO && ESTADO.materias) || []).find((m) => row.mat && mesmaMateria(m.nome, row.mat));
+        if (!mat) continue; /* sem matéria cadastrada: não cria por suposição */
+        const id = gerarId_('TOP');
+        const linha = { id, id_materia: mat.id, materia: mat.nome, topico: row.nome, status: 'Ativo', rodada_atual: 1, total_banco: row.tot, resolvidas_rodada: 0, restantes_rodada: row.tot, acertos_total: 0, erros_total: 0, aproveitamento: 0, bloco: '1ª Bateria Pós-Teoria' };
+        try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('topicos').insert(linha); } catch (e) { /* local */ }
+        k = { id, idMateria: mat.id, materia: mat.nome, topico: row.nome, status: 'Ativo', materiaAtiva: true, resolvidasTotal: 0 };
+        ESTADO.topicos.push(k); n.criados++;
+      }
+      for (const d of it.dups) {
+        for (const tb of ['sessoes', 'revisoes', 'questoes', 'flashcards']) await atualizarRefs(tb, d, k, row.nome);
+        (FC_DECK || []).concat(window.FC_DECK_PAUSADOS || []).forEach((c) => { if (c.idTopico === d.id) { c.idTopico = k.id; c.topico = row.nome; } });
+        (ESTADO.sessoes || []).forEach((x) => { if (x.idTopico === d.id) x.idTopico = k.id; });
+        try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('topicos').update({ status: 'Inativo', topico: d.topico + ' (duplicado mesclado em ' + k.id + ')' }).eq('id', d.id); } catch (e) { /* local */ }
+        d.status = 'Inativo'; d.topico = d.topico + ' (duplicado mesclado em ' + k.id + ')';
+        n.mescl++;
+      }
+      if (k.topico !== row.nome) {
+        try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('topicos').update({ topico: row.nome }).eq('id', k.id); } catch (e) { /* local */ }
+        k.topico = row.nome; n.ren++;
+      }
+      ciclo.canon[k.id] = 1;
+      if (row.seca) {
+        await dbStatus('topicos', [k.id], 'Inativo');
+        p.topicos[k.id] = { nome: row.nome, materia: k.materia, motivo: 'Lei Seca (fora da Teoria da Meta)', t: Date.now() };
+        n.seca++;
+        continue;
+      }
+      delete p.topicos[k.id];
+      if (k.status !== 'Ativo') await dbStatus('topicos', [k.id], 'Ativo');
+      if (it.falta > 0) {
+        const ac = Math.min(it.falta, it.acFalta);
+        const sessao = {
+          id: gerarId_('SES'), data_sessao: hoje, id_materia: k.idMateria, materia: k.materia, id_topico: k.id, topico: row.nome, rodada: 1,
+          questoes_resolvidas: it.falta, acertos: ac, erros: it.falta - ac, aproveitamento_sessao: Number(((ac / it.falta) * 100).toFixed(1)),
+          meta_diaria_epoca: 0, meta_aprov_epoca: 0,
+          observacoes: '[HISTÓRICO DO CURSO ' + fmtData(hoje) + '] resolvidas = exato (curso); acertos/erros = ESTIMATIVA pela barra do curso',
+          tipo_registro: 'Confirmado'
+        };
+        try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('sessoes').upsert(sessao, { onConflict: 'id' }); } catch (e) { /* local */ }
+        n.imp++;
+      }
+      try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('topicos').update({ total_banco: Math.max(row.tot, Number(k.totalBanco || 0)) }).eq('id', k.id); } catch (e) { /* local */ }
+    }
+    p.t = Date.now(); ciclo.t = Date.now();
+    persistirCiclo();
+    try { if (typeof carregarFlashcardsSupabase === 'function') { window.FC_DECK_PAUSADOS = []; await carregarFlashcardsSupabase(); } } catch (e) { /* ignora */ }
+    await atualizarEstadoGeral();
+    atualizarChipTrilha();
+    return n;
+  }
+
+  window.fcxFecharPadronizacao = function () { const m = $('fcxModalPad'); if (m) m.remove(); };
+  window.fcxAbrirPadronizacao = function () {
+    window.fcxFecharPadronizacao();
+    const plano = planoPadronizacao();
+    const linhas = plano.map((it) => {
+      const r = it.row;
+      const st = !it.keeper ? '<span class="text-amber-300">não encontrado — será criado</span>' : 'encontrado: <strong>' + esc(it.keeper.topico) + '</strong> (' + esc(it.keeper.materia) + ', ' + esc(it.keeper.status) + ')';
+      return '<tr class="border-t border-slate-800 align-top"><td class="py-1 pr-2 font-bold ' + (r.seca ? 'text-rose-300' : 'text-white') + '">' + esc(r.nome) + (r.seca ? '<div class="text-[10px] font-normal">Lei Seca → sai da bateria (histórico preservado)</div>' : '') + (r.confirmar ? '<div class="text-[10px] font-normal text-amber-300">' + esc(r.confirmar) + '</div>' : '') + '</td>' +
+        '<td class="py-1 pr-2 text-slate-300">' + st + (it.dups.length ? '<div class="text-amber-300">+ ' + it.dups.length + ' duplicado(s) a mesclar: ' + it.dups.map((d) => esc(d.topico)).join('; ') + '</div>' : '') + '</td>' +
+        '<td class="py-1 text-slate-300 whitespace-nowrap">' + r.res + ' de ' + r.tot + '<div class="text-[10px]">' + (r.seca ? 'não importa' : (it.falta > 0 ? '+' + it.falta + ' q. (≈' + it.acFalta + ' C)' : 'já registrado')) + '</div></td></tr>';
+    }).join('');
+    const box = document.createElement('div');
+    box.id = 'fcxModalPad';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(2,6,23,.88);display:flex;align-items:center;justify-content:center;padding:12px';
+    box.innerHTML = '<div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto p-5 space-y-3">' +
+      '<div class="flex items-start justify-between gap-3"><div><h3 class="text-base font-extrabold text-white">Padronizar tópicos e recuperar desempenho</h3>' +
+      '<p class="text-[11px] text-slate-400 mt-1">Pré-visualização: nada foi alterado ainda. Duplicados são mesclados no tópico com mais dados (cartões, sessões e questões migram junto; o duplicado fica inativo, nada é apagado). Questões resolvidas e totais vêm do curso (exatos). Acertos/erros por caderno são <strong>estimados pela barra</strong> e fecham em 517 C / 198 E; ficam marcados como estimativa na sessão criada. Só entra o que faltar em relação ao que já existe — nunca se reduz nem duplica histórico.</p></div>' +
+      '<button type="button" onclick="fcxFecharPadronizacao()" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-xs">Fechar</button></div>' +
+      '<table class="w-full text-[11px]"><thead><tr class="text-left text-slate-400"><th>Nome padrão (curso)</th><th>No sistema</th><th>Questões</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
+      '<div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800"><button type="button" onclick="fcxAplicarPadronizacao()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">Aplicar padronização</button>' +
+      '<button type="button" onclick="fcxFecharPadronizacao()" class="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 text-xs">Cancelar</button></div></div>';
+    document.body.appendChild(box);
+  };
+  window.fcxAplicarPadronizacao = async function () {
+    window.fcxFecharPadronizacao();
+    const n = await aplicarPadronizacao();
+    aviso('Padronização concluída: ' + n.ren + ' renomeado(s), ' + n.mescl + ' duplicado(s) mesclado(s), ' + n.imp + ' histórico(s) de questões recuperado(s), ' + n.seca + ' de Lei Seca fora da bateria, ' + n.criados + ' criado(s).');
+  };
+  function montarBotaoPadronizar() {
+    if ($('fcxBtnPad') || typeof document.querySelector !== 'function') return;
+    const ref = $('fcxBtnLeiSeca');
+    if (!ref || !ref.parentNode) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.id = 'fcxBtnPad';
+    b.className = 'px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-[11px] transition';
+    b.textContent = 'Padronizar tópicos e questões';
+    b.setAttribute('onclick', 'fcxAbrirPadronizacao()');
+    ref.parentNode.insertBefore(b, ref);
+  }
+
   /* ========================================================================
    * INICIALIZAÇÃO
    * ======================================================================== */
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    get ciclo() { return ciclo; }, planoTrilha, aplicarPlanoTrilha, desfazerTrilha, migrarDatasF, inferirDataCelula, transferirPendencias, htmlPendencias, htmlPainelDia, metaVista, temProgresso, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
+    get ciclo() { return ciclo; }, planoPadronizacao, aplicarPadronizacao, planoTrilha, aplicarPlanoTrilha, desfazerTrilha, migrarDatasF, inferirDataCelula, transferirPendencias, htmlPendencias, htmlPainelDia, metaVista, temProgresso, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
     inicializarUI();
-    try { montarBotaoTrilha(); avisoInicialTrilha(); } catch (e) { /* ignora */ }
+    try { montarBotaoTrilha(); montarBotaoPadronizar(); avisoInicialTrilha(); } catch (e) { /* ignora */ }
     if (typeof renderizarDashboardCronograma === 'function' && CRON_METAS && CRON_METAS.length) {
       CRON_METAS.forEach(derivarStatusMeta);
       renderizarDashboardCronograma();
