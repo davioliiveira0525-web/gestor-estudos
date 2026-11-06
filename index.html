@@ -15216,6 +15216,15 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     normalizarPartesPorPdf(m);
     const n = m.totalPartes;
     const hoje = hojeYMD();
+    m.subtopicos.forEach((st, i) => {
+      for (let p = 0; p < n; p++) {
+        const c0 = st.partesStatus[p];
+        if (c0.concluida && !c0.data && celulaExigida(st, n, p)) {
+          c0.data = inferirDataCelula(m, p, i);
+          try { ciclo.inferidas = ciclo.inferidas || {}; ciclo.inferidas[m.id + '|' + p + '|' + i] = 1; } catch (e) { /* ignora */ }
+        }
+      }
+    });
     m.subtopicos.forEach((st) => {
       let todas = true;
       let ultima = '';
@@ -15250,10 +15259,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const alguem = m.subtopicos.some((st) => st.partesStatus.some((c, p) => c.concluida && celulaExigida(st, n, p)));
     m.status = completa ? 'Concluído' : (alguem ? 'Em Andamento' : 'Pendente');
     if (completa) {
-      if (!m.dataConclusao) {
-        const datas = m.subtopicos.map((s) => s.dataConclusao).filter(Boolean).sort();
-        m.dataConclusao = datas.length ? datas[datas.length - 1] : hoje;
-      }
+      const datas = m.subtopicos.map((s) => s.dataConclusao).filter(Boolean).sort();
+      if (datas.length) m.dataConclusao = datas[datas.length - 1];
+      else if (!m.dataConclusao) m.dataConclusao = ontemYMD();
     } else {
       m.dataConclusao = '';
     }
@@ -15393,7 +15401,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       '<div class="min-w-0 flex-1">' +
       '<div class="text-xs font-extrabold truncate ' + (c ? 'text-emerald-300 line-through opacity-80' : 'text-white') + '" title="' + esc(st.nome) + '">' + esc(st.nome) + '</div>' +
       '<div class="text-[10px] text-slate-400">' + (pag > 0 ? pag + ' pág. nesta parte' : 'Parte sem contagem de páginas') +
-      (c && cel.data ? ' • concluída em ' + fmtData(cel.data) : '') + (contexto ? ' • ' + esc(contexto) : '') + '</div>' +
+      (contexto ? ' • ' + esc(contexto) : '') + '</div>' +
+      (c ? '<div class="text-[10px] text-slate-400 flex flex-wrap items-center gap-1">Concluída em <input type="date" value="' + (cel.data || '') + '" max="' + hojeYMD() + '" onchange="fcxAlterarDataCelula(\'' + m.id + '\',' + p + ',' + i + ',this.value)" class="rounded border px-1 py-0 text-[10px] font-bold" style="background:#0f172a;color:#e2e8f0;border-color:#334155">' +
+        ((ciclo.inferidas && ciclo.inferidas[m.id + '|' + p + '|' + i]) ? '<span class="text-amber-400">(data estimada — corrija se precisar)</span>' : '') + '</div>' : '') +
       '<div class="text-[10px] text-slate-500">PDF: ' + prog.lidas + '/' + prog.total + ' pág. (' + prog.pct + '%)</div></div>' +
       '<button type="button" onclick="alternarConclusaoCelulaCron(\'' + m.id + '\',' + p + ',' + i + ',' + (!c) + ')" class="px-2 py-1 rounded-lg text-[10px] font-extrabold shrink-0 ' +
       (c ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700' : 'bg-emerald-600 hover:bg-emerald-500 text-white') + '">' + (c ? 'Desfazer' : 'Concluí esta parte') + '</button></div>';
@@ -15457,8 +15467,10 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (lista) {
       let html = '';
       if (plano.pendencias.length) {
-        html += '<div class="text-[10px] font-extrabold uppercase text-amber-400">Pendências de dias anteriores (' + plano.pendencias.length + ')</div>' +
-          plano.pendencias.map((x) => htmlLinhaCelula(x.m, x.p, x.i, x.m.materia + ' • Meta ' + x.m.numeroMeta + ' • iniciada em ' + fmtData(x.desde))).join('');
+        html += '<div class="flex flex-wrap items-center justify-between gap-2"><span class="text-[10px] font-extrabold uppercase text-rose-400">⚠ Pendências de dias anteriores (' + plano.pendencias.length + ')</span>' +
+          (plano.pendencias.some((x) => !x.transferida) ? '<button type="button" onclick="fcxTransferirTodasPendencias()" class="px-2 py-1 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-[10px] font-extrabold">Transferir todas para hoje</button>' : '') + '</div>' +
+          plano.pendencias.map((x) => '<div class="rounded-lg border border-rose-700 bg-rose-950/30 p-1 space-y-1">' + htmlLinhaCelula(x.m, x.p, x.i, x.m.materia + ' • Meta ' + x.m.numeroMeta + ' • atrasada desde ' + fmtData(x.desde)) +
+            (x.transferida ? '<div class="text-[10px] text-emerald-300 px-1">Já transferida para hoje</div>' : '<button type="button" onclick="fcxTransferirPendencia(\'' + x.m.id + '\',' + x.p + ',' + x.i + ')" class="px-2 py-1 rounded bg-rose-700 hover:bg-rose-600 text-white text-[10px] font-extrabold">Transferir para hoje</button>') + '</div>').join('');
       }
       if (plano.hoje) {
         html += '<div class="text-[10px] font-extrabold uppercase text-indigo-400 pt-1">Hoje — Meta ' + plano.hoje.m.numeroMeta + ' • Parte ' + (plano.hoje.p + 1) + '</div>' +
@@ -15597,7 +15609,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         vinculo: { area: 'CRONOGRAMA', idMeta: m.id, idxParte: p, idxPdf: i },
         detalhe: (desde ? 'Pendência desde ' + fmtData(desde) + ' • ' : '') + 'Semana ' + String(m.numeroSemana).padStart(2, '0') + ' • Meta ' + m.numeroMeta + ' • Parte ' + (p + 1) + '/' + m.totalPartes
       });
-      plano.pendencias.forEach((x) => lista.push(mk(x.m, x.p, x.i, x.st, x.pag, x.desde)));
+      plano.pendencias.filter((x) => x.transferida).forEach((x) => lista.push(mk(x.m, x.p, x.i, x.st, x.pag, x.desde)));
       plano.hojeLista.forEach(({ m, p }) => {
         m.subtopicos.forEach((st, i) => {
           if (celulaExigida(st, m.totalPartes, p) && !st.partesStatus[p].concluida) lista.push(mk(m, p, i, st, cotaCelula(st, m.totalPartes, p), ''));
@@ -15672,6 +15684,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
   /* A divisão em blocos original continua igual. Aqui só se "congela" quais cartões pertencem a cada bloco,
      para que um cartão não mude de bloco quando a ordem por erros muda; dentro do bloco a ordem segue os erros. */
+  const memoRecon = {};
   envolver('construirEstruturaBlocosFiltroAtual_', (orig, cards) => {
     lerCicloDaNuvem();
     const chave = obterChaveFiltroAtualBlocos_();
@@ -15714,21 +15727,29 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       b.totalBloco = b.cardsOriginais.length;
     });
     /* recupera o que já foi estudado (desempenho registrado nos cartões) uma única vez por conjunto de blocos */
-    if (chave.indexOf('E__') === 0 && !sv && !ciclo.recon[chave]) {
-      const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
-      const per = typeof periodoAtual === 'function' ? periodoAtual() : null;
-      const ini = per ? per.inicio : '';
-      blocos.forEach((b) => {
-        b.cardsOriginais.forEach((c) => {
-          const t = tel[c.id];
-          const estudado = c.totalRevisoes > 0 && (!t || !t.ultimaDataEstudo || !ini || t.ultimaDataEstudo >= ini);
-          if (!estudado) return;
-          b.respondidosSet[c.id] = true; b.dominadosSet[c.id] = true; b.acertosPorCard[c.id] = Math.max(1, Number(FC_CRITERIO_DOMINIO) || 1);
+    if (chave.indexOf('E__') === 0 && ciclo.recon[chave] !== 'reset') {
+      const memo = chave + '|' + blocos.reduce((a, b) => a + b.cardsOriginais.length, 0) + '|' + hojeYMD();
+      if (memoRecon[chave] !== memo) {
+        memoRecon[chave] = memo;
+        const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
+        const idMeta = chave.split('__')[1];
+        const mm = (CRON_METAS || []).concat(window.CRON_METAS_OCULTAS || []).find((x) => x.id === idMeta);
+        let ini = mm ? inicioDaMeta(mm) : '';
+        if (!ini) { const per = typeof periodoAtual === 'function' ? periodoAtual() : null; ini = per ? per.inicio : ''; }
+        let mudou = false;
+        blocos.forEach((b) => {
+          b.cardsOriginais.forEach((c) => {
+            const t = tel[c.id];
+            const estudado = c.totalRevisoes > 0 && (!t || !t.ultimaDataEstudo || !ini || t.ultimaDataEstudo >= ini);
+            if (!estudado || b.dominadosSet[c.id]) return;
+            b.respondidosSet[c.id] = true; b.dominadosSet[c.id] = true; b.acertosPorCard[c.id] = Math.max(1, Number(FC_CRITERIO_DOMINIO) || 1);
+            mudou = true;
+          });
+          b.concluido = b.concluido || (b.cardsOriginais.length > 0 && b.cardsOriginais.every((c) => b.dominadosSet[c.id]));
         });
-        b.concluido = b.cardsOriginais.length > 0 && b.cardsOriginais.every((c) => b.dominadosSet[c.id]);
-      });
-      ciclo.recon[chave] = true;
-      salvarBlocos();
+        ciclo.recon[chave] = true;
+        if (mudou) salvarBlocos();
+      }
     }
     return blocos;
   });
@@ -15742,7 +15763,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const chave = obterChaveFiltroAtualBlocos_();
     delete ciclo.blocos[chave];
     delete ciclo.comp[chave];
-    ciclo.recon[chave] = true;
+    ciclo.recon[chave] = 'reset';
     persistirCiclo();
     return orig();
   });
@@ -15879,7 +15900,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       if (!meta) meta = (pl.pendencias[0] && pl.pendencias[0].m) || (pl.proximos[0] && pl.proximos[0].m) || null;
       if (meta) {
         const datas = meta.detalhesPartes.map((p) => p.dataPlanejada).filter(Boolean).sort();
-        const inicio = datas[0] || hoje;
+        const inicio = inicioDaMeta(meta) || datas[0] || hoje;
         const fim = datas[datas.length - 1] || hoje;
         const dias = diffDias(fim, inicio) + 1;
         const dia = Math.min(dias, Math.max(1, diffDias(hoje, inicio) + 1));
@@ -16068,7 +16089,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const topo = $('fcxEstudosTopo');
     if (!topo) return;
     const per = periodoAtual();
-    if (!per) { topo.innerHTML = '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-400">Nenhuma meta do cronograma encontrada para este período.</div>'; return; }
+    const painelDia = htmlPainelDia();
+    if (!per) { topo.innerHTML = painelDia + '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-400">Nenhuma meta do cronograma encontrada para este período.</div>'; return; }
     const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
     const cards = FC_DECK.filter((c) => per.permitidos.has(c.idTopico) && (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS'));
     const estud = cards.filter((c) => c.totalRevisoes > 0);
@@ -16106,7 +16128,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         '<select onchange="fcxVincularTopicoNome(\'' + esc(nome).replace(/'/g, '') + '\', this.value)" class="rounded border px-2 py-1 font-bold"><option value="">Escolher...</option>' +
         todos.map((t) => '<option value="' + t.id + '">' + esc(t.topico) + '</option>').join('') + '</select></div>').join('');
     }
-    topo.innerHTML = '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">' +
+    topo.innerHTML = painelDia + '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">' +
       '<div class="flex flex-wrap items-center justify-between gap-2"><div><span class="text-[10px] font-extrabold uppercase text-emerald-400">Estatísticas da meta atual</span>' +
       '<h3 class="text-sm font-extrabold text-white">Meta ' + per.meta.numeroMeta + ' • ' + esc(per.topicos.map((x) => x.nome).join(' + ')) + '</h3></div>' +
       '<span class="px-2.5 py-1 rounded-lg bg-indigo-950 border border-indigo-800 text-indigo-200 text-[11px] font-extrabold">' + esc(fmtData(per.inicio)) + ' a ' + esc(fmtData(per.fim)) + ' • Dia ' + per.dia + ' de ' + per.dias + '</span></div>' +
@@ -16375,15 +16397,15 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         if (!pt.dataPlanejada && salvo[p]) pt.dataPlanejada = salvo[p];
         if (!pt.dataPlanejada) {
           const inf = infoSlot(m, p);
-          if (concluidaMeta || (inf.todas && inf.ult && inf.ult < hoje)) {
-            pt.dataPlanejada = inf.ult || m.dataConclusao || hoje;
+          if (concluidaMeta || inf.todas) {
+            pt.dataPlanejada = inf.ult || m.dataConclusao || ontemYMD();
           } else {
             const base = Math.max(cursor == null ? -Infinity : cursor, diasDe(hoje));
             pt.dataPlanejada = deDias(Math.round(base));
           }
           alterou = true;
         }
-        if (!concluidaMeta) {
+        if (!concluidaMeta && !infoSlot(m, p).todas) {
           const ds = diasDe(pt.dataPlanejada);
           cursor = Math.max(cursor == null ? -Infinity : cursor, ds + dpp);
         }
@@ -16404,6 +16426,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
   function planoDeHoje() {
     const hoje = hojeYMD();
+    migrarDatasF();
     garantirPlanoFixo();
     const pendencias = [];
     const hojeLista = [];
@@ -16415,7 +16438,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         const data = pt.dataPlanejada || hoje;
         const pend = celulasPendentesDoSlot(m, p);
         if (!pend.length) { if (data === hoje) previstasHojeConcluidas.push({ m, p }); return; }
-        if (data < hoje) pend.forEach(({ i, st }) => pendencias.push({ m, p, i, st, pag: cotaCelula(st, m.totalPartes, p), desde: data }));
+        if (data < hoje) pend.forEach(({ i, st }) => pendencias.push({ m, p, i, st, pag: cotaCelula(st, m.totalPartes, p), desde: data, transferida: ciclo.transf && ciclo.transf[m.id + '|' + p + '|' + i] === hoje }));
         else if (data === hoje) hojeLista.push({ m, p });
         else futuros.push({ m, p, data });
       });
@@ -16486,6 +16509,12 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       AG_STATE.atividades = AG_STATE.atividades.filter((a) => {
         const v = a && a.vinculo;
         if (!v || v.area !== 'CRONOGRAMA') return true;
+        const mC = CRON_METAS.find((x) => x.id === v.idMeta);
+        if (mC && a.data >= hoje && !a.concluidaManual && !Number(a.segundosEstudados || 0) && Number.isInteger(v.idxParte) && Number.isInteger(v.idxPdf)) {
+          const stC = mC.subtopicos && mC.subtopicos[v.idxPdf];
+          const celC = stC && stC.partesStatus && stC.partesStatus[v.idxParte];
+          if (mC.status === 'Concluído' || (celC && celC.concluida)) return false;
+        }
         if (agAtividadeConcluida_(a) || Number(a.segundosEstudados || 0) > 0) return true;
         const m = CRON_METAS.find((x) => x.id === v.idMeta);
         const plan = m && m.detalhesPartes[v.idxParte] && m.detalhesPartes[v.idxParte].dataPlanejada;
@@ -16662,6 +16691,21 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return out.filter(Boolean);
   };
 
+  const cardsDoTopico = (t) => {
+    const id = t && t.id;
+    return (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK) ? FC_DECK : []).filter((c) => c.idTopico === id).length +
+      (window.FC_DECK_PAUSADOS || []).filter((c) => c.idTopico === id).length;
+  };
+  const temProgresso = (t) => Boolean(t) && (cardsDoTopico(t) > 0 || Number(t.resolvidasTotal || 0) > 0);
+  /* "visto" = já iniciado, concluído, agendado até hoje ou com blocos de estudo salvos (não só o 100% concluído) */
+  function metaVista(m) {
+    try { derivarStatusMeta(m); } catch (e) { /* ignora */ }
+    const hoje = hojeYMD();
+    if (m.status !== 'Pendente') return true;
+    if ((m.detalhesPartes || []).some((pt) => pt.dataPlanejada && pt.dataPlanejada <= hoje)) return true;
+    return Object.keys((ciclo && ciclo.blocos) || {}).some((k) => k.indexOf('E__' + m.id + '__') === 0);
+  }
+
   function subConcluido(m, st) {
     if (m.status === 'Concluído' || st.concluido) return true;
     let exigidas = 0, feitas = 0;
@@ -16674,6 +16718,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
 
   function planoTrilha() {
+    try { migrarDatasF(); garantirPlanoFixo(); } catch (e) { /* ignora */ }
     const entradas = trilhaAtual();
     const metas = (CRON_METAS || []).concat(window.CRON_METAS_OCULTAS || []).filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
     metas.forEach((m) => { try { derivarStatusMeta(m); } catch (e) { /* ignora */ } });
@@ -16711,14 +16756,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     });
     entradas.forEach((e) => {
       e.metas = metasFicam.filter((m) => (m.__entradas || []).indexOf(e) >= 0);
-      e.estudada = e.metas.some((m) => {
-        const subs = (m.subtopicos || []).filter((st) => casa(st.nome, e.nome));
-        return subs.length ? subs.every((st) => subConcluido(m, st)) : m.status === 'Concluído';
-      });
+      e.estudada = e.metas.some((m) => metaVista(m));
       e.materia = ((ESTADO && ESTADO.materias) || []).find((x) => (x.status === 'Ativo' || (ciclo.pausa && ciclo.pausa.materias && ciclo.pausa.materias[x.id])) && mesmaMateria(x.nome, e.materiaRaw)) || null;
       e.topico = null;
     });
-    const topicos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || regT[t.id]);
+    const topicos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || regT[t.id] || cardsDoTopico(t) > 0);
     const pares = [];
     entradas.forEach((e) => {
       topicos.filter((t) => (e.materia ? t.idMateria === e.materia.id : mesmaMateria(t.materia, e.materiaRaw))).forEach((t) => { const sc = pontuar(t.topico, e.nome); if (sc >= 1) pares.push({ e, t, sc }); });
@@ -16727,6 +16769,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const usadosT = new Set();
     pares.forEach((p) => { if (p.e.topico || usadosT.has(p.t.id)) return; p.e.topico = p.t; usadosT.add(p.t.id); });
     const criar = [], renomear = [], semMateria = [], futuros = [], manter = [];
+    entradas.forEach((e) => { if (!e.estudada && e.topico && temProgresso(e.topico)) e.estudada = true; });
     entradas.forEach((e) => {
       if (e.estudada) {
         if (e.topico) { manter.push(e); if (nn(e.topico.topico) !== nn(e.nome)) renomear.push(e); }
@@ -16734,9 +16777,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         else semMateria.push(e);
       } else if (e.topico) futuros.push(e);
     });
-    const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo'));
-    const reativar = entradas.filter((e) => e.estudada && e.topico && e.topico.status !== 'Ativo');
-    return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar };
+    const protegido = (t) => temProgresso(t) && conteudo.some((m) => metaVista(m) && nomesDaMeta(m).some((c) => casa(c, t.topico)));
+    const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo') && !protegido(t));
+    const reativar = entradas.filter((e) => e.estudada && e.topico && (e.topico.status !== 'Ativo' || regT[e.topico.id]));
+    const reativarIds = topicos.filter((t) => !usadosT.has(t.id) && protegido(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id);
+    return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar, reativarIds };
   }
   window.__FCX_PLANO_TRILHA__ = planoTrilha;
 
@@ -16781,11 +16826,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       nTop++;
     }
     /* ativar / pausar tópicos */
-    const ativar = plano.reativar.map((e) => e.topico.id);
+    const ativar = plano.reativar.map((e) => e.topico.id).concat(plano.reativarIds || []).filter((x, i, a) => a.indexOf(x) === i);
     ativar.forEach((id) => { delete p.topicos[id]; });
     await dbStatus('topicos', ativar, 'Ativo');
     const pausarFora = plano.fora.map((t) => ({ t, motivo: 'fora da trilha' }));
-    const pausarFut = plano.futuros.filter((e) => e.topico.status === 'Ativo').map((e) => ({ t: e.topico, motivo: 'ainda não estudado na trilha' }));
+    const pausarFut = plano.futuros.filter((e) => e.topico.status === 'Ativo' && !temProgresso(e.topico)).map((e) => ({ t: e.topico, motivo: 'ainda não estudado na trilha' }));
     const lote = pausarFora.concat(pausarFut);
     lote.forEach(({ t, motivo }) => { p.topicos[t.id] = { nome: t.topico, materia: t.materia, motivo, t: agora }; });
     await dbStatus('topicos', lote.map((x) => x.t.id), 'Inativo');
@@ -16802,6 +16847,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     p.t = agora; ciclo.t = agora;
     persistirCiclo();
     filtrarMetasOcultas();
+    if (ativar.length) { try { if (typeof carregarFlashcardsSupabase === 'function') { window.FC_DECK_PAUSADOS = []; await carregarFlashcardsSupabase(); } } catch (er) { /* ignora */ } }
     filtrarDeckPausado();
     const nAg = limparAgendaPausada();
     if (mudouCron) await compactarCronograma();
@@ -16845,7 +16891,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     timerSync = setTimeout(async () => {
       try {
         const pl = planoTrilha();
-        if (pl.criar.length || pl.reativar.length || pl.futuros.some((e) => e.topico.status === 'Ativo') || pl.metasSair.length) {
+        if (pl.criar.length || pl.reativar.length || (pl.reativarIds && pl.reativarIds.length) || pl.futuros.some((e) => e.topico.status === 'Ativo' && !temProgresso(e.topico)) || pl.metasSair.length) {
           await aplicarPlanoTrilha(pl, { silencioso: true });
           aviso('Trilha sincronizada com o que você já estudou.');
         }
@@ -16989,7 +17035,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v3';
+  const VERSAO_TRILHA = 'Trilha 06/11 v4';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17016,7 +17062,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
           await aplicarPlanoTrilha(planoTrilha(), {});
         } else if (ciclo.trilha && ciclo.trilha.ativo) {
           const pl = planoTrilha();
-          if (pl.criar.length || pl.reativar.length || pl.futuros.some((e) => e.topico.status === 'Ativo')) await aplicarPlanoTrilha(pl, { silencioso: true });
+          if (pl.criar.length || pl.reativar.length || (pl.reativarIds && pl.reativarIds.length) || pl.futuros.some((e) => e.topico.status === 'Ativo' && !temProgresso(e.topico))) await aplicarPlanoTrilha(pl, { silencioso: true });
         }
         const ativa = ciclo.trilha && ciclo.trilha.ativo;
         const n = planoTrilha().entradas.filter((e) => e.estudada).length;
@@ -17025,13 +17071,243 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     }, 2000);
   }
 
+
+  /* ========================================================================
+   * F. DATAS REAIS · PENDÊNCIAS EM VERMELHO · TRANSFERÊNCIA PARA HOJE
+   * ======================================================================== */
+  function ontemYMD() { return deDias(diasDe(hojeYMD()) - 1); }
+
+  function inicioDaMeta(m) {
+    const ds = [];
+    (m.detalhesPartes || []).forEach((pt) => { if (pt.dataPlanejada) ds.push(pt.dataPlanejada); });
+    (m.subtopicos || []).forEach((st) => (st.partesStatus || []).forEach((c) => { if (c && c.concluida && c.data) ds.push(c.data); }));
+    ds.sort();
+    return ds[0] || '';
+  }
+
+  /* data de conclusão quando o registro antigo não guardou (evidências na ordem: agenda → parte → meta → plano → ontem) */
+  function inferirDataCelula(m, p, i) {
+    const hoje = hojeYMD();
+    try {
+      const ags = (typeof AG_STATE !== 'undefined' && AG_STATE && AG_STATE.atividades) || [];
+      const a = ags.filter((x) => x.vinculo && x.vinculo.area === 'CRONOGRAMA' && x.vinculo.idMeta === m.id && x.vinculo.idxParte === p &&
+        (x.vinculo.idxPdf === i || x.vinculo.idxPdf == null) && (x.concluidaManual || Number(x.segundosEstudados || 0) > 0) && x.data && x.data < hoje)
+        .sort((u, v) => v.data.localeCompare(u.data))[0];
+      if (a) return a.data;
+    } catch (e) { /* ignora */ }
+    const pt = m.detalhesPartes && m.detalhesPartes[p];
+    if (pt && pt.dataConclusaoParte && pt.dataConclusaoParte < hoje) return pt.dataConclusaoParte;
+    if (m.dataConclusao && m.dataConclusao < hoje) return m.dataConclusao;
+    if (pt && pt.dataPlanejada && pt.dataPlanejada < hoje) return pt.dataPlanejada;
+    return ontemYMD();
+  }
+
+  function evidenciaHoje(m, st, p) {
+    const hoje = hojeYMD();
+    return (st.historicoConclusao || []).some((h) => h && h.acao === 'PARTE_CONCLUIDA' && Number(h.parte) === p + 1 && h.data === hoje);
+  }
+
+  async function salvarMetasLote(lista) {
+    try {
+      if (lista.length && typeof supabaseClient !== 'undefined' && supabaseClient) {
+        await supabaseClient.from('cronograma_metas').upsert(lista.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+      }
+    } catch (e) { /* mantém local */ }
+  }
+
+  /* migração única: conclusões gravadas como "hoje" sem prova viram a data real (dia anterior) e o plano recomeça de hoje */
+  let migrando = false;
+  function migrarDatasF() {
+    try {
+      if (migrando || !Array.isArray(CRON_METAS) || !CRON_METAS.length) return;
+      const pronto = window.CRON_CARREGADO_NUVEM || typeof supabaseClient === 'undefined' || !supabaseClient;
+      if (!pronto) return;
+      ciclo.mig = ciclo.mig || {};
+      if (ciclo.mig.d1) return;
+      migrando = true;
+      ciclo.mig.d1 = Date.now();
+      ciclo.plano = ciclo.plano || {};
+      const hoje = hojeYMD();
+      const mud = new Set();
+      CRON_METAS.forEach((m) => {
+        normalizarPartesPorPdf(m);
+        m.subtopicos.forEach((st, i) => st.partesStatus.forEach((cel, p) => {
+          if (!cel.concluida || !celulaExigida(st, m.totalPartes, p)) return;
+          if (cel.data === hoje && !evidenciaHoje(m, st, p)) { cel.data = ''; cel.data = inferirDataCelula(m, p, i); mud.add(m); try { ciclo.inferidas = ciclo.inferidas || {}; ciclo.inferidas[m.id + '|' + p + '|' + i] = 1; } catch (e) { /* ignora */ } }
+        }));
+        if (m.dataConclusao === hoje) { m.dataConclusao = ''; mud.add(m); }
+        derivarStatusMeta(m);
+        m.detalhesPartes.forEach((pt, p) => {
+          const inf = infoSlot(m, p);
+          if (inf.todas && inf.ult) {
+            if (!pt.dataPlanejada || pt.dataPlanejada > inf.ult) { pt.dataPlanejada = inf.ult; mud.add(m); }
+          } else if (m.status !== 'Concluído' && pt.dataPlanejada && pt.dataPlanejada >= hoje && celulasPendentesDoSlot(m, p).length) {
+            pt.dataPlanejada = ''; mud.add(m);
+          }
+          if (ciclo.plano[m.id]) ciclo.plano[m.id][p] = pt.dataPlanejada || '';
+        });
+      });
+      ciclo.t = Date.now();
+      persistirCiclo();
+      garantirPlanoFixo().forEach((m) => mud.add(m));
+      persistirCiclo();
+      salvarMetasLote(Array.from(mud));
+      setTimeout(() => { try { renderizarDashboardCronograma(); renderizarListaSemanasCronograma(); } catch (e) { /* ignora */ } }, 0);
+    } catch (e) { /* ignora */ } finally { migrando = false; }
+  }
+
+  window.fcxAlterarDataCelula = async function (idMeta, p, i, valor) {
+    const m = (CRON_METAS || []).find((x) => x.id === idMeta);
+    if (!m || !valor) return;
+    normalizarPartesPorPdf(m);
+    const cel = m.subtopicos[i] && m.subtopicos[i].partesStatus[p];
+    if (!cel || !cel.concluida) return;
+    cel.data = valor > hojeYMD() ? hojeYMD() : valor;
+    try { delete ciclo.inferidas[idMeta + '|' + p + '|' + i]; } catch (e) { /* ignora */ }
+    derivarStatusMeta(m);
+    m.detalhesPartes.forEach((pt, q) => { const inf = infoSlot(m, q); if (inf.todas && inf.ult) { pt.dataPlanejada = inf.ult; if (ciclo.plano && ciclo.plano[m.id]) ciclo.plano[m.id][q] = inf.ult; } });
+    garantirPlanoFixo();
+    persistirCiclo();
+    await salvarMetasLote([m]);
+    atualizarTudoF();
+  };
+
+  /* ---- pendências ---- */
+  const chavePend = (m, p, i) => m.id + '|' + p + '|' + i;
+
+  function moverAtividadesParaHoje(lista) {
+    try {
+      if (typeof AG_STATE === 'undefined' || !AG_STATE || !Array.isArray(AG_STATE.atividades)) return 0;
+      const hoje = hojeYMD();
+      const inicioMin = typeof agMinutosAgora_ === 'function' ? Math.ceil(agMinutosAgora_() / 5) * 5 : 8 * 60;
+      let n = 0;
+      lista.forEach((x) => {
+        const origem = 'SYS_CONT_' + x.m.id + '_' + x.i + '_P' + x.p;
+        AG_STATE.atividades.forEach((a) => {
+          if (a.origemSistemaId !== origem || !a.data || a.data >= hoje || agAtividadeConcluida_(a)) return;
+          if (!Array.isArray(a.transferencias)) a.transferencias = [];
+          a.transferencias.push({ de: a.data, para: hoje, em: new Date().toISOString() });
+          a.data = hoje;
+          try { a.inicioMin = encontrarHorarioLivre_(hoje, a.duracaoMin, inicioMin); } catch (e) { /* mantém */ }
+          n++;
+        });
+      });
+      if (n && typeof salvarEstadoAgendaStorage_ === 'function') salvarEstadoAgendaStorage_();
+      return n;
+    } catch (e) { return 0; }
+  }
+
+  function atualizarTudoF() {
+    try { atualizarPainelDoDia(); } catch (e) { /* ignora */ }
+    try { if (typeof renderizarDashboardCronograma === 'function') { renderizarDashboardCronograma(); renderizarListaSemanasCronograma(); } } catch (e) { /* ignora */ }
+    try { if (abaAq === 'estudos') renderizarEstatisticasMeta(); } catch (e) { /* ignora */ }
+    try { if (typeof renderizarAgendaCompletaUI === 'function') renderizarAgendaCompletaUI(); } catch (e) { /* ignora */ }
+  }
+
+  function transferirPendencias(lista) {
+    if (!lista.length) return 0;
+    const hoje = hojeYMD();
+    ciclo.transf = ciclo.transf || {};
+    Object.keys(ciclo.transf).forEach((k) => { if (ciclo.transf[k] !== hoje) delete ciclo.transf[k]; });
+    lista.forEach((x) => { ciclo.transf[chavePend(x.m, x.p, x.i)] = hoje; });
+    ciclo.t = Date.now();
+    persistirCiclo();
+    moverAtividadesParaHoje(lista);
+    try { if (typeof sincronizarPlanejamentoDiario3Areas === 'function') sincronizarPlanejamentoDiario3Areas(false); } catch (e) { /* ignora */ }
+    atualizarTudoF();
+    aviso(lista.length + ' pendência(s) transferida(s) para hoje.');
+    return lista.length;
+  }
+
+  window.fcxTransferirPendencia = function (idMeta, p, i) {
+    const pl = planoDeHoje();
+    const x = pl.pendencias.find((y) => y.m.id === idMeta && y.p === p && y.i === i);
+    if (x) transferirPendencias([x]);
+  };
+  window.fcxTransferirTodasPendencias = function () {
+    transferirPendencias(planoDeHoje().pendencias.filter((x) => !x.transferida));
+  };
+
+  function htmlLinhaPend(x) {
+    return '<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg border border-rose-700 bg-rose-950/40 text-[11px]">' +
+      '<div class="min-w-0"><div class="font-extrabold text-rose-200 truncate">' + esc(x.st.nome) + '</div>' +
+      '<div class="text-rose-300/80">' + esc(x.m.materia) + ' • Semana ' + String(x.m.numeroSemana).padStart(2, '0') + ' • Meta ' + x.m.numeroMeta + ' • Parte ' + (x.p + 1) + '/' + x.m.totalPartes + ' • atrasada desde ' + esc(fmtData(x.desde)) + '</div></div>' +
+      (x.transferida ? '<span class="text-emerald-300 font-bold">Transferida para hoje</span>' :
+        '<button type="button" onclick="fcxTransferirPendencia(\'' + x.m.id + '\',' + x.p + ',' + x.i + ')" class="px-2 py-1 rounded bg-rose-700 hover:bg-rose-600 text-white font-extrabold">Transferir para hoje</button>') + '</div>';
+  }
+
+  function htmlPendencias() {
+    let pl;
+    try { pl = planoDeHoje(); } catch (e) { return ''; }
+    const lista = pl.pendencias.filter((x) => !x.transferida);
+    if (!lista.length) return '';
+    return '<div class="rounded-xl border border-rose-600 bg-rose-950/30 p-3 space-y-2"><div class="flex flex-wrap items-center justify-between gap-2">' +
+      '<span class="text-[11px] font-extrabold uppercase text-rose-300">⚠ ' + lista.length + ' pendência(s) de dias anteriores</span>' +
+      '<button type="button" onclick="fcxTransferirTodasPendencias()" class="px-2.5 py-1 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-[11px] font-extrabold">Transferir todas para hoje</button></div>' +
+      lista.map(htmlLinhaPend).join('') + '</div>';
+  }
+
+  /* painel do aba "Estudos do dia": o que está programado hoje + pendências + concluídas */
+  function htmlPainelDia() {
+    let pl;
+    try { pl = planoDeHoje(); } catch (e) { return ''; }
+    const hoje = hojeYMD();
+    const prog = pl.hojeLista.map(({ m, p }) => '<div class="text-[11px] text-slate-200"><span class="font-extrabold text-indigo-300">' + esc(m.materia) + '</span> • Meta ' + m.numeroMeta + ' • Parte ' + (p + 1) + '/' + m.totalPartes + ' — ' +
+      m.subtopicos.filter((st) => celulaExigida(st, m.totalPartes, p)).map((st) => esc(st.nome)).join(' + ') + '</div>').join('');
+    const feitasHoje = [];
+    (CRON_METAS || []).forEach((m) => m.subtopicos.forEach((st) => st.partesStatus.forEach((c, p) => { if (c.concluida && c.data === hoje && celulaExigida(st, m.totalPartes, p)) feitasHoje.push(esc(m.materia) + ' — ' + esc(st.nome) + ' (parte ' + (p + 1) + ')'); })));
+    const transf = pl.pendencias.filter((x) => x.transferida);
+    return '<div class="rounded-xl border border-indigo-700 bg-indigo-950/30 p-3 space-y-1.5"><div class="text-[10px] font-extrabold uppercase text-indigo-300">Programado para hoje • ' + esc(fmtData(hoje)) + '</div>' +
+      (prog || '<div class="text-[11px] text-slate-400">Nada novo programado para hoje.</div>') +
+      (transf.length ? '<div class="text-[10px] font-extrabold uppercase text-amber-300 pt-1">Pendências transferidas para hoje (' + transf.length + ')</div>' + transf.map((x) => '<div class="text-[11px] text-amber-100">' + esc(x.m.materia) + ' — ' + esc(x.st.nome) + ' • Parte ' + (x.p + 1) + ' • desde ' + esc(fmtData(x.desde)) + '</div>').join('') : '') +
+      (feitasHoje.length ? '<div class="text-[10px] font-extrabold uppercase text-emerald-300 pt-1">Concluídas hoje (' + feitasHoje.length + ')</div><div class="text-[11px] text-emerald-100">' + feitasHoje.join('<br>') + '</div>' : '') + '</div>' + htmlPendencias();
+  }
+
+  /* agenda: faixa de pendências + blocos atrasados em vermelho */
+  function atrasada(a) {
+    const hoje = hojeYMD();
+    if (!a || !a.data) return false;
+    if (a.tipo === 'COMPROMISSO') return false;
+    let concl = false;
+    try { concl = agAtividadeConcluida_(a); } catch (e) { concl = false; }
+    if (concl) return false;
+    return a.data < hoje || (a.dataOriginal && a.dataOriginal < hoje && a.data <= hoje);
+  }
+  function pintarAtrasadasAgenda() {
+    try {
+      if (typeof document.querySelectorAll !== 'function' || typeof AG_STATE === 'undefined' || !AG_STATE) return;
+      document.querySelectorAll('[data-atv-id]').forEach((el) => {
+        const a = (AG_STATE.atividades || []).find((x) => x.id === el.getAttribute('data-atv-id'));
+        if (!a || !atrasada(a)) return;
+        el.style.backgroundColor = 'rgba(244,63,94,.32)';
+        el.style.borderLeftColor = '#f43f5e';
+        el.style.boxShadow = 'inset 0 0 0 1px #f43f5e';
+        el.setAttribute('data-atrasada', '1');
+        const t = el.querySelector('.ag-bloco-topico');
+        if (t && t.textContent.indexOf('⚠') !== 0) t.textContent = '⚠ ' + t.textContent;
+        el.title = 'ATRASADA desde ' + fmtData(a.dataOriginal || a.data) + ' • ' + (el.title || '');
+      });
+    } catch (e) { /* ignora */ }
+  }
+  function faixaPendenciasAgenda() {
+    try {
+      const cont = $('agListaPlanejamento');
+      if (!cont || !cont.parentNode) return;
+      let b = $('fcxPendAgenda');
+      if (!b) { b = document.createElement('div'); b.id = 'fcxPendAgenda'; b.className = 'px-3 py-2'; cont.parentNode.insertBefore(b, cont); }
+      b.innerHTML = htmlPendencias();
+    } catch (e) { /* ignora */ }
+  }
+  envolver('renderizarAgendaCompletaUI', (orig, ...args) => { const r = orig(...args); faixaPendenciasAgenda(); pintarAtrasadasAgenda(); return r; });
+  envolver('renderizarPainelVisualAgenda_', (orig, ...args) => { const r = orig(...args); pintarAtrasadasAgenda(); return r; });
+
   /* ========================================================================
    * INICIALIZAÇÃO
    * ======================================================================== */
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    planoTrilha, aplicarPlanoTrilha, desfazerTrilha, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
+    get ciclo() { return ciclo; }, planoTrilha, aplicarPlanoTrilha, desfazerTrilha, migrarDatasF, inferirDataCelula, transferirPendencias, htmlPendencias, htmlPainelDia, metaVista, temProgresso, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
