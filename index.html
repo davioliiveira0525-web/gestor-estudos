@@ -17584,6 +17584,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
   const VERSAO_TRILHA = 'Trilha 06/11 v18';
   function selo(txt, cor) {
+    /* selo flutuante (canto inferior esquerdo) desativado a pedido; a trilha continua funcionando
+       e os detalhes seguem acessíveis pelo botão da trilha no Cronograma */
+    const antigo = $('fcxSeloTrilha');
+    if (antigo && antigo.parentNode) antigo.parentNode.removeChild(antigo);
+    return;
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
       el = document.createElement('button');
