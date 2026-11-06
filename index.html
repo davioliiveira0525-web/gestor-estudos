@@ -15219,6 +15219,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     m.subtopicos.forEach((st, i) => {
       for (let p = 0; p < n; p++) {
         const c0 = st.partesStatus[p];
+        if (c0.concluida && c0.data === hoje && celulaExigida(st, n, p) && !evidenciaHoje(m, st, p, i)) {
+          c0.data = '';
+        }
         if (c0.concluida && !c0.data && celulaExigida(st, n, p)) {
           c0.data = inferirDataCelula(m, p, i);
           try { ciclo.inferidas = ciclo.inferidas || {}; ciclo.inferidas[m.id + '|' + p + '|' + i] = 1; } catch (e) { /* ignora */ }
@@ -15292,6 +15295,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         const cel = st.partesStatus[p];
         if (Boolean(marcado) === cel.concluida) continue;
         st.partesStatus[p] = { concluida: Boolean(marcado), data: marcado ? hoje : '' };
+        try { ciclo.real = ciclo.real || {}; Object.keys(ciclo.real).forEach((k) => { if (ciclo.real[k] !== hoje) delete ciclo.real[k]; }); const kr = m.id + '|' + p + '|' + i; if (marcado) ciclo.real[kr] = hoje; else delete ciclo.real[kr]; persistirCiclo(); } catch (e) { /* ignora */ }
         if (!Array.isArray(st.historicoConclusao)) st.historicoConclusao = [];
         st.historicoConclusao.push({ acao: marcado ? 'PARTE_CONCLUIDA' : 'PARTE_REABERTA', parte: p + 1, data: hoje, em: new Date().toISOString() });
         if (marcado && !m.detalhesPartes[p].dataInicio) m.detalhesPartes[p].dataInicio = hoje;
@@ -16405,6 +16409,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
           }
           alterou = true;
         }
+        const inf0 = infoSlot(m, p);
+        if (inf0.todas && inf0.ult && inf0.ult < hoje && pt.dataPlanejada === hoje) { pt.dataPlanejada = inf0.ult; alterou = true; }
         if (!concluidaMeta && !infoSlot(m, p).todas) {
           const ds = diasDe(pt.dataPlanejada);
           cursor = Math.max(cursor == null ? -Infinity : cursor, ds + dpp);
@@ -17045,7 +17051,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v6';
+  const VERSAO_TRILHA = 'Trilha 06/11 v7';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17112,8 +17118,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return ontemYMD();
   }
 
-  function evidenciaHoje(m, st, p) {
+  function evidenciaHoje(m, st, p, i) {
     const hoje = hojeYMD();
+    if (ciclo.real && ciclo.real[m.id + '|' + p + '|' + i] === hoje) return true;
     return (st.historicoConclusao || []).some((h) => h && h.acao === 'PARTE_CONCLUIDA' && Number(h.parte) === p + 1 && h.data === hoje);
   }
 
@@ -17143,7 +17150,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         normalizarPartesPorPdf(m);
         m.subtopicos.forEach((st, i) => st.partesStatus.forEach((cel, p) => {
           if (!cel.concluida || !celulaExigida(st, m.totalPartes, p)) return;
-          if (cel.data === hoje && !evidenciaHoje(m, st, p)) { cel.data = ''; cel.data = inferirDataCelula(m, p, i); mud.add(m); try { ciclo.inferidas = ciclo.inferidas || {}; ciclo.inferidas[m.id + '|' + p + '|' + i] = 1; } catch (e) { /* ignora */ } }
+          if (cel.data === hoje && !evidenciaHoje(m, st, p, i)) { cel.data = ''; cel.data = inferirDataCelula(m, p, i); mud.add(m); try { ciclo.inferidas = ciclo.inferidas || {}; ciclo.inferidas[m.id + '|' + p + '|' + i] = 1; } catch (e) { /* ignora */ } }
         }));
         if (m.dataConclusao === hoje) { m.dataConclusao = ''; mud.add(m); }
         derivarStatusMeta(m);
@@ -17173,6 +17180,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const cel = m.subtopicos[i] && m.subtopicos[i].partesStatus[p];
     if (!cel || !cel.concluida) return;
     cel.data = valor > hojeYMD() ? hojeYMD() : valor;
+    if (cel.data === hojeYMD()) { ciclo.real = ciclo.real || {}; ciclo.real[idMeta + '|' + p + '|' + i] = hojeYMD(); }
     try { delete ciclo.inferidas[idMeta + '|' + p + '|' + i]; } catch (e) { /* ignora */ }
     derivarStatusMeta(m);
     m.detalhesPartes.forEach((pt, q) => { const inf = infoSlot(m, q); if (inf.todas && inf.ult) { pt.dataPlanejada = inf.ult; if (ciclo.plano && ciclo.plano[m.id]) ciclo.plano[m.id][q] = inf.ult; } });
@@ -17241,7 +17249,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   function htmlLinhaPend(x) {
     return '<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg border border-rose-700 bg-rose-950/40 text-[11px]">' +
       '<div class="min-w-0"><div class="font-extrabold text-rose-200 truncate">' + esc(x.st.nome) + '</div>' +
-      '<div class="text-rose-300/80">' + esc(x.m.materia) + ' • Semana ' + String(x.m.numeroSemana).padStart(2, '0') + ' • Meta ' + x.m.numeroMeta + ' • Parte ' + (x.p + 1) + '/' + x.m.totalPartes + ' • atrasada desde ' + esc(fmtData(x.desde)) + '</div></div>' +
+      '<div class="text-rose-400">' + esc(x.m.materia) + ' • Semana ' + String(x.m.numeroSemana).padStart(2, '0') + ' • Meta ' + x.m.numeroMeta + ' • Parte ' + (x.p + 1) + '/' + x.m.totalPartes + ' • atrasada desde ' + esc(fmtData(x.desde)) + '</div></div>' +
       (x.transferida ? '<span class="text-emerald-300 font-bold">Transferida para hoje</span>' :
         '<span class="flex flex-wrap gap-1"><button type="button" onclick="fcxTransferirPendencia(\'' + x.m.id + '\',' + x.p + ',' + x.i + ')" class="px-2 py-1 rounded bg-rose-700 hover:bg-rose-600 text-white font-extrabold">Transferir para hoje</button>' +
         '<button type="button" onclick="fcxConcluirPendencia(\'' + x.m.id + '\',' + x.p + ',' + x.i + ')" class="px-2 py-1 rounded border border-emerald-600 text-emerald-300 hover:bg-emerald-950 font-extrabold" title="Já estudei isto: marca como concluída na data planejada (você pode ajustar a data depois)">Já concluí</button></span>') + '</div>';
@@ -17292,8 +17300,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const transf = pl.pendencias.filter((x) => x.transferida);
     return '<div class="rounded-xl border border-indigo-700 bg-indigo-950/30 p-3 space-y-1.5"><div class="text-[10px] font-extrabold uppercase text-indigo-300">Programado para hoje • ' + esc(fmtData(hoje)) + '</div>' +
       (prog || '<div class="text-[11px] text-slate-400">Nada novo programado para hoje.</div>') +
-      (transf.length ? '<div class="text-[10px] font-extrabold uppercase text-amber-300 pt-1">Pendências transferidas para hoje (' + transf.length + ')</div>' + transf.map((x) => '<div class="text-[11px] text-amber-100">' + esc(x.m.materia) + ' — ' + esc(x.st.nome) + ' • Parte ' + (x.p + 1) + ' • desde ' + esc(fmtData(x.desde)) + '</div>').join('') : '') +
-      (feitasHoje.length ? '<div class="text-[10px] font-extrabold uppercase text-emerald-300 pt-1">Concluídas hoje (' + feitasHoje.length + ')</div><div class="text-[11px] text-emerald-100">' + feitasHoje.join('<br>') + '</div>' : '') + '</div>' + htmlPendencias();
+      (transf.length ? '<div class="text-[10px] font-extrabold uppercase text-amber-300 pt-1">Pendências transferidas para hoje (' + transf.length + ')</div>' + transf.map((x) => '<div class="text-[11px] text-amber-400">' + esc(x.m.materia) + ' — ' + esc(x.st.nome) + ' • Parte ' + (x.p + 1) + ' • desde ' + esc(fmtData(x.desde)) + '</div>').join('') : '') +
+      (feitasHoje.length ? '<details class="pt-1"><summary class="cursor-pointer text-[10px] font-extrabold uppercase text-emerald-400">Concluídas hoje (' + feitasHoje.length + ') — clique para ver</summary><div class="text-[11px] text-slate-300 max-h-40 overflow-y-auto pt-1">' + feitasHoje.slice(0, 40).join('<br>') + (feitasHoje.length > 40 ? '<br>… e mais ' + (feitasHoje.length - 40) : '') + '</div></details>' : '') + '</div>' + htmlPendencias();
   }
 
   /* agenda: faixa de pendências + blocos atrasados em vermelho */
@@ -17357,9 +17365,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     { k: 'ch', mat: 'Leis Extravagantes', nome: 'Lei nº 8.072/1990 – Crimes Hediondos', re: /hediondos|8\.?072|8\.?702/, res: 34, tot: 71, ac: 30 },
     { k: 'adm', mat: 'Direito Administrativo', nome: 'Noções Iniciais e Princípios Administrativos', re: /nocoes iniciais/, res: 63, tot: 438, ac: 48 },
     { k: 'ent', mat: 'Direito Administrativo', nome: 'Entes da Administração', re: /entes da adm/, res: 45, tot: 149, ac: 34 },
-    { k: 'id', mat: '', nome: 'Lei nº 10.741/2003 – Estatuto da Pessoa Idosa', re: /estatuto da pessoa idosa|10\.?741/, res: 17, tot: 140, ac: 13 },
-    { k: 'des', mat: '', nome: 'Lei nº 10.826/2003 – Estatuto do Desarmamento', re: /desarmamento|10\.?826/, res: 13, tot: 123, ac: 8 },
-    { k: 'ant', mat: '', nome: 'Lei nº 13.260/2016 – Antiterrorismo', re: /antiterror|13\.?260/, res: 7, tot: 7, ac: 6 },
+    { k: 'id', mat: '', matCriar: 'Leis Extravagantes', nome: 'Lei nº 10.741/2003 – Estatuto da Pessoa Idosa', re: /estatuto da pessoa idosa|10\.?741/, res: 17, tot: 140, ac: 13 },
+    { k: 'des', mat: '', matCriar: 'Leis Extravagantes', nome: 'Lei nº 10.826/2003 – Estatuto do Desarmamento', re: /desarmamento|10\.?826/, res: 13, tot: 123, ac: 8 },
+    { k: 'ant', mat: '', matCriar: 'Leis Extravagantes', nome: 'Lei nº 13.260/2016 – Antiterrorismo', re: /antiterror|13\.?260/, res: 7, tot: 7, ac: 6 },
     { k: 'ms', mat: '', seca: true, nome: 'Lei nº 12.016/2009 – Mandado de Segurança', re: /mandado de seguranca|12\.?016/, res: 1, tot: 202, ac: 0 },
     { k: 'pop', mat: '', seca: true, nome: 'Lei nº 4.717/1965 – Ação Popular', re: /acao popular|4\.?717/, res: 12, tot: 81, ac: 4 },
     { k: 'mi', mat: '', seca: true, nome: 'Lei nº 13.300/2016 – Mandado de Injunção', re: /mandado de injuncao|13\.?300/, res: 10, tot: 52, ac: 8 },
@@ -17413,7 +17421,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       const { row } = it;
       let k = it.keeper;
       if (!k) {
-        const mat = ((ESTADO && ESTADO.materias) || []).find((m) => row.mat && mesmaMateria(m.nome, row.mat));
+        const matRef = row.mat || row.matCriar;
+        const mat = ((ESTADO && ESTADO.materias) || []).find((m) => matRef && mesmaMateria(m.nome, matRef));
         if (!mat) continue; /* sem matéria cadastrada: não cria por suposição */
         const id = gerarId_('TOP');
         const linha = { id, id_materia: mat.id, materia: mat.nome, topico: row.nome, status: 'Ativo', rodada_atual: 1, total_banco: row.tot, resolvidas_rodada: 0, restantes_rodada: row.tot, acertos_total: 0, erros_total: 0, aproveitamento: 0, bloco: '1ª Bateria Pós-Teoria' };
@@ -17491,10 +17500,26 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       '<div class="flex items-start justify-between gap-3"><div><h3 class="text-base font-extrabold text-white">Padronizar tópicos e recuperar desempenho</h3>' +
       '<p class="text-[11px] text-slate-400 mt-1">Pré-visualização: nada foi alterado ainda. Duplicados são mesclados no tópico com mais dados (cartões, sessões e questões migram junto; o duplicado fica inativo, nada é apagado). Questões resolvidas e totais vêm do curso (exatos). Acertos/erros por caderno são <strong>estimados pela barra</strong> e fecham em 517 C / 198 E; ficam marcados como estimativa na sessão criada. Só entra o que faltar em relação ao que já existe — nunca se reduz nem duplica histórico.</p></div>' +
       '<button type="button" onclick="fcxFecharPadronizacao()" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-xs">Fechar</button></div>' +
+      '<div id="fcxPadSoma" class="p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300"></div>' +
       '<table class="w-full text-[11px]"><thead><tr class="text-left text-slate-400"><th>Nome padrão (curso)</th><th>No sistema</th><th>Questões</th></tr></thead><tbody>' + linhas + '</tbody></table>' +
       '<div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800"><button type="button" onclick="fcxAplicarPadronizacao()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">Aplicar padronização</button>' +
       '<button type="button" onclick="fcxFecharPadronizacao()" class="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 text-xs">Cancelar</button></div></div>';
     document.body.appendChild(box);
+    window.fcxPadSoma();
+  };
+  window.fcxPadSoma = function () {
+    let r = 0, a = 0, n = 0;
+    CURSO.forEach((x) => {
+      if (x.seca) return;
+      const ir = $('fcxPadRes_' + x.k), ia = $('fcxPadAc_' + x.k);
+      r += ir ? (parseInt(ir.value, 10) || 0) : x.res; a += ia ? (parseInt(ia.value, 10) || 0) : x.ac; n++;
+    });
+    const el = $('fcxPadSoma');
+    if (el) el.innerHTML = '<strong class="text-white">Soma dos ' + n + ' tópicos já concluídos (sem Lei Seca):</strong> ' + r + ' resolvidas • ' + a + ' acertos • ' + (r - a) + ' erros • ' + (r ? (a / r * 100).toFixed(1) : '0.0') + '% de aproveitamento';
+    const pend = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' && resolvidasDoTopico(t) === 0 && !CURSO.some((c) => !c.seca && c.re.test(nn(t.topico))));
+    let ep = $('fcxPadPend');
+    if (!ep && el) { ep = document.createElement('div'); ep.id = 'fcxPadPend'; ep.className = 'p-2 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-300'; el.parentNode.insertBefore(ep, el.nextSibling); }
+    if (ep) ep.innerHTML = '<strong class="text-white">Tópicos ativos ainda sem questões (1ª bateria pendente): ' + pend.length + '</strong>' + (pend.length ? '<br>' + pend.map((t) => esc(t.materia) + ' — ' + esc(t.topico)).join('<br>') : '');
   };
   window.fcxPadCalc = function (k, campo) {
     const g = (x) => $('fcxPad' + x + '_' + k);
@@ -17503,6 +17528,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (campo === 'er') ac = Math.max(0, res - er); else ac = Math.min(ac, res);
     er = res - ac;
     g('Res').value = res; g('Ac').value = ac; g('Er').value = er;
+    window.fcxPadSoma();
   };
   window.fcxAplicarPadronizacao = async function () {
     CURSO.forEach((r) => {
@@ -17514,6 +17540,18 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const n = await aplicarPadronizacao();
     aviso('Padronização concluída: ' + n.ren + ' renomeado(s), ' + n.mescl + ' duplicado(s) mesclado(s), ' + n.imp + ' histórico(s) de questões recuperado(s), ' + n.seca + ' de Lei Seca fora da bateria, ' + n.criados + ' criado(s).');
   };
+  envolver('renderizarEstatisticas', (orig, ...args) => {
+    const original = ESTADO && ESTADO.sessoes;
+    try {
+      if (Array.isArray(original)) {
+        const { ids } = topicosPausados();
+        const inativos = new Set(((ESTADO.topicos || [])).filter((t) => t.status === 'Inativo').map((t) => t.id));
+        ESTADO.sessoes = original.filter((x) => !ids.has(x.idTopico) && !inativos.has(x.idTopico));
+      }
+      return orig(...args);
+    } finally { if (original) ESTADO.sessoes = original; }
+  });
+
   function montarBotaoPadronizar() {
     if ($('fcxBtnPad') || typeof document.querySelector !== 'function') return;
     const ref = $('fcxBtnLeiSeca');
