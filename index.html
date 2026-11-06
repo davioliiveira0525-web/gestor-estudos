@@ -15620,6 +15620,12 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   });
 
   envolver('montarCandidatosDoDia_', (orig) => {
+    if (usarCacheCand && cacheCand) return cacheCand;
+    const r0 = candidatosDoDia(orig);
+    if (usarCacheCand) cacheCand = r0;
+    return r0;
+  });
+  function candidatosDoDia(orig) {
     const hojeAg = hojeYMD();
     const idsBatHoje = new Set((((ESTADO && ESTADO.painel && ESTADO.painel.atividadesHoje) || []).filter((i) => i.dataPlanejada === hojeAg)).map((i) => i.idRevisao));
     /* BATERIA DO DIA: só o que está programado para hoje (atrasos ficam no dia em que foram programados) */
@@ -15672,7 +15678,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       } catch (e) { /* sem cartões/questões do dia */ }
       return lista.concat(base);
     } catch (e) { return base; }
-  });
+  }
 
   /* ========================================================================
    * K. CICLO DE ESTUDO DA MATÉRIA
@@ -16774,7 +16780,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return exigidas > 0 && feitas === exigidas;
   }
 
-  function planoTrilha() {
+  function planoTrilhaBruto() {
     try { migrarDatasF(); garantirPlanoFixo(); } catch (e) { /* ignora */ }
     const entradas = trilhaAtual();
     const metas = (CRON_METAS || []).concat(window.CRON_METAS_OCULTAS || []).filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
@@ -16876,6 +16882,29 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const reativar = entradas.filter((e) => e.estudada && e.topico && (e.topico.status !== 'Ativo' || regT[e.topico.id]));
     const reativarIds = topicos.filter((t) => !usadosT.has(t.id) && protegido(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id);
     return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar, reativarIds, grupos, renomearGeral, criarGeral, mesclarGeral };
+  }
+  /* o cálculo da trilha é pesado: só refaz quando algo que o influencia mudou */
+  let _ptSig = null, _ptVal = null;
+  function assinaturaPT() {
+    const top = (((typeof ESTADO !== 'undefined' && ESTADO && ESTADO.topicos) || [])).map((t) => t.id + ':' + t.status + ':' + t.topico + ':' + (t.resolvidasTotal || 0) + ':' + (t.materiaAtiva ? 1 : 0)).join(',');
+    const mat = (((typeof ESTADO !== 'undefined' && ESTADO && ESTADO.materias) || [])).map((m) => m.id + m.status).join(',');
+    const cron = (Array.isArray(CRON_METAS) ? CRON_METAS : []).map((m) => {
+      let c = 0;
+      (m.subtopicos || []).forEach((st) => (st.partesStatus || []).forEach((x) => { if (x && x.concluida) c++; }));
+      return m.id + m.status + m.topico + c + (m.detalhesPartes || []).map((pt) => pt.dataPlanejada || '').join('/');
+    }).join('|');
+    const deck = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK) ? FC_DECK.length : 0) + '/' + ((window.FC_DECK_PAUSADOS || []).length);
+    const pa = ciclo.pausa || {};
+    return [hojeYMD(), top, mat, cron, deck, ciclo.t, Object.keys(ciclo.blocos || {}).length, Object.keys(pa.topicos || {}).length, Object.keys(pa.metas || {}).length, Object.keys(pa.materias || {}).length,
+      Object.keys(ciclo.canon || {}).length, ciclo.trilha && ciclo.trilha.ativo ? 1 : 0, Object.keys(ciclo.real || {}).length, Object.keys(ciclo.cel || {}).length].join('#');
+  }
+  function planoTrilha() {
+    let sig = null;
+    try { sig = assinaturaPT(); } catch (e) { sig = null; }
+    if (sig !== null && sig === _ptSig && _ptVal) return _ptVal;
+    const v = planoTrilhaBruto();
+    _ptVal = v; _ptSig = sig;
+    return v;
   }
   window.__FCX_PLANO_TRILHA__ = planoTrilha;
 
@@ -17222,6 +17251,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
    *    Nada é transferido sozinho: sem conclusão até as 3h do dia seguinte, a tarefa vira PENDENTE (vermelha)
    *    e continua no dia em que foi programada até você reprogramá-la.
    * ======================================================================== */
+  let cacheCand = null, usarCacheCand = false;
   const CORTE_H = 3;
   const diaLogico = () => formatarDataYMD_(new Date(Date.now() - CORTE_H * 3600000));
   function concluidaAg(a) { try { return agAtividadeConcluida_(a); } catch (e) { return false; } }
@@ -17279,6 +17309,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const hoje = agHoje_();
     let mudou = false;
     const cand = new Set(montarCandidatosDoDia_().map((c) => c.origemSistemaId));
+    if (colorirTarefas()) mudou = true;
     const antes = AG_STATE.atividades.length;
     AG_STATE.atividades = AG_STATE.atividades.filter((a) => {
       const o = a.origemSistemaId || '';
@@ -17307,10 +17338,25 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return mudou;
   }
   envolver('sincronizarPlanejamentoDiario3Areas', (orig, ...args) => {
-    const r = orig(...args);
-    try { if (posProcessarAgenda()) { salvarEstadoAgendaStorage_(); renderizarAgendaCompletaUI(); } } catch (e) { /* ignora */ }
-    return r;
+    cacheCand = null; usarCacheCand = true;
+    try {
+      const r = orig(...args);
+      try { if (posProcessarAgenda()) { salvarEstadoAgendaStorage_(); renderizarAgendaCompletaUI(); } } catch (e) { /* ignora */ }
+      return r;
+    } finally { usarCacheCand = false; cacheCand = null; }
   });
+  /* cores distintas por tipo de tarefa (só quando você não escolheu uma cor) */
+  const COR_TAREFA = { 'Leitura do PDF': '#3b82f6', 'Cartões': '#a855f7', 'Questões do Dia': '#14b8a6', 'Aquecimento': '#f59e0b', 'Bateria de Questões': '#22c55e' };
+  function colorirTarefas() {
+    let mudou = false;
+    (AG_STATE.atividades || []).forEach((a) => {
+      const inf = infoTarefa(a);
+      if (inf.conj === 'OUTRAS' || a.corManual) return;
+      const c = COR_TAREFA[inf.rot];
+      if (c && a.cor !== c) { a.cor = c; mudou = true; }
+    });
+    return mudou;
+  }
 
   /* ---- "Feito" MANUAL: você marca e desmarca; vale mesmo quando o sistema detectou conclusão sozinho ---- */
   envolver('obterStatusConclusaoAtividade_', (orig, a) => {
@@ -17496,7 +17542,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     }).join('');
   };
 
-  const VERSAO_TRILHA = 'Trilha 06/11 v15';
+  const VERSAO_TRILHA = 'Trilha 06/11 v16';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
