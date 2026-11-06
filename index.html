@@ -14303,7 +14303,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 
 
 <script>
-/* ===== CORREÇÕES: flashcards, edição/exportação TXT, cronograma ===== */
+/* ===== CORREÇÕES E CICLO DE ESTUDO ===== */
 /* ==========================================================================
  * CORREÇÕES E MELHORIAS — Gestor de Estudos
  * Colar dentro de uma tag script no FINAL do body (depois de todos os outros scripts)
@@ -15169,6 +15169,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     injetarBotoesNavegador();
     if (typeof atualizarContadorSelecionadosExclusaoUI_ === 'function') atualizarContadorSelecionadosExclusaoUI_();
     decorarNavegador();
+    montarAbasAquecimento();
+    renderizarDecTopico();
   }
 
   /* ========================================================================
@@ -15630,12 +15632,345 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   });
 
   /* ========================================================================
+   * K. CICLO DE ESTUDO DA MATÉRIA
+   *    K1 progresso dos blocos salvo · K2 ciclo PDF-Base + Caderno de Erros
+   *    K3 zerar decoreba por tópico · K4 abas "Estudos do dia" / "Revisões do dia"
+   * ======================================================================== */
+  const lerJSON = (k, pad) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? pad : v; } catch (e) { return pad; } };
+  const gravarJSON = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem armazenamento */ } };
+
+  /* K1 — progresso dos blocos persistido (a divisão em blocos em si não é alterada) */
+  const K_BLOCOS = 'GR_FCX_BLOCOS_V1';
+  let blocosSalvos = lerJSON(K_BLOCOS, {});
+
+  function salvarBlocos() {
+    try {
+      const mapa = (typeof FC_ESTADO_BLOCOS_MAP !== 'undefined' && FC_ESTADO_BLOCOS_MAP) || {};
+      Object.keys(mapa).forEach((chave) => {
+        blocosSalvos[chave] = (mapa[chave] || []).map((b) => ({
+          respondidosSet: b.respondidosSet || {}, acertosPorCard: b.acertosPorCard || {},
+          emReforcoSet: b.emReforcoSet || {}, dominadosSet: b.dominadosSet || {}, concluido: Boolean(b.concluido)
+        }));
+      });
+      gravarJSON(K_BLOCOS, blocosSalvos);
+    } catch (e) { /* ignora */ }
+  }
+
+  envolver('construirEstruturaBlocosFiltroAtual_', (orig, cards) => {
+    const chave = obterChaveFiltroAtualBlocos_();
+    const existia = Boolean(FC_ESTADO_BLOCOS_MAP && FC_ESTADO_BLOCOS_MAP[chave]);
+    const blocos = orig(cards);
+    const sv = blocosSalvos[chave];
+    if (!existia && blocos.length && sv && sv.length === blocos.length) {
+      blocos.forEach((b, i) => {
+        const s = sv[i] || {};
+        b.respondidosSet = s.respondidosSet || {}; b.acertosPorCard = s.acertosPorCard || {};
+        b.emReforcoSet = s.emReforcoSet || {}; b.dominadosSet = s.dominadosSet || {}; b.concluido = Boolean(s.concluido);
+      });
+    }
+    return blocos;
+  });
+
+  ['julgarCardCertoErradoFC', 'avaliarCardSessaoFC', 'finalizarSessaoEPersistirSupabase_', 'encerrarSessaoFCManual', 'voltarParaDeckFC', 'renderizarVisaoDeckFC'].forEach((nome) => {
+    if (typeof window[nome] !== 'function') return;
+    envolver(nome, (orig, ...args) => { const r = orig(...args); salvarBlocos(); return r; });
+  });
+
+  envolver('reiniciarProgressoBlocosFiltroAtual', (orig) => {
+    const chave = obterChaveFiltroAtualBlocos_();
+    delete blocosSalvos[chave];
+    gravarJSON(K_BLOCOS, blocosSalvos);
+    return orig();
+  });
+
+  /* K2 — ciclo: PDF-Base + Caderno de Erros misturados (cada cartão mantém seu rótulo de origem) */
+  envolver('obterCardsFiltradosFC', (orig) => {
+    const sel = $('fcFiltroTipo');
+    if (!sel || sel.value !== 'CICLO') return orig();
+    sel.value = '';
+    let lista;
+    try { lista = orig(); } finally { sel.value = 'CICLO'; }
+    return lista.filter((c) => c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS');
+  });
+
+  const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  function materiaDoSistema(nomeMateria) {
+    const alvo = semAcento(nomeMateria);
+    const lista = (ESTADO && ESTADO.materias) || [];
+    return lista.find((m) => semAcento(m.nome) === alvo) || lista.find((m) => alvo && (semAcento(m.nome).includes(alvo) || alvo.includes(semAcento(m.nome)))) || null;
+  }
+
+  function materiasDoDia() {
+    const out = [];
+    const ja = new Set();
+    const add = (nome, origem) => {
+      const mat = materiaDoSistema(nome);
+      const chave = mat ? mat.id : semAcento(nome);
+      if (ja.has(chave)) return;
+      ja.add(chave);
+      out.push({ nome: mat ? mat.nome : nome, id: mat ? mat.id : '', origem });
+    };
+    try {
+      const pl = planoDeHoje();
+      pl.pendencias.forEach((x) => add(x.m.materia, 'pendente'));
+      if (pl.hoje) add(pl.hoje.m.materia, 'hoje');
+    } catch (e) { /* cronograma ainda não carregado */ }
+    return out;
+  }
+
+  function abrirCicloDaMateria(idMateria) {
+    const set = (id, v) => { const el = $(id); if (el) el.value = v; };
+    set('fcFiltroMateria', idMateria);
+    if (typeof aoMudarMateriaFiltroFC === 'function') aoMudarMateriaFiltroFC();
+    set('fcFiltroTopico', '');
+    set('fcFiltroTipo', 'CICLO');
+    set('fcSelectOrdemApresentacao', 'PRIORIDADE_ERROS');
+    if (typeof atualizarOrdemApresentacaoUI === 'function') atualizarOrdemApresentacaoUI('PRIORIDADE_ERROS');
+    else if (typeof renderizarVisaoDeckFC === 'function') renderizarVisaoDeckFC();
+    definirAbaAquecimento('revisoes');
+  }
+  window.fcxAbrirCicloDaMateria = abrirCicloDaMateria;
+
+  function estudarPrimeiraPassagem(idMateria) {
+    const set = (id, v) => { const el = $(id); if (el) el.value = v; };
+    set('fcFiltroMateria', idMateria);
+    if (typeof aoMudarMateriaFiltroFC === 'function') aoMudarMateriaFiltroFC();
+    set('fcFiltroTopico', '');
+    set('fcFiltroTipo', 'PDF_BASE');
+    set('fcSelectOrdemApresentacao', 'SEQUENCIAL_CRIACAO');
+    if (typeof atualizarOrdemApresentacaoUI === 'function') atualizarOrdemApresentacaoUI('SEQUENCIAL_CRIACAO');
+    iniciarProximoBlocoDisponivelFC();
+  }
+  window.fcxEstudarPrimeiraPassagem = estudarPrimeiraPassagem;
+
+  /* K3 — zerar decoreba por tópico (contagem de "zeradas": até 3, uma por dia) */
+  const K_DEC = 'GR_FCX_DEC_ZERADAS_V1';
+  const DEC_META_ZERADAS = 3;
+  const TITULO_DEC_TOPICO = 'Zerar Decoreba do Tópico';
+
+  function topicosDaBateriaHoje() {
+    const lista = (ESTADO && ESTADO.painel && ESTADO.painel.atividadesHoje) || [];
+    const vistos = new Set();
+    return lista.filter((a) => a && a.idTopico && !vistos.has(a.idTopico) && vistos.add(a.idTopico));
+  }
+
+  function renderizarDecTopico() {
+    const raiz = $('btnZerarDecorebasHoje') ? $('btnZerarDecorebasHoje').closest('div.space-y-3') : null;
+    if (!raiz) return;
+    let box = $('fcxDecTopico');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fcxDecTopico';
+      box.className = 'rounded-lg border border-purple-800/60 bg-slate-950/70 p-3 space-y-2';
+      raiz.appendChild(box);
+    }
+    const topicos = topicosDaBateriaHoje();
+    const reg = lerJSON(K_DEC, {});
+    const hoje = hojeYMD();
+    if (!topicos.length) {
+      box.innerHTML = '<div class="text-[11px] font-extrabold uppercase text-purple-300">Zerar decoreba por tópico da bateria de hoje</div>' +
+        '<div class="text-[11px] text-slate-400">Nenhum tópico na bateria de questões de hoje.</div>';
+      return;
+    }
+    box.innerHTML = '<div class="text-[11px] font-extrabold uppercase text-purple-300">Zerar decoreba por tópico da bateria de hoje (meta: ' + DEC_META_ZERADAS + ' zeradas, uma por dia)</div>' +
+      topicos.map((a) => {
+        const qtd = FC_DECK.filter((c) => c.tipo === 'DECOREBA' && c.idTopico === a.idTopico).length;
+        const r = reg[a.idTopico] || { n: 0, ult: '' };
+        const feitaHoje = r.ult === hoje;
+        return '<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-slate-900 border border-slate-800">' +
+          '<div class="min-w-0"><div class="text-[10px] font-extrabold uppercase text-purple-400">' + esc(a.materia) + '</div>' +
+          '<div class="text-xs font-bold text-white truncate">' + esc(a.topico) + '</div>' +
+          '<div class="text-[10px] text-slate-400">' + qtd + ' decoreba(s) • zeradas: <strong class="' + (r.n >= DEC_META_ZERADAS ? 'text-emerald-400' : 'text-slate-200') + '">' + Math.min(r.n, 99) + '/' + DEC_META_ZERADAS + '</strong>' + (feitaHoje ? ' • feita hoje ✓' : '') + '</div></div>' +
+          '<div class="flex items-center gap-1.5">' +
+          '<button type="button" ' + (qtd ? '' : 'disabled ') + 'onclick="fcxZerarDecorebaTopico(\'' + a.idTopico + '\')" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-extrabold text-[11px]">Zerar decoreba</button>' +
+          '<button type="button" onclick="fcxReiniciarContagemDecoreba(\'' + a.idTopico + '\')" class="px-2 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 text-[11px]" title="Voltar a contagem para 0">Reiniciar</button>' +
+          '</div></div>';
+      }).join('');
+  }
+
+  window.fcxZerarDecorebaTopico = function (idTopico) {
+    const cards = FC_DECK.filter((c) => c.tipo === 'DECOREBA' && c.idTopico === idTopico)
+      .sort((a, b) => (b.scoreUrgencia || 0) - (a.scoreUrgencia || 0) || a.ordemCriacao - b.ordemCriacao);
+    if (!cards.length) { aviso('Este tópico não tem cartões de decoreba.', true); return; }
+    const t = ((ESTADO && ESTADO.topicos) || []).find((x) => x.id === idTopico);
+    window.__fcxDecTopico = idTopico;
+    iniciarPlayerBlocoEspecifico_(cards, TITULO_DEC_TOPICO + ' — ' + (t ? t.topico : idTopico), 1, 1, null, true);
+  };
+
+  window.fcxReiniciarContagemDecoreba = function (idTopico) {
+    const reg = lerJSON(K_DEC, {});
+    delete reg[idTopico];
+    gravarJSON(K_DEC, reg);
+    renderizarDecTopico();
+    aviso('Contagem de zeradas reiniciada para este tópico.');
+  };
+
+  envolver('finalizarSessaoEPersistirSupabase_', (orig, ...args) => {
+    try {
+      if (typeof FC_SESSAO !== 'undefined' && FC_SESSAO && FC_SESSAO.isModoDecoreba && window.__fcxDecTopico &&
+          String(FC_SESSAO.tituloSessao || '').indexOf(TITULO_DEC_TOPICO) === 0) {
+        const reg = lerJSON(K_DEC, {});
+        const r = reg[window.__fcxDecTopico] || { n: 0, ult: '' };
+        const hoje = hojeYMD();
+        if (r.ult !== hoje) { r.n = Math.min(DEC_META_ZERADAS, (r.n || 0) + 1); r.ult = hoje; }
+        reg[window.__fcxDecTopico] = r;
+        gravarJSON(K_DEC, reg);
+      }
+    } catch (e) { /* ignora */ }
+    window.__fcxDecTopico = null;
+    const res = orig(...args);
+    renderizarDecTopico();
+    return res;
+  });
+  envolver('renderizarPainelDecorebaInteligente_', (orig, ...args) => { const r = orig(...args); renderizarDecTopico(); return r; });
+
+  /* K4 — abas "Estudos do dia" e "Revisões do dia" */
+  const K_ABA = 'GR_FCX_ABA_AQUECIMENTO';
+  let abaAq = lerJSON(K_ABA, 'revisoes');
+
+  function definirAbaAquecimento(aba) {
+    abaAq = aba === 'estudos' ? 'estudos' : 'revisoes';
+    gravarJSON(K_ABA, abaAq);
+    const cont = $('containerDeckFlashcards');
+    if (cont) cont.classList.toggle('fcx-tab-estudos', abaAq === 'estudos');
+    const be = $('fcxAbaEstudos'), br = $('fcxAbaRevisoes');
+    if (be) be.className = 'px-3.5 py-1.5 rounded-lg transition ' + (abaAq === 'estudos' ? 'subtab-active' : 'subtab-inactive');
+    if (br) br.className = 'px-3.5 py-1.5 rounded-lg transition ' + (abaAq === 'revisoes' ? 'subtab-active' : 'subtab-inactive');
+    renderizarEstudosDoDia();
+    renderizarChipsCiclo();
+  }
+  window.fcxAbaAquecimento = definirAbaAquecimento;
+
+  function renderizarChipsCiclo() {
+    const painel = $('fcPainelSelecao');
+    if (!painel) return;
+    let box = $('fcxChipsCiclo');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'fcxChipsCiclo';
+      box.className = 'rounded-xl border border-indigo-800/70 bg-indigo-950/30 p-3 space-y-2';
+      painel.insertBefore(box, painel.firstChild);
+    }
+    const mats = materiasDoDia().filter((m) => m.id);
+    box.innerHTML = '<div class="text-[11px] font-extrabold uppercase text-indigo-300">Revisões do dia — ciclo da matéria (PDF-Base + Caderno de Erros misturados, mais errados primeiro)</div>' +
+      (mats.length
+        ? '<div class="flex flex-wrap gap-2">' + mats.map((m) =>
+          '<button type="button" onclick="fcxAbrirCicloDaMateria(\'' + m.id + '\')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Ciclo: ' + esc(m.nome) + (m.origem === 'pendente' ? ' (pendente)' : '') + '</button>').join('') + '</div>'
+        : '<div class="text-[11px] text-slate-400">Nenhuma matéria do cronograma para hoje. Use os filtros abaixo e a modalidade "Ciclo".</div>');
+  }
+
+  function renderizarEstudosDoDia() {
+    const aq = $('subaba-fc-aquecimento');
+    if (!aq) return;
+    const cont = $('containerDeckFlashcards');
+    let box = $('fcxEstudosDia');
+    if (!box && cont) {
+      box = document.createElement('div');
+      box.id = 'fcxEstudosDia';
+      box.className = 'p-4 space-y-3';
+      cont.appendChild(box);
+    }
+    if (!box) return;
+    let pl = null;
+    try { pl = planoDeHoje(); } catch (e) { pl = null; }
+    const linhas = [];
+    const linhaCel = (m, p, i, st, rotulo) => {
+      const cel = st.partesStatus && st.partesStatus[p];
+      const feita = Boolean(cel && cel.concluida);
+      const pag = cotaCelula(st, m.totalPartes, p);
+      return '<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-slate-950 border ' + (feita ? 'border-emerald-700/70' : 'border-slate-800') + '">' +
+        '<div class="min-w-0"><div class="text-xs font-bold text-white truncate">' + esc(st.nome) + '</div>' +
+        '<div class="text-[10px] text-slate-400">' + rotulo + ' • Parte ' + (p + 1) + ' de ' + m.totalPartes + (pag ? ' • ' + pag + ' pág.' : '') + (feita ? ' • concluída em ' + esc(formatarDataBR(cel.data || '')) : '') + '</div></div>' +
+        (feita
+          ? '<button type="button" onclick="fcxEstudoCelula(\'' + m.id + '\',' + p + ',' + i + ',false)" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-[11px]">Desfazer</button>'
+          : '<button type="button" onclick="fcxEstudoCelula(\'' + m.id + '\',' + p + ',' + i + ',true)" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px]">Concluí esta parte</button>') +
+        '</div>';
+    };
+    const grupos = [];
+    if (pl) {
+      if (pl.hoje) {
+        const { m, p } = pl.hoje;
+        const itens = m.subtopicos.map((st, i) => (celulaExigida(st, m.totalPartes, p) ? linhaCel(m, p, i, st, 'Hoje') : '')).join('');
+        grupos.push({ m, titulo: 'Hoje • Meta ' + m.numeroMeta + ' • ' + m.materia, itens });
+      }
+      const porMeta = {};
+      pl.pendencias.forEach((x) => { (porMeta[x.m.id + '_' + x.p] = porMeta[x.m.id + '_' + x.p] || { m: x.m, p: x.p, l: [] }).l.push(x); });
+      Object.keys(porMeta).forEach((k) => {
+        const g = porMeta[k];
+        grupos.push({ m: g.m, titulo: 'Pendente • Meta ' + g.m.numeroMeta + ' • ' + g.m.materia, itens: g.l.map((x) => linhaCel(g.m, g.p, x.i, x.st, 'Pendente desde ' + esc(formatarDataBR(x.desde)))).join('') });
+      });
+    }
+    const feitasHoje = [];
+    const hojeStr = hojeYMD();
+    (CRON_METAS || []).forEach((m) => {
+      if (!Array.isArray(m.subtopicos)) return;
+      m.subtopicos.forEach((st, i) => {
+        (st.partesStatus || []).forEach((cel, p) => {
+          if (cel && cel.concluida && cel.data === hojeStr) feitasHoje.push(linhaCel(m, p, i, st, esc(m.materia) + ' • Meta ' + m.numeroMeta));
+        });
+      });
+    });
+    if (feitasHoje.length) grupos.push({ m: null, titulo: 'Concluídas hoje', topico: '', itens: feitasHoje.join('') });
+    box.innerHTML = '<div class="text-[11px] font-extrabold uppercase text-emerald-300">Estudos do dia — conteúdo do cronograma (travado na matéria do dia)</div>' +
+      (grupos.length ? grupos.map((g) => {
+        const mat = g.m ? materiaDoSistema(g.m.materia) : null;
+        return '<div class="rounded-xl border border-slate-800 bg-slate-900 p-3 space-y-2">' +
+          '<div class="flex flex-wrap items-center justify-between gap-2"><div class="text-xs font-extrabold text-white">' + esc(g.titulo) + (g.m ? ' — ' + esc(g.m.topico) : '') + '</div>' +
+          (mat ? '<button type="button" onclick="fcxEstudarPrimeiraPassagem(\'' + mat.id + '\')" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px]">Estudar cartões PDF-Base (1ª passagem)</button>' : '') +
+          '</div>' + g.itens + '</div>';
+      }).join('') : '<div class="text-xs text-slate-400">Nada programado ou pendente no cronograma para hoje.</div>');
+  }
+
+  window.fcxEstudoCelula = async function (idMeta, p, i, marcado) {
+    await alternarConclusaoCelulaCron(idMeta, p, i, marcado);
+    renderizarEstudosDoDia();
+    renderizarChipsCiclo();
+  };
+
+  function montarAbasAquecimento() {
+    const aq = $('subaba-fc-aquecimento');
+    if (!aq || $('fcxAbasAq')) return;
+    const barra = document.createElement('div');
+    barra.id = 'fcxAbasAq';
+    barra.className = 'bg-slate-900 rounded-xl border border-slate-800 p-2 flex flex-wrap items-center gap-1.5 text-xs no-print';
+    barra.innerHTML = '<button type="button" id="fcxAbaEstudos" onclick="fcxAbaAquecimento(\'estudos\')">Estudos do dia</button>' +
+      '<button type="button" id="fcxAbaRevisoes" onclick="fcxAbaAquecimento(\'revisoes\')">Revisões do dia</button>';
+    aq.insertBefore(barra, aq.firstChild);
+    const sel = $('fcFiltroTipo');
+    if (sel && !sel.querySelector('option[value="CICLO"]')) {
+      const op = document.createElement('option');
+      op.value = 'CICLO';
+      op.textContent = '★ Ciclo: PDF-Base + Caderno de Erros';
+      sel.insertBefore(op, sel.options[1] || null);
+    }
+    definirAbaAquecimento(abaAq);
+  }
+
+  envolver('renderizarVisaoDeckFC', (orig, ...args) => {
+    const r = orig(...args);
+    try { renderizarChipsCiclo(); if (abaAq === 'estudos') renderizarEstudosDoDia(); renderizarDecTopico(); } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  (function cssK() {
+    if (typeof document.createElement !== 'function' || !document.head || document.getElementById('fcxCSSK')) return;
+    const st = document.createElement('style');
+    st.id = 'fcxCSSK';
+    st.textContent =
+      '#fcxEstudosDia{display:none}' +
+      '#containerDeckFlashcards.fcx-tab-estudos #fcPainelSelecao{display:none!important}' +
+      '#containerDeckFlashcards.fcx-tab-estudos #fcxEstudosDia{display:block}' +
+      '#fcSessaoPlayer:not(.hidden) ~ #fcxEstudosDia,#fcPainelDiagnosticoFinal:not(.hidden) ~ #fcxEstudosDia{display:none!important}';
+    document.head.appendChild(st);
+  })();
+
+  /* ========================================================================
    * INICIALIZAÇÃO
    * ======================================================================== */
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, cotaCelula, celulaExigida, limitePalavras, textoPuro
+    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, materiasDoDia, renderizarDecTopico, cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
