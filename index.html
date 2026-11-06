@@ -14322,6 +14322,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
   const $ = (id) => document.getElementById(id);
   const hojeYMD = () => formatarDataYMD_(new Date());
   const nn = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+  /* "X – PT.n": parte de uma matéria com subdivisões (cartões por parte; bateria de questões única por matéria) */
+  function parteInfo(nome) {
+    const base = String(nome || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const m = base.match(/^(.*?)\s*[-–—]?\s*\bpt\.?\s*(\d+)\s*$/);
+    return m && m[1].trim() ? { base: m[1].replace(/\s*[-–—]\s*$/, '').trim(), n: parseInt(m[2], 10) } : null;
+  }
+  const chaveGrupo = (idMateria, nome) => { const pi = parteInfo(nome); return pi ? String(idMateria || '') + '|' + pi.base : null; };
   const fmtData = (d) => (typeof formatarDataBR === 'function' ? formatarDataBR(d) : d);
   const aviso = (msg, erro) => { try { notificar(msg, Boolean(erro)); } catch (e) { console.log(msg); } };
 
@@ -16771,35 +16778,36 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const topicos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || regT[t.id] || cardsDoTopico(t) > 0);
     const pares = [];
     entradas.forEach((e) => {
-      topicos.filter((t) => (e.materia ? t.idMateria === e.materia.id : mesmaMateria(t.materia, e.materiaRaw))).forEach((t) => { const sc = pontuar(t.topico, e.nome); if (sc >= 1) pares.push({ e, t, sc }); });
+      const pe = parteInfo(e.nome);
+      topicos.filter((t) => (e.materia ? t.idMateria === e.materia.id : mesmaMateria(t.materia, e.materiaRaw))).forEach((t) => {
+        if (pe) { const pt = parteInfo(t.topico); if (nn(t.topico) === pe.base || (pt && pt.n !== pe.n)) return; } /* cada parte tem o seu tópico; o caderno único antigo não vira PT.1 */
+        const sc = pontuar(t.topico, e.nome); if (sc >= 1) pares.push({ e, t, sc });
+      });
     });
     pares.sort((a, b) => (b.sc - a.sc) || ((b.e.estudada ? 1 : 0) - (a.e.estudada ? 1 : 0)));
     const usadosT = new Set();
     pares.forEach((p) => { if (p.e.topico || usadosT.has(p.t.id)) return; p.e.topico = p.t; usadosT.add(p.t.id); });
-    /* "X – PT.1/PT.2/PT.3": um único caderno de questões (bateria única); o PDF-base segue por PDF */
-    const semPT = (n) => nn(n).replace(/\s*-?\s*pt\.?\s*\d+\s*$/, '').trim();
+    /* caderno único antigo ("X" sem PT) cujas partes existem na trilha: vira histórico do grupo, sem ser pausado como "fora da trilha" */
+    const legados = [];
     entradas.forEach((e) => {
-      if (e.topico || !/pt\.?\s*\d+\s*$/.test(nn(e.nome))) return;
-      const base = semPT(e.nome);
-      const irmao = entradas.find((o) => o !== e && o.topico && mesmaMateria(o.materiaRaw, e.materiaRaw) && semPT(o.nome) === base);
-      if (irmao) { e.topico = irmao.topico; e.compartilhaTopico = true; return; }
-      const t = topicos.find((x) => (e.materia ? x.idMateria === e.materia.id : mesmaMateria(x.materia, e.materiaRaw)) && nn(x.topico) === base);
-      if (t) { e.topico = t; e.compartilhaTopico = true; }
+      const pe = parteInfo(e.nome);
+      if (!pe) return;
+      topicos.forEach((t) => { if (nn(t.topico) === pe.base && (e.materia ? t.idMateria === e.materia.id : mesmaMateria(t.materia, e.materiaRaw)) && !parteInfo(t.topico) && legados.indexOf(t) < 0) { legados.push(t); usadosT.add(t.id); } });
     });
     const criar = [], renomear = [], semMateria = [], futuros = [], manter = [];
     entradas.forEach((e) => { if (!e.estudada && e.topico && temProgresso(e.topico)) e.estudada = true; });
     entradas.forEach((e) => {
       if (e.estudada) {
-        if (e.topico) { manter.push(e); if (nn(e.topico.topico) !== nn(e.nome) && !(ciclo.canon && ciclo.canon[e.topico.id]) && !e.compartilhaTopico) renomear.push(e); }
+        if (e.topico) { manter.push(e); if (nn(e.topico.topico) !== nn(e.nome) && !(ciclo.canon && ciclo.canon[e.topico.id])) renomear.push(e); }
         else if (e.materia) criar.push(e);
         else semMateria.push(e);
-      } else if (e.topico && !e.compartilhaTopico) futuros.push(e);
+      } else if (e.topico) futuros.push(e);
     });
     const protegido = (t) => temProgresso(t) && conteudo.some((m) => metaVista(m) && nomesDaMeta(m).some((c) => casa(c, t.topico)));
     const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo') && !protegido(t));
     const reativar = entradas.filter((e) => e.estudada && e.topico && (e.topico.status !== 'Ativo' || regT[e.topico.id]));
     const reativarIds = topicos.filter((t) => !usadosT.has(t.id) && protegido(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id);
-    return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar, reativarIds };
+    return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar, reativarIds, legados };
   }
   window.__FCX_PLANO_TRILHA__ = planoTrilha;
 
@@ -16852,6 +16860,17 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const lote = pausarFora.concat(pausarFut);
     lote.forEach(({ t, motivo }) => { p.topicos[t.id] = { nome: t.topico, materia: t.materia, motivo, t: agora }; });
     await dbStatus('topicos', lote.map((x) => x.t.id), 'Inativo');
+    /* caderno único antigo → histórico do grupo: sai da programação (as partes assumem), mas seus números continuam contando */
+    const idsLeg = [];
+    (plano.legados || []).forEach((t) => {
+      const base = nn(t.topico);
+      const temParte = (ESTADO.topicos || []).some((x) => x !== t && x.idMateria === t.idMateria && x.status === 'Ativo' && parteInfo(x.topico) && parteInfo(x.topico).base === base);
+      if (!temParte) return;
+      ciclo.legado = ciclo.legado || {};
+      ciclo.legado[t.id] = { base, nome: t.topico, t: agora };
+      if (t.status === 'Ativo') idsLeg.push(t.id);
+    });
+    await dbStatus('topicos', idsLeg, 'Inativo');
     /* futuros que viraram estudados deixam o registro */
     plano.manter.forEach((e) => { delete p.topicos[e.topico.id]; });
     /* cronograma */
@@ -17053,7 +17072,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v8';
+  const VERSAO_TRILHA = 'Trilha 06/11 v9';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17357,7 +17376,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   const CURSO = [
     { k: 'pn', mat: 'Direito Penal', nome: 'Noções Iniciais e Princípios', re: /nocoes iniciais/, res: 40, tot: 148, ac: 28 },
     { k: 'lp', mat: 'Direito Penal', nome: 'Lei Penal e sua Aplicação', re: /lei penal|aplicacao da lei/, res: 27, tot: 121, ac: 22 },
-    { k: 'tc', mat: 'Direito Penal', nome: 'Teoria do Crime', re: /teoria do crime/, res: 31, tot: 232, ac: 18 },
+    { k: 'tc', mat: 'Direito Penal', nome: 'Teoria do Crime', re: /^(?!.*\bpt\.?\s*\d).*teoria do crime/, res: 31, tot: 232, ac: 18 },
     { k: 'ppn', mat: 'Direito Processual Penal', nome: 'Noções Iniciais e Princípios', re: /nocoes iniciais/, res: 55, tot: 156, ac: 41 },
     { k: 'ip', mat: 'Direito Processual Penal', nome: 'Inquérito Policial', re: /inquerito/, res: 20, tot: 121, ac: 15 },
     { k: 'ap', mat: 'Direito Processual Penal', nome: 'Ação Penal', re: /acao penal/, res: 20, tot: 141, ac: 11 },
@@ -17547,13 +17566,43 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const n = await aplicarPadronizacao();
     aviso('Padronização concluída: ' + n.ren + ' renomeado(s), ' + n.mescl + ' duplicado(s) mesclado(s), ' + n.imp + ' histórico(s) de questões recuperado(s), ' + n.seca + ' de Lei Seca fora da bateria, ' + n.criados + ' criado(s).');
   };
+  /* ---- T. BATERIA ÚNICA POR MATÉRIA: todas as partes (PT.1, PT.2, PT.3…) sempre no mesmo dia ---- */
+  function unificarPartes(pend, hoje) {
+    const g = {};
+    (pend || []).forEach((r) => { const k = chaveGrupo(r.idMateria, r.topico); if (k) (g[k] = g[k] || []).push(r); });
+    Object.keys(g).forEach((k) => {
+      const L = g[k];
+      if (L.length < 2) return;
+      const alvo = L.map((r) => r.dataPrevistaAtual).filter(Boolean).sort()[0];
+      if (!alvo) return;
+      const ordem = L.slice().sort((a, b) => parteInfo(a.topico).n - parteInfo(b.topico).n);
+      const nomes = ordem.map((r) => 'PT.' + parteInfo(r.topico).n).join(', ');
+      const base = String(L[0].topico).replace(/\s*[-–—]?\s*pt\.?\s*\d+\s*$/i, '');
+      const algumaAnt = L.some((r) => r.antecipadaHoje);
+      L.forEach((r) => {
+        r.dataPrevistaAtual = alvo;
+        r.status = alvo < hoje ? 'Atrasada' : (alvo === hoje ? 'Para Hoje' : 'Programada');
+        if (algumaAnt && alvo === hoje) r.antecipadaHoje = true;
+        r.grupoBateria = base;
+        r.motivoAgendamentoData = 'Bateria única de "' + base + '": ' + nomes + ' no mesmo dia (' + alvo.split('-').reverse().join('/') + ').';
+      });
+    });
+  }
+  envolver('redistribuirRevisoesPorCapacidade_', (orig, ...args) => {
+    const r = orig(...args);
+    try { unificarPartes(args[0], args[5]); } catch (e) { /* ignora */ }
+    return r;
+  });
+  window.__FCX_UNIFICAR_PARTES__ = unificarPartes;
+
   envolver('renderizarEstatisticas', (orig, ...args) => {
     const original = ESTADO && ESTADO.sessoes;
     try {
       if (Array.isArray(original)) {
         const { ids } = topicosPausados();
         const inativos = new Set(((ESTADO.topicos || [])).filter((t) => t.status === 'Inativo').map((t) => t.id));
-        ESTADO.sessoes = original.filter((x) => !ids.has(x.idTopico) && !inativos.has(x.idTopico));
+        const leg = ciclo.legado || {};
+        ESTADO.sessoes = original.filter((x) => leg[x.idTopico] || (!ids.has(x.idTopico) && !inativos.has(x.idTopico)));
       }
       return orig(...args);
     } finally { if (original) ESTADO.sessoes = original; }
@@ -17873,6 +17922,28 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   window.fcxGtRestaurar = async function (i) { await restaurarTopico(i); };
   window.fcxGtFiltro = function () { renderizarPainelTopicos(); };
 
+  /* visão geral por matéria com subdivisões: total do grupo + desempenho individual de cada parte */
+  function htmlGrupos(lista) {
+    const g = {};
+    lista.forEach((t) => {
+      const pi = parteInfo(t.topico);
+      const leg = (ciclo.legado || {})[t.id];
+      const base = pi ? pi.base : (leg ? leg.base : null);
+      if (base) (g[base] = g[base] || []).push({ t, n: pi ? pi.n : 0, leg: !pi });
+    });
+    return Object.keys(g).filter((b) => g[b].some((x) => !x.leg)).map((b) => {
+      const itens = g[b].sort((x, y) => x.n - y.n);
+      let R = 0, A = 0;
+      const partes = itens.map((x) => {
+        const tt = totaisTopico(x.t); R += tt.res; A += tt.ac;
+        return '<span class="inline-block mr-2">' + (x.leg ? 'Caderno único anterior' : 'PT.' + x.n) + ': <strong class="text-white">' + tt.res + '</strong> real. • <strong class="text-white">' + tt.ac + '</strong> ac. • ' + (tt.res ? (tt.ac / tt.res * 100).toFixed(1) + '%' : '—') + '</span>';
+      }).join('');
+      const nomeG = esc(itens[0].t.topico.replace(/\s*[-–—]?\s*pt\.?\s*\d+\s*$/i, ''));
+      return '<div class="my-1 p-2 rounded-lg border border-indigo-800 bg-slate-900 text-[11px] text-slate-300"><strong class="text-indigo-300">' + nomeG + ' — bateria única (todas as partes no mesmo dia)</strong><br>' +
+        'Visão geral: <strong class="text-white">' + R + '</strong> realizadas • <strong class="text-white">' + A + '</strong> acertos • <strong class="text-white">' + Math.max(0, R - A) + '</strong> erros • ' + (R ? (A / R * 100).toFixed(1) + '%' : '—') + '<br>' + partes + '</div>';
+    }).join('');
+  }
+
   function renderizarPainelTopicos() {
     const cont = $('fcxGtLista');
     if (!cont) return;
@@ -17888,7 +17959,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       if (!lista.length) return '';
       const linhas = lista.map((t) => {
         const x = totaisTopico(t);
-        if (t.status === 'Ativo') { totR += x.res; totA += x.ac; }
+        if (t.status === 'Ativo' || (ciclo.legado || {})[t.id]) { totR += x.res; totA += x.ac; }
         const id = t.id;
         return '<tr class="border-t border-slate-800 align-top"><td class="py-1 pr-2"><input id="fcxGtNome_' + id + '" value="' + esc(t.topico).replace(/"/g, '&quot;') + '" ' + inp.replace('class="', 'class="w-56 ') + '>' +
           '<div class="text-[10px] ' + (t.status === 'Ativo' ? 'text-emerald-400' : 'text-slate-400') + '">' + esc(t.status) + '</div></td>' +
@@ -17901,7 +17972,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
           '<button type="button" onclick="fcxGtExcluir(\'' + id + '\')" class="px-2 py-1 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 font-extrabold text-[10px]">Excluir</button></td></tr>';
       }).join('');
       return '<details open class="rounded-lg border border-slate-800 bg-slate-900 p-2"><summary class="cursor-pointer text-xs font-extrabold text-indigo-300">' + esc(m.nome) + ' <span class="text-slate-400 font-semibold">(' + lista.length + ' tópico' + (lista.length > 1 ? 's' : '') + ')</span></summary>' +
-        '<div class="overflow-x-auto"><table class="w-full text-[11px] mt-1"><thead><tr class="text-left text-slate-400"><th>Tópico</th><th>Banco</th><th>Realizadas</th><th>Acertos</th><th>Erros</th><th>Aprov.</th><th></th></tr></thead><tbody>' + linhas + '</tbody></table></div></details>';
+        htmlGrupos(lista) + '<div class="overflow-x-auto"><table class="w-full text-[11px] mt-1"><thead><tr class="text-left text-slate-400"><th>Tópico</th><th>Banco</th><th>Realizadas</th><th>Acertos</th><th>Erros</th><th>Aprov.</th><th></th></tr></thead><tbody>' + linhas + '</tbody></table></div></details>';
     }).join('');
     const lix = lerJSON(K_LIXEIRA, []);
     const lixHtml = lix.length ? '<details class="rounded-lg border border-slate-800 p-2"><summary class="cursor-pointer text-xs font-extrabold text-amber-400">Lixeira (' + lix.length + ') — restaurar tópico excluído</summary>' +
