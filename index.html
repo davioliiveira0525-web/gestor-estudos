@@ -17014,7 +17014,18 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return ids;
   }
   /* tópico ainda em estudo e sem histórico de questões fica fora da bateria (quem já resolveu questões continua nela) */
-  window.__FCX_FORA_BATERIA__ = (id, nome, resolvidas) => Number(resolvidas) > 0 ? false : topicosEmEstudo().has(id);
+  /* ---- bateria FIXADA para um dia (referência definida pelo usuário): exatamente estes tópicos, nada além ---- */
+  const FIXOS_REFERENCIA = { '2026-11-06': [['teoria do crime', '^teoria do crime'], ['organizacao do estado', 'organizacao do estado'], ['lei dos crimes hediondos', 'hediondos|8\\.?072|8\\.?702']] };
+  function fixosDoDia(dia) {
+    if (!ciclo.fixos) { ciclo.fixos = JSON.parse(JSON.stringify(FIXOS_REFERENCIA)); persistirCiclo(); }
+    return (ciclo.fixos[dia] || []).map((x) => ({ nome: x[0], re: new RegExp(x[1]) }));
+  }
+  const casaFixo = (fx, nome) => { const n = nn(nome); return fx.some((f) => f.re.test(n)); };
+  window.__FCX_FORA_BATERIA__ = (id, nome, resolvidas) => {
+    if (Number(resolvidas) > 0) return false;
+    try { if (casaFixo(fixosDoDia(hojeYMD()), nome)) return false; } catch (e) { /* ignora */ }
+    return topicosEmEstudo().has(id);
+  };
   window.__FCX_EM_ESTUDO__ = topicosEmEstudo;
 
   /* ---- cartões pendentes de PDF-base: um item por tópico da trilha já estudado ---- */
@@ -17164,7 +17175,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v11';
+  const VERSAO_TRILHA = 'Trilha 06/11 v12';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17658,6 +17669,71 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const n = await aplicarPadronizacao();
     aviso('Padronização concluída: ' + n.ren + ' renomeado(s), ' + n.mescl + ' duplicado(s) mesclado(s), ' + n.imp + ' histórico(s) de questões recuperado(s), ' + n.seca + ' de Lei Seca fora da bateria, ' + n.criados + ' criado(s).');
   };
+  /* realoca a bateria do dia: os tópicos fixados ficam hoje; o restante vai para os próximos dias de estudo (limite diário respeitado) */
+  function aplicarBateriaFixada(pend, limite, dias, hoje) {
+    const fx = fixosDoDia(hoje);
+    if (!fx.length || !Array.isArray(pend)) return;
+    const fixados = pend.filter((r) => casaFixo(fx, r.topico));
+    fixados.forEach((r) => { r.dataPrevistaAtual = hoje; r.status = 'Para Hoje'; r.antecipadaHoje = true; r.motivoAgendamentoData = 'Bateria de hoje definida por você (referência de organização).'; });
+    const deslocar = pend.filter((r) => fixados.indexOf(r) < 0 && r.dataPrevistaAtual && r.dataPrevistaAtual <= hoje);
+    const cont = {};
+    pend.forEach((r) => { if (deslocar.indexOf(r) < 0) cont[r.dataPrevistaAtual] = (cont[r.dataPrevistaAtual] || 0) + 1; });
+    deslocar.forEach((r) => {
+      let d = parseDataYMD_(hoje), n = 0;
+      do { d.setDate(d.getDate() + 1); n++; } while (n < 400 && (!(dias || []).includes(d.getDay()) || (cont[formatarDataYMD_(d)] || 0) >= limite));
+      const ymd = formatarDataYMD_(d);
+      cont[ymd] = (cont[ymd] || 0) + 1;
+      r.antecipadaHoje = false; r.dataPrevistaAtual = ymd; r.status = 'Programada';
+      r.motivoAgendamentoData = 'Fora da bateria de hoje (definida por você); realocado para ' + ymd.split('-').reverse().join('/') + ' respeitando ' + limite + ' tópicos/dia.';
+    });
+    window.__FCX_FIXADOS_HOJE__ = fixados.map((r) => r.topico);
+  }
+  envolver('redistribuirRevisoesPorCapacidade_', (orig, ...args) => {
+    const r = orig(...args);
+    try { aplicarBateriaFixada(args[0], args[3], args[4], args[5]); } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  /* ---- verificação de integração entre agenda, cronograma, tópicos, cartões e histórico ---- */
+  function auditoriaIntegracao() {
+    const out = [];
+    const tops = (ESTADO && ESTADO.topicos) || [];
+    const ids = new Set(tops.map((t) => t.id));
+    const orfSes = ((ESTADO && ESTADO.sessoes) || []).filter((x) => x.idTopico && !ids.has(x.idTopico));
+    if (orfSes.length) out.push({ n: 'alerta', t: orfSes.length + ' sessão(ões) de questões apontam para tópico que não existe mais (histórico preservado no banco; reatribua pelo Gerenciar se precisar).' });
+    const deck = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK) ? FC_DECK : []);
+    const orfC = deck.filter((c) => c.idTopico && !ids.has(c.idTopico));
+    if (orfC.length) out.push({ n: 'alerta', t: orfC.length + ' cartão(ões) sem tópico correspondente.' });
+    const vistos = {};
+    tops.filter((t) => t.status === 'Ativo').forEach((t) => { const k = t.idMateria + '|' + nn(t.topico); (vistos[k] = vistos[k] || []).push(t); });
+    Object.keys(vistos).filter((k) => vistos[k].length > 1).forEach((k) => out.push({ n: 'alerta', t: 'Tópico duplicado ativo: "' + vistos[k][0].topico + '" (' + vistos[k].length + ' registros) — use "Padronizar tópicos e questões".' }));
+    tops.filter((t) => parteInfo(t.topico) && t.status === 'Ativo').forEach((t) => out.push({ n: 'alerta', t: 'Tópico separado por parte ainda existe: "' + t.topico + '" (será mesclado na próxima sincronização da trilha).' }));
+    let emBat = [];
+    try { const em = topicosEmEstudo(); emBat = tops.filter((t) => t.status === 'Ativo' && t.materiaAtiva && Number(t.resolvidasTotal || 0) === 0 && em.has(t.id) && !casaFixo(fixosDoDia(hojeYMD()), t.topico)); } catch (e) { /* ignora */ }
+    if (emBat.length) out.push({ n: 'alerta', t: 'Em estudo mas ainda na bateria: ' + emBat.map((t) => t.topico).join('; ') + '.' });
+    const fx = fixosDoDia(hojeYMD());
+    if (fx.length) {
+      const achou = fx.map((f) => ({ f, t: tops.find((t) => t.status === 'Ativo' && f.re.test(nn(t.topico))) }));
+      achou.filter((a) => !a.t).forEach((a) => out.push({ n: 'alerta', t: 'Bateria de hoje: não encontrei tópico ativo para "' + a.f.nome + '" (verifique se o estudo foi marcado/o tópico existe).' }));
+      const ok = achou.filter((a) => a.t).map((a) => a.t.topico);
+      if (ok.length) out.push({ n: 'ok', t: 'Bateria de hoje fixada: ' + ok.join(' • ') });
+    }
+    try {
+      const pl = planoTrilha();
+      if (pl.criar.length || pl.criarGeral.length || pl.mesclarGeral.length || pl.renomearGeral.length) out.push({ n: 'alerta', t: 'A trilha tem tópicos a criar/mesclar (' + (pl.criar.length + pl.criarGeral.length + pl.mesclarGeral.length + pl.renomearGeral.length) + '); a sincronização automática resolve ao recarregar.' });
+      if (pl.semMateria.length) out.push({ n: 'alerta', t: pl.semMateria.length + ' tópico(s) estudado(s) da trilha sem matéria cadastrada: ' + pl.semMateria.slice(0, 4).map((e) => e.nome).join('; ') + '.' });
+    } catch (e) { /* ignora */ }
+    if (!out.some((x) => x.n === 'alerta')) out.push({ n: 'ok', t: 'Nenhuma divergência encontrada entre tópicos, cartões, histórico, trilha e bateria.' });
+    return out;
+  }
+  window.__FCX_AUDITORIA__ = auditoriaIntegracao;
+  function htmlAuditoria() {
+    let l = [];
+    try { l = auditoriaIntegracao(); } catch (e) { l = [{ n: 'alerta', t: 'Não foi possível verificar (' + String(e && e.message || e) + ').' }]; }
+    return '<div class="text-[11px] p-2 rounded-lg border border-slate-800 bg-slate-900 mb-2"><strong class="text-indigo-300">Verificação de integração</strong>' +
+      l.map((x) => '<div class="' + (x.n === 'ok' ? 'text-emerald-400' : 'text-amber-400') + '">' + (x.n === 'ok' ? '✔ ' : '⚠ ') + esc(x.t) + '</div>').join('') + '</div>';
+  }
+
   envolver('renderizarEstatisticas', (orig, ...args) => {
     const original = ESTADO && ESTADO.sessoes;
     try {
@@ -18017,7 +18093,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const lix = lerJSON(K_LIXEIRA, []);
     const lixHtml = lix.length ? '<details class="rounded-lg border border-slate-800 p-2"><summary class="cursor-pointer text-xs font-extrabold text-amber-400">Lixeira (' + lix.length + ') — restaurar tópico excluído</summary>' +
       lix.map((c, i) => '<div class="flex items-center justify-between gap-2 text-[11px] py-1 border-t border-slate-800"><span class="text-slate-300">' + esc(c.materia || '') + ' — <strong>' + esc(c.nome) + '</strong> • ' + esc(new Date(c.t).toLocaleString('pt-BR')) + '</span><button type="button" onclick="fcxGtRestaurar(' + i + ')" class="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[10px]">Restaurar</button></div>').join('') + '</details>' : '';
-    cont.innerHTML = '<div class="text-[11px] text-slate-300 p-2 rounded-lg bg-slate-950 border border-slate-800"><strong class="text-white">Total dos tópicos ativos:</strong> ' + totR + ' realizadas • ' + totA + ' acertos • ' + (totR - totA) + ' erros • ' + (totR ? (totA / totR * 100).toFixed(1) : '0.0') + '%</div>' + (blocos || '<div class="text-xs text-slate-400">Nenhum tópico encontrado.</div>') + lixHtml;
+    cont.innerHTML = htmlAuditoria() + '<div class="text-[11px] text-slate-300 p-2 rounded-lg bg-slate-950 border border-slate-800"><strong class="text-white">Total dos tópicos ativos:</strong> ' + totR + ' realizadas • ' + totA + ' acertos • ' + (totR - totA) + ' erros • ' + (totR ? (totA / totR * 100).toFixed(1) : '0.0') + '%</div>' + (blocos || '<div class="text-xs text-slate-400">Nenhum tópico encontrado.</div>') + lixHtml;
   }
 
   function montarAbaGerenciar() {
