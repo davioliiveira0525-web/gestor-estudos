@@ -15216,6 +15216,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     normalizarPartesPorPdf(m);
     const n = m.totalPartes;
     const hoje = hojeYMD();
+    aplicarOverlayCelulas(m);
     m.subtopicos.forEach((st, i) => {
       for (let p = 0; p < n; p++) {
         const c0 = st.partesStatus[p];
@@ -15295,6 +15296,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         const cel = st.partesStatus[p];
         if (Boolean(marcado) === cel.concluida) continue;
         st.partesStatus[p] = { concluida: Boolean(marcado), data: marcado ? hoje : '' };
+        registrarCelula(m, p, i, st.partesStatus[p]);
         try { ciclo.real = ciclo.real || {}; Object.keys(ciclo.real).forEach((k) => { if (ciclo.real[k] !== hoje) delete ciclo.real[k]; }); const kr = m.id + '|' + p + '|' + i; if (marcado) ciclo.real[kr] = hoje; else delete ciclo.real[kr]; persistirCiclo(); } catch (e) { /* ignora */ }
         if (!Array.isArray(st.historicoConclusao)) st.historicoConclusao = [];
         st.historicoConclusao.push({ acao: marcado ? 'PARTE_CONCLUIDA' : 'PARTE_REABERTA', parte: p + 1, data: hoje, em: new Date().toISOString() });
@@ -16480,7 +16482,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const mudadas = garantirPlanoFixo();
     try {
       if (typeof supabaseClient !== 'undefined' && supabaseClient && mudadas.length) {
-        await supabaseClient.from('cronograma_metas').upsert(mudadas.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+        await upsertMetas(mudadas);
       }
     } catch (e) { /* mantém local */ }
     if (typeof renderizarDashboardCronograma === 'function') renderizarDashboardCronograma();
@@ -16496,7 +16498,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const mudadas = garantirPlanoFixo();
     try {
       if (typeof supabaseClient !== 'undefined' && supabaseClient && mudadas.length) {
-        await supabaseClient.from('cronograma_metas').upsert(mudadas.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+        await upsertMetas(mudadas);
       }
     } catch (e) { /* mantém local */ }
     if (typeof renderizarDashboardCronograma === 'function') renderizarDashboardCronograma();
@@ -16684,7 +16686,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const mudadas = garantirPlanoFixo();
     try {
       if (typeof supabaseClient !== 'undefined' && supabaseClient && mudadas.length) {
-        await supabaseClient.from('cronograma_metas').upsert(mudadas.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+        await upsertMetas(mudadas);
       }
     } catch (e) { /* mantém local */ }
   }
@@ -16869,7 +16871,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (mudouCron) await compactarCronograma();
     try {
       if (alteradas.length && typeof supabaseClient !== 'undefined' && supabaseClient) {
-        await supabaseClient.from('cronograma_metas').upsert(alteradas.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+        await upsertMetas(alteradas);
       }
     } catch (e) { /* local */ }
     await atualizarEstadoGeral();
@@ -17051,7 +17053,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v7';
+  const VERSAO_TRILHA = 'Trilha 06/11 v8';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17121,13 +17123,14 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   function evidenciaHoje(m, st, p, i) {
     const hoje = hojeYMD();
     if (ciclo.real && ciclo.real[m.id + '|' + p + '|' + i] === hoje) return true;
+    try { const o = ciclo.cel && ciclo.cel[m.id] && ciclo.cel[m.id][p + '|' + i]; if (o && o[0] && o[1] === hoje) return true; } catch (e) { /* ignora */ }
     return (st.historicoConclusao || []).some((h) => h && h.acao === 'PARTE_CONCLUIDA' && Number(h.parte) === p + 1 && h.data === hoje);
   }
 
   async function salvarMetasLote(lista) {
     try {
       if (lista.length && typeof supabaseClient !== 'undefined' && supabaseClient) {
-        await supabaseClient.from('cronograma_metas').upsert(lista.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+        await upsertMetas(lista);
       }
     } catch (e) { /* mantém local */ }
   }
@@ -17181,6 +17184,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (!cel || !cel.concluida) return;
     cel.data = valor > hojeYMD() ? hojeYMD() : valor;
     if (cel.data === hojeYMD()) { ciclo.real = ciclo.real || {}; ciclo.real[idMeta + '|' + p + '|' + i] = hojeYMD(); }
+    registrarCelula(m, p, i, cel);
     try { delete ciclo.inferidas[idMeta + '|' + p + '|' + i]; } catch (e) { /* ignora */ }
     derivarStatusMeta(m);
     m.detalhesPartes.forEach((pt, q) => { const inf = infoSlot(m, q); if (inf.todas && inf.ult) { pt.dataPlanejada = inf.ult; if (ciclo.plano && ciclo.plano[m.id]) ciclo.plano[m.id][q] = inf.ult; } });
@@ -17276,6 +17280,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (!cel || cel.concluida) return;
     const dt = (m.detalhesPartes[p] && m.detalhesPartes[p].dataPlanejada) || ontemYMD();
     cel.concluida = true; cel.data = dt < hojeYMD() ? dt : ontemYMD();
+    registrarCelula(m, p, i, cel);
     if (!Array.isArray(st.historicoConclusao)) st.historicoConclusao = [];
     st.historicoConclusao.push({ acao: 'PARTE_CONCLUIDA', parte: p + 1, data: cel.data, em: new Date().toISOString() });
     derivarStatusMeta(m);
@@ -17379,8 +17384,9 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   const ehImportado = (x) => /^\[HISTÓRICO DO CURSO/.test(String(x.observacoes || ''));
   function resolvidasDoTopico(t) {
     const ss = ((ESTADO && ESTADO.sessoes) || []).filter((x) => x.idTopico === t.id);
-    const tag = ss.filter(ehImportado).reduce((a, x) => a + (Number(x.resolvidas) || 0), 0);
-    const proprias = ss.filter((x) => !ehImportado(x)).reduce((a, x) => a + (Number(x.resolvidas) || 0), 0);
+    const ehAj = (x) => ehImportado(x) || /^\[AJUSTE MANUAL/.test(String(x.observacoes || ''));
+    const tag = ss.filter(ehAj).reduce((a, x) => a + (Number(x.resolvidas) || 0), 0);
+    const proprias = ss.filter((x) => !ehAj(x)).reduce((a, x) => a + (Number(x.resolvidas) || 0), 0);
     return Math.max(proprias, Number(t.resolvidasTotal || 0) - tag);
   }
 
@@ -17457,7 +17463,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('sessoes').delete().eq('id', a.id); } catch (e) { /* local */ }
       }
       ESTADO.sessoes = (ESTADO.sessoes || []).filter((x) => !(x.idTopico === k.id && ehImportado(x)));
-      if (it.falta > 0) {
+      const manual = (ESTADO.sessoes || []).some((x) => x.idTopico === k.id && /^\[AJUSTE MANUAL/.test(String(x.observacoes || '')));
+      if (it.falta > 0 && !manual) {
         const ac = Math.min(it.falta, it.acFalta);
         const sessao = {
           id: gerarId_('SES'), data_sessao: hoje, id_materia: k.idMateria, materia: k.materia, id_topico: k.id, topico: row.nome, rodada: 1,
@@ -17564,18 +17571,398 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     ref.parentNode.insertBefore(b, ref);
   }
 
+
+  /* ========================================================================
+   * S. PERSISTÊNCIA CONFIÁVEL · CRONÔMETRO · GERENCIAR TÓPICOS
+   * ======================================================================== */
+
+  /* ---- S1. gravação verificada: erros do banco aparecem; nada fica só "na memória" ---- */
+  function bannerSalvar(msg) {
+    try {
+      let b = $('fcxBannerSalvar');
+      if (!msg) { if (b) b.remove(); return; }
+      if (!b) {
+        b = document.createElement('div'); b.id = 'fcxBannerSalvar';
+        b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:10000;background:#b91c1c;color:#fff;font:700 12px sans-serif;padding:8px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between';
+        document.body.appendChild(b);
+      }
+      b.innerHTML = '<span>⚠ ' + esc(msg) + '</span><button type="button" style="background:#fff;color:#b91c1c;border-radius:6px;padding:2px 8px;font-weight:800" onclick="this.parentNode.remove()">Fechar</button>';
+    } catch (e) { /* ignora */ }
+  }
+  async function dbq(fn) {
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return { ok: true, local: true };
+    try {
+      const r = await fn(supabaseClient);
+      if (r && r.error) return { ok: false, erro: r.error.message || String(r.error) };
+      return { ok: true, data: r && r.data };
+    } catch (e) { return { ok: false, erro: String((e && e.message) || e) }; }
+  }
+  const celulasConcluidas = (m) => (m.subtopicos || []).reduce((a, st) => a + (st.partesStatus || []).filter((c) => c && c.concluida).length, 0);
+
+  async function upsertMetas(lista, verificar) {
+    lista = (lista || []).filter(Boolean);
+    if (!lista.length) return true;
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return true;
+    const linhas = lista.map(serializarMetaParaColunasSupabase_);
+    let r = await dbq((c) => c.from('cronograma_metas').upsert(linhas, { onConflict: 'id' }));
+    if (!r.ok) {
+      const l2 = linhas.map((l) => Object.assign({}, l, { data_planejada: l.data_planejada || null, data_conclusao: l.data_conclusao || null }));
+      r = await dbq((c) => c.from('cronograma_metas').upsert(l2, { onConflict: 'id' }));
+    }
+    if (!r.ok) {
+      const l3 = linhas.map((l) => ({ id: l.id, status: l.status, parte_meta: l.parte_meta, detalhes_doutrina: l.detalhes_doutrina }));
+      r = await dbq((c) => c.from('cronograma_metas').upsert(l3, { onConflict: 'id' }));
+    }
+    if (!r.ok) { bannerSalvar('O banco recusou salvar o cronograma (' + r.erro + '). Sua alteração ficou guardada neste navegador e será reaplicada ao recarregar.'); return false; }
+    if (verificar && lista.length === 1) {
+      const m = lista[0];
+      const v = await dbq((c) => c.from('cronograma_metas').select('detalhes_doutrina').eq('id', m.id).limit(1));
+      try {
+        const row = v.data && v.data[0];
+        if (v.ok && row) {
+          const dp = JSON.parse(row.detalhes_doutrina || '{}');
+          const nBanco = (dp.subtopicos || []).reduce((a, st) => a + (st.partesStatus || []).filter((x) => x && x.concluida).length, 0);
+          if (nBanco !== celulasConcluidas(m)) bannerSalvar('O banco respondeu "ok", mas não gravou a alteração do cronograma (provável permissão/RLS da tabela cronograma_metas). Ela está guardada neste navegador.');
+          else bannerSalvar('');
+        }
+      } catch (e) { /* ignora */ }
+    }
+    return true;
+  }
+  window.persistirMetaIndividualSupabase_ = async function (m) {
+    window.CRON_VERSAO_EDICAO = (window.CRON_VERSAO_EDICAO || 0) + 1;
+    return upsertMetas([m], true);
+  };
+
+  /* cópia local (e na nuvem de configurações) de tudo que você marca no cronograma: reaplicada em todo carregamento */
+  function registrarCelula(m, p, i, cel) {
+    try {
+      ciclo.cel = ciclo.cel || {};
+      ciclo.cel[m.id] = ciclo.cel[m.id] || {};
+      ciclo.cel[m.id][p + '|' + i] = [cel && cel.concluida ? 1 : 0, (cel && cel.concluida && cel.data) || ''];
+      persistirCiclo();
+    } catch (e) { /* ignora */ }
+  }
+  function aplicarOverlayCelulas(m) {
+    try {
+      const ov = ciclo && ciclo.cel && ciclo.cel[m.id];
+      if (!ov) return;
+      Object.keys(ov).forEach((k) => {
+        const [p, i] = k.split('|').map(Number);
+        const st = m.subtopicos && m.subtopicos[i];
+        if (!st || !st.partesStatus || !st.partesStatus[p]) return;
+        const cel = st.partesStatus[p];
+        const c = Boolean(ov[k][0]), d = ov[k][1] || '';
+        if (cel.concluida !== c || (c && d && cel.data !== d)) st.partesStatus[p] = { concluida: c, data: c ? d : '' };
+      });
+    } catch (e) { /* ignora */ }
+  }
+  /* depois de recarregar do banco, reaplica o que você marcou e devolve ao banco o que estiver diferente */
+  envolver('carregarCronogramaSupabase', async (orig, ...args) => {
+    const r = await orig(...args);
+    try {
+      if (Array.isArray(CRON_METAS) && ciclo.cel) {
+        const difere = [];
+        CRON_METAS.forEach((m) => {
+          if (!ciclo.cel[m.id]) return;
+          const antes = celulasConcluidas(m);
+          derivarStatusMeta(m);
+          if (celulasConcluidas(m) !== antes) difere.push(m);
+        });
+        if (difere.length) {
+          garantirPlanoFixo();
+          await upsertMetas(difere);
+          if (typeof renderizarDashboardCronograma === 'function') { renderizarDashboardCronograma(); renderizarListaSemanasCronograma(); }
+        }
+      }
+    } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  /* ---- S2. cronômetro removido ---- */
+  (function () {
+    try {
+      const css = document.createElement('style');
+      css.textContent = '.ag-toolbar-timer{display:none!important}button[onclick^="iniciarOuFocarTimerAgenda"],button[onclick^="alternarPlayPauseTimerAgenda"],button[onclick^="encerrarTimerAgenda"]{display:none!important}.gcal-timer-active-ring{box-shadow:none!important}';
+      document.head.appendChild(css);
+    } catch (e) { /* ignora */ }
+    window.iniciarOuFocarTimerAgenda = function (id, ev) { if (ev && ev.stopPropagation) ev.stopPropagation(); };
+    window.alternarPlayPauseTimerAgenda = function () {};
+    window.encerrarTimerAgenda = function () {};
+  })();
+  function ocultarCronometroSessao() {
+    try {
+      const t = $('fcTimerSessao');
+      if (t && t.style.display !== 'none') {
+        t.style.display = 'none';
+        const sep = t.nextElementSibling;
+        if (sep) sep.style.display = 'none';
+        const rot = t.closest && t.closest('.text-right') && t.closest('.text-right').firstElementChild;
+        if (rot) rot.textContent = 'Média por card';
+      }
+    } catch (e) { /* ignora */ }
+  }
+
+  /* ---- S3. renomear / excluir tópico (lixeira com restauração) ---- */
+  const K_LIXEIRA = 'GR_FCX_LIXEIRA_V1';
+  const topicoPorId = (id) => ((ESTADO && ESTADO.topicos) || []).find((t) => t.id === id);
+
+  async function renomearTopico(id, novo) {
+    const t = topicoPorId(id);
+    novo = String(novo || '').replace(/\s+/g, ' ').trim();
+    if (!t || !novo || novo === t.topico) return false;
+    const r = await dbq((c) => c.from('topicos').update({ topico: novo }).eq('id', id));
+    if (!r.ok) { bannerSalvar('Não consegui renomear o tópico (' + r.erro + ').'); return false; }
+    for (const tb of ['sessoes', 'revisoes']) await dbq((c) => c.from(tb).update({ topico: novo }).eq('id_topico', id));
+    t.topico = novo;
+    (ESTADO.sessoes || []).forEach((x) => { if (x.idTopico === id) x.topico = novo; });
+    (ESTADO.revisoes || []).forEach((x) => { if (x.idTopico === id) x.topico = novo; });
+    ciclo.canon = ciclo.canon || {}; ciclo.canon[id] = 1; persistirCiclo();
+    return true;
+  }
+
+  async function excluirTopico(id) {
+    const t = topicoPorId(id);
+    if (!t) return false;
+    const copia = { t: Date.now(), nome: t.topico, materia: t.materia, linhas: {} };
+    for (const tb of ['topicos', 'sessoes', 'revisoes', 'questoes', 'flashcards']) {
+      const campo = tb === 'topicos' ? 'id' : 'id_topico';
+      const r = await dbq((c) => c.from(tb).select('*').eq(campo, id));
+      copia.linhas[tb] = (r.ok && Array.isArray(r.data)) ? r.data : [];
+    }
+    const lix = lerJSON(K_LIXEIRA, []);
+    lix.unshift(copia);
+    gravarJSON(K_LIXEIRA, lix.slice(0, 20));
+    for (const tb of ['flashcards', 'questoes', 'revisoes', 'sessoes']) {
+      const r = await dbq((c) => c.from(tb).delete().eq('id_topico', id));
+      if (!r.ok) { bannerSalvar('Não consegui excluir os registros de "' + tb + '" (' + r.erro + '). Nada foi perdido: o tópico foi mantido.'); return false; }
+    }
+    const rt = await dbq((c) => c.from('topicos').delete().eq('id', id));
+    if (!rt.ok) { bannerSalvar('Não consegui excluir o tópico (' + rt.erro + ').'); return false; }
+    ESTADO.topicos = ESTADO.topicos.filter((x) => x.id !== id);
+    ESTADO.sessoes = (ESTADO.sessoes || []).filter((x) => x.idTopico !== id);
+    FC_DECK = (FC_DECK || []).filter((c) => c.idTopico !== id);
+    if (ciclo.pausa && ciclo.pausa.topicos) delete ciclo.pausa.topicos[id];
+    persistirCiclo();
+    return true;
+  }
+
+  async function restaurarTopico(idx) {
+    const lix = lerJSON(K_LIXEIRA, []);
+    const c = lix[idx];
+    if (!c) return;
+    for (const tb of ['topicos', 'sessoes', 'revisoes', 'questoes', 'flashcards']) {
+      const linhas = c.linhas[tb] || [];
+      if (!linhas.length) continue;
+      const r = await dbq((cl) => cl.from(tb).upsert(linhas, { onConflict: 'id' }));
+      if (!r.ok) { bannerSalvar('Não consegui restaurar "' + tb + '" (' + r.erro + ').'); return; }
+    }
+    lix.splice(idx, 1); gravarJSON(K_LIXEIRA, lix);
+    try { if (typeof carregarFlashcardsSupabase === 'function') await carregarFlashcardsSupabase(); } catch (e) { /* ignora */ }
+    await atualizarEstadoGeral();
+    renderizarPainelTopicos();
+    aviso('Tópico restaurado com todo o histórico.');
+  }
+
+  async function aposAlterarTopicos() {
+    await atualizarEstadoGeral();
+    try { if (typeof filtrarTopicosSelectSessao === 'function') filtrarTopicosSelectSessao(); } catch (e) { /* ignora */ }
+    try { renderizarPainelTopicos(); } catch (e) { /* ignora */ }
+  }
+
+  /* botões no formulário "Lançar Resolução de Questões" */
+  function montarBotoesFormulario() {
+    try {
+      const sel = $('sesTopico');
+      if (!sel || $('fcxFormTopicoAcoes')) return;
+      const box = document.createElement('div');
+      box.id = 'fcxFormTopicoAcoes';
+      box.className = 'flex flex-wrap gap-2 mt-1';
+      box.innerHTML = '<button type="button" onclick="fcxRenomearTopicoForm()" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 text-[11px] font-bold">✎ Renomear tópico</button>' +
+        '<button type="button" onclick="fcxExcluirTopicoForm()" class="px-2.5 py-1 rounded-lg border border-rose-800 text-rose-300 hover:bg-rose-950 text-[11px] font-bold">🗑 Excluir tópico</button>';
+      sel.parentNode.appendChild(box);
+    } catch (e) { /* ignora */ }
+  }
+  window.fcxRenomearTopicoForm = async function () {
+    const id = ($('sesTopico') || {}).value;
+    const t = topicoPorId(id);
+    if (!t) { aviso('Selecione um tópico primeiro.', true); return; }
+    const novo = window.prompt('Novo nome do tópico:', t.topico);
+    if (novo == null) return;
+    if (await renomearTopico(id, novo)) { await aposAlterarTopicos(); try { $('sesTopico').value = id; } catch (e) { /* ignora */ } aviso('Tópico renomeado.'); }
+  };
+  window.fcxExcluirTopicoForm = async function () {
+    const id = ($('sesTopico') || {}).value;
+    if (!id) { aviso('Selecione um tópico primeiro.', true); return; }
+    await excluirComConfirmacao(id);
+  };
+  async function excluirComConfirmacao(id) {
+    const t = topicoPorId(id);
+    if (!t) return;
+    const nS = (ESTADO.sessoes || []).filter((x) => x.idTopico === id).length;
+    const nC = (FC_DECK || []).filter((c) => c.idTopico === id).length;
+    const ok = window.confirm('Excluir o tópico "' + t.topico + '"?\n\nSerão removidos junto: ' + nS + ' sessão(ões) de questões e ' + nC + ' cartão(ões).\nUma cópia fica na Lixeira (aba Gerenciar Tópicos) e pode ser restaurada.');
+    if (!ok) return;
+    if (await excluirTopico(id)) { await aposAlterarTopicos(); aviso('Tópico excluído. Cópia guardada na lixeira.'); }
+  }
+
+  /* ---- S4. aba GERENCIAR TÓPICOS E ESTATÍSTICAS ---- */
+  const TAG_AJUSTE = '[HISTÓRICO DO CURSO ';
+  const ehAjuste = (x) => String(x.observacoes || '').indexOf(TAG_AJUSTE) === 0 || String(x.observacoes || '').indexOf('[AJUSTE MANUAL') === 0;
+  function totaisTopico(t) {
+    const ss = ((ESTADO && ESTADO.sessoes) || []).filter((x) => x.idTopico === t.id);
+    const res = ss.reduce((a, x) => a + (Number(x.resolvidas) || 0), 0);
+    const ac = ss.reduce((a, x) => a + (Number(x.acertos) || 0), 0);
+    const proprias = ss.filter((x) => !ehAjuste(x));
+    return { res, ac, er: Math.max(0, res - ac), resP: proprias.reduce((a, x) => a + (Number(x.resolvidas) || 0), 0), acP: proprias.reduce((a, x) => a + (Number(x.acertos) || 0), 0) };
+  }
+
+  /* define os totais exatos do tópico por uma sessão de ajuste (única, substituível); as sessões reais não são tocadas */
+  async function definirTotaisTopico(t, res, ac) {
+    const tot = totaisTopico(t);
+    const dRes = res - tot.resP, dAc = ac - tot.acP;
+    const antigas = ((ESTADO.sessoes || [])).filter((x) => x.idTopico === t.id && ehAjuste(x));
+    for (const a of antigas) {
+      const r = await dbq((c) => c.from('sessoes').delete().eq('id', a.id));
+      if (!r.ok) { bannerSalvar('Não consegui atualizar os totais (' + r.erro + ').'); return false; }
+    }
+    ESTADO.sessoes = (ESTADO.sessoes || []).filter((x) => !(x.idTopico === t.id && ehAjuste(x)));
+    if (dRes !== 0 || dAc !== 0) {
+      const hoje = hojeYMD();
+      const linha = {
+        id: gerarId_('SES'), data_sessao: hoje, id_materia: t.idMateria, materia: t.materia, id_topico: t.id, topico: t.topico, rodada: 1,
+        questoes_resolvidas: dRes, acertos: dAc, erros: dRes - dAc, aproveitamento_sessao: dRes > 0 ? Number(((dAc / dRes) * 100).toFixed(1)) : 0,
+        meta_diaria_epoca: 0, meta_aprov_epoca: 0,
+        observacoes: '[AJUSTE MANUAL ' + fmtData(hoje) + '] totais definidos no painel Gerenciar Tópicos', tipo_registro: 'Confirmado'
+      };
+      const r = await dbq((c) => c.from('sessoes').upsert(linha, { onConflict: 'id' }));
+      if (!r.ok) { bannerSalvar('Não consegui gravar os totais (' + r.erro + ').'); return false; }
+      ESTADO.sessoes.push({ id: linha.id, idTopico: t.id, idMateria: t.idMateria, resolvidas: dRes, acertos: dAc, dataSessao: hoje, rodada: 1, observacoes: linha.observacoes, topico: t.topico, materia: t.materia });
+    }
+    return true;
+  }
+
+  window.fcxGtCalc = function (id, campo) {
+    const g = (x) => $('fcxGt' + x + '_' + id);
+    if (!g('Res')) return;
+    let res = Math.max(0, parseInt(g('Res').value, 10) || 0), ac = Math.max(0, parseInt(g('Ac').value, 10) || 0), er = Math.max(0, parseInt(g('Er').value, 10) || 0);
+    if (campo === 'er') ac = Math.max(0, res - er); else ac = Math.min(ac, res);
+    er = res - ac;
+    g('Res').value = res; g('Ac').value = ac; g('Er').value = er;
+    const ap = $('fcxGtAp_' + id); if (ap) ap.textContent = res ? (ac / res * 100).toFixed(1) + '%' : '—';
+  };
+
+  window.fcxGtSalvar = async function (id) {
+    const t = topicoPorId(id);
+    if (!t) return;
+    const nome = ($('fcxGtNome_' + id) || {}).value;
+    const banco = Math.max(0, parseInt(($('fcxGtBanco_' + id) || {}).value, 10) || 0);
+    const res = Math.max(0, parseInt(($('fcxGtRes_' + id) || {}).value, 10) || 0);
+    const ac = Math.min(res, Math.max(0, parseInt(($('fcxGtAc_' + id) || {}).value, 10) || 0));
+    let ok = true;
+    if (nome && nome.trim() !== t.topico) ok = (await renomearTopico(id, nome)) && ok;
+    if (banco !== Number(t.totalBanco || 0)) {
+      const r = await dbq((c) => c.from('topicos').update({ total_banco: banco }).eq('id', id));
+      if (!r.ok) { bannerSalvar('Não consegui salvar o total do banco (' + r.erro + ').'); ok = false; } else t.totalBanco = banco;
+    }
+    ok = (await definirTotaisTopico(t, res, ac)) && ok;
+    await aposAlterarTopicos();
+    if (ok) aviso('Tópico "' + t.topico + '" atualizado.');
+  };
+  window.fcxGtExcluir = async function (id) { await excluirComConfirmacao(id); };
+  window.fcxGtRestaurar = async function (i) { await restaurarTopico(i); };
+  window.fcxGtFiltro = function () { renderizarPainelTopicos(); };
+
+  function renderizarPainelTopicos() {
+    const cont = $('fcxGtLista');
+    if (!cont) return;
+    const busca = nn((($('fcxGtBusca') || {}).value) || '');
+    const topicos = (ESTADO && ESTADO.topicos) || [];
+    const mats = ((ESTADO && ESTADO.materias) || []).slice();
+    const orfas = topicos.filter((t) => !mats.some((m) => m.id === t.idMateria));
+    if (orfas.length) mats.push({ id: '__sem__', nome: 'Sem matéria cadastrada' });
+    const inp = 'class="rounded border px-1 py-0.5 text-[11px] font-bold" style="background:#0f172a;color:#e2e8f0;border-color:#334155"';
+    let totR = 0, totA = 0;
+    const blocos = mats.map((m) => {
+      const lista = topicos.filter((t) => (m.id === '__sem__' ? orfas.indexOf(t) >= 0 : t.idMateria === m.id)).filter((t) => !busca || nn(t.topico).indexOf(busca) >= 0);
+      if (!lista.length) return '';
+      const linhas = lista.map((t) => {
+        const x = totaisTopico(t);
+        if (t.status === 'Ativo') { totR += x.res; totA += x.ac; }
+        const id = t.id;
+        return '<tr class="border-t border-slate-800 align-top"><td class="py-1 pr-2"><input id="fcxGtNome_' + id + '" value="' + esc(t.topico).replace(/"/g, '&quot;') + '" ' + inp.replace('class="', 'class="w-56 ') + '>' +
+          '<div class="text-[10px] ' + (t.status === 'Ativo' ? 'text-emerald-400' : 'text-slate-400') + '">' + esc(t.status) + '</div></td>' +
+          '<td class="py-1 pr-1"><input id="fcxGtBanco_' + id + '" type="number" min="0" value="' + Number(t.totalBanco || 0) + '" ' + inp.replace('class="', 'class="w-16 ') + '></td>' +
+          '<td class="py-1 pr-1"><input id="fcxGtRes_' + id + '" type="number" min="0" value="' + x.res + '" onchange="fcxGtCalc(\'' + id + '\',\'res\')" ' + inp.replace('class="', 'class="w-16 ') + '></td>' +
+          '<td class="py-1 pr-1"><input id="fcxGtAc_' + id + '" type="number" min="0" value="' + x.ac + '" onchange="fcxGtCalc(\'' + id + '\',\'ac\')" ' + inp.replace('class="', 'class="w-16 ') + '></td>' +
+          '<td class="py-1 pr-1"><input id="fcxGtEr_' + id + '" type="number" min="0" value="' + x.er + '" onchange="fcxGtCalc(\'' + id + '\',\'er\')" ' + inp.replace('class="', 'class="w-16 ') + '></td>' +
+          '<td id="fcxGtAp_' + id + '" class="py-1 pr-2 font-bold text-white whitespace-nowrap">' + (x.res ? (x.ac / x.res * 100).toFixed(1) + '%' : '—') + '</td>' +
+          '<td class="py-1 whitespace-nowrap"><button type="button" onclick="fcxGtSalvar(\'' + id + '\')" class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px]">Salvar</button> ' +
+          '<button type="button" onclick="fcxGtExcluir(\'' + id + '\')" class="px-2 py-1 rounded border border-rose-800 text-rose-300 hover:bg-rose-950 font-extrabold text-[10px]">Excluir</button></td></tr>';
+      }).join('');
+      return '<details open class="rounded-lg border border-slate-800 bg-slate-950/50 p-2"><summary class="cursor-pointer text-xs font-extrabold text-indigo-300">' + esc(m.nome) + ' <span class="text-slate-400 font-semibold">(' + lista.length + ' tópico' + (lista.length > 1 ? 's' : '') + ')</span></summary>' +
+        '<div class="overflow-x-auto"><table class="w-full text-[11px] mt-1"><thead><tr class="text-left text-slate-400"><th>Tópico</th><th>Banco</th><th>Realizadas</th><th>Acertos</th><th>Erros</th><th>Aprov.</th><th></th></tr></thead><tbody>' + linhas + '</tbody></table></div></details>';
+    }).join('');
+    const lix = lerJSON(K_LIXEIRA, []);
+    const lixHtml = lix.length ? '<details class="rounded-lg border border-slate-800 p-2"><summary class="cursor-pointer text-xs font-extrabold text-amber-400">Lixeira (' + lix.length + ') — restaurar tópico excluído</summary>' +
+      lix.map((c, i) => '<div class="flex items-center justify-between gap-2 text-[11px] py-1 border-t border-slate-800"><span class="text-slate-300">' + esc(c.materia || '') + ' — <strong>' + esc(c.nome) + '</strong> • ' + esc(new Date(c.t).toLocaleString('pt-BR')) + '</span><button type="button" onclick="fcxGtRestaurar(' + i + ')" class="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-[10px]">Restaurar</button></div>').join('') + '</details>' : '';
+    cont.innerHTML = '<div class="text-[11px] text-slate-300 p-2 rounded-lg bg-slate-950 border border-slate-800"><strong class="text-white">Total dos tópicos ativos:</strong> ' + totR + ' realizadas • ' + totA + ' acertos • ' + (totR - totA) + ' erros • ' + (totR ? (totA / totR * 100).toFixed(1) : '0.0') + '%</div>' + (blocos || '<div class="text-xs text-slate-400">Nenhum tópico encontrado.</div>') + lixHtml;
+  }
+
+  function montarAbaGerenciar() {
+    try {
+      if ($('subbtn-reg-gerenciar')) return;
+      const hist = $('subbtn-reg-historico'), secHist = $('subaba-reg-historico');
+      if (!hist || !secHist) return;
+      const b = document.createElement('button');
+      b.type = 'button'; b.id = 'subbtn-reg-gerenciar';
+      b.className = 'px-3 py-1.5 rounded-lg transition subtab-inactive';
+      b.textContent = 'Gerenciar Tópicos e Estatísticas';
+      b.setAttribute('onclick', "alternarSubAbaRegistrar('gerenciar')");
+      hist.parentNode.appendChild(b);
+      const sec = document.createElement('div');
+      sec.id = 'subaba-reg-gerenciar';
+      sec.className = 'hidden bg-slate-900 rounded-xl border border-slate-800 overflow-hidden';
+      sec.innerHTML = '<div class="px-4 py-3 border-b border-slate-800 space-y-2"><div><h2 class="text-sm font-bold text-white">Gerenciar Tópicos e Estatísticas</h2>' +
+        '<p class="text-[11px] text-slate-400">Todos os tópicos por matéria. Edite nome, banco de questões, realizadas, acertos e erros e clique em Salvar. As suas sessões reais nunca são alteradas: o painel só cria um ajuste substituível para fechar os totais que você definir.</p></div>' +
+        '<input id="fcxGtBusca" oninput="fcxGtFiltro()" placeholder="Buscar tópico..." class="w-full sm:w-72 rounded-lg border px-2.5 py-1.5 text-xs"></div>' +
+        '<div id="fcxGtLista" class="p-3 space-y-2"></div>';
+      secHist.parentNode.insertBefore(sec, secHist.nextSibling);
+      envolver('alternarSubAbaRegistrar', (orig, qual) => {
+        const g = $('subaba-reg-gerenciar'), gb = $('subbtn-reg-gerenciar');
+        if (qual === 'gerenciar') {
+          orig('historico');
+          const h = $('subaba-reg-historico'); if (h) h.classList.add('hidden');
+          const hb = $('subbtn-reg-historico'); if (hb) hb.className = 'px-3 py-1.5 rounded-lg transition subtab-inactive';
+          if (g) g.classList.remove('hidden');
+          if (gb) gb.className = 'px-3 py-1.5 rounded-lg transition subtab-active';
+          renderizarPainelTopicos();
+        } else {
+          if (g) g.classList.add('hidden');
+          if (gb) gb.className = 'px-3 py-1.5 rounded-lg transition subtab-inactive';
+          orig(qual);
+        }
+      });
+    } catch (e) { /* ignora */ }
+  }
+  envolver('aplicarEstado', (orig, ...args) => {
+    const r = orig(...args);
+    try { ocultarCronometroSessao(); montarBotoesFormulario(); const g = $('subaba-reg-gerenciar'); if (g && !g.classList.contains('hidden')) renderizarPainelTopicos(); } catch (e) { /* ignora */ }
+    return r;
+  });
+
   /* ========================================================================
    * INICIALIZAÇÃO
    * ======================================================================== */
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    get ciclo() { return ciclo; }, planoPadronizacao, aplicarPadronizacao, planoTrilha, aplicarPlanoTrilha, desfazerTrilha, migrarDatasF, inferirDataCelula, transferirPendencias, htmlPendencias, htmlPainelDia, metaVista, temProgresso, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
+    get ciclo() { return ciclo; }, upsertMetas, renomearTopico, excluirTopico, definirTotaisTopico, totaisTopico, registrarCelula, aplicarOverlayCelulas, renderizarPainelTopicos, planoPadronizacao, aplicarPadronizacao, planoTrilha, aplicarPlanoTrilha, desfazerTrilha, migrarDatasF, inferirDataCelula, transferirPendencias, htmlPendencias, htmlPainelDia, metaVista, temProgresso, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
     inicializarUI();
-    try { montarBotaoTrilha(); montarBotaoPadronizar(); avisoInicialTrilha(); } catch (e) { /* ignora */ }
+    try { montarBotaoTrilha(); montarBotaoPadronizar(); avisoInicialTrilha(); montarAbaGerenciar(); montarBotoesFormulario(); ocultarCronometroSessao(); } catch (e) { /* ignora */ }
     if (typeof renderizarDashboardCronograma === 'function' && CRON_METAS && CRON_METAS.length) {
       CRON_METAS.forEach(derivarStatusMeta);
       renderizarDashboardCronograma();
@@ -17588,3 +17975,4 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
 </body>
 </html>
+  
