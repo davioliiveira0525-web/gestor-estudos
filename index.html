@@ -15619,7 +15619,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
    *      progresso dos blocos, composição fixa dos blocos, zeradas de decoreba e vínculo de matérias */
   const K_CICLO = 'GR_FCX_CICLO_V2';
   const K_CICLO_NUVEM = 'GR_FCX_CICLO_JSON';
-  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {}, mapaT: {}, inicio: {}, plano: {}, estudo: {}, recon: {}, rev: {}, pausa: {} });
+  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {}, mapaT: {}, inicio: {}, plano: {}, estudo: {}, recon: {}, rev: {}, pausa: {}, trilha: {} });
   let ciclo = Object.assign(cicloVazio(), lerJSON(K_CICLO, {}));
   if (!ciclo.t) { /* migra a versão anterior (somente navegador) */
     ciclo.blocos = lerJSON('GR_FCX_BLOCOS_V1', {});
@@ -16504,29 +16504,84 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
 
   /* ========================================================================
-   * N. SEPARAÇÃO TEMPORÁRIA: TEORIA x LEI SECA
-   *    Nada é excluído. O que não consta na lista de Teoria sai da estrutura de Teoria
-   *    (cronograma, fila de questões, cartões, agenda e indicadores) e pode voltar a qualquer momento.
+   * N. TRILHA DE ESTUDOS (fonte única da Teoria)
+   *    Cronograma, tópicos, PDFs-base pendentes, fila de questões, cartões, agenda e indicadores
+   *    passam a respeitar a trilha. Nada é excluído: o que sai fica guardado e pode voltar.
    * ======================================================================== */
-  const TEORIA_LISTA = [["Direito Penal", 1, "Noções Iniciais e Princípios"], ["Direito Penal", 2, "Aplicação da Lei Penal"], ["Direito Penal", 2, "Teoria do Crime — Parte 1"], ["Direito Penal", 2, "Teoria do Crime — Parte 2"], ["Direito Penal", 3, "Teoria do Crime — Parte 3"], ["Direito Penal", 8, "Ação Penal e Causas de Extinção da Punibilidade"], ["Direito Penal", 11, "Crimes contra a Pessoa"], ["Direito Penal", 12, "Crimes contra o Patrimônio"], ["Direito Penal", 13, "Crimes contra a Propriedade Imaterial"], ["Direito Penal", 13, "Crimes contra a Organização do Trabalho"], ["Direito Penal", 13, "Crimes contra o Sentimento Religioso e Respeito aos Mortos"], ["Direito Penal", 14, "Crimes contra a Dignidade Sexual"], ["Direito Penal", 16, "Crimes contra a Família"], ["Direito Penal", 16, "Crimes contra a Incolumidade Pública"], ["Direito Penal", 16, "Crimes contra a Paz Pública"], ["Direito Penal", 17, "Crimes contra a Fé Pública"], ["Direito Penal", 19, "Crimes contra as Finanças Públicas"], ["Direito Penal", 19, "Crimes contra o Estado Democrático de Direito"], ["Direito Processual Penal", 1, "Noções Iniciais e Princípios"], ["Direito Processual Penal", 2, "Inquérito Policial"], ["Direito Processual Penal", 3, "Ação Penal"], ["Direito Processual Penal", 6, "Jurisdição e Competência"], ["Direito Processual Penal", 8, "Provas"], ["Direito Processual Penal", 11, "Prisões"], ["Direito Processual Penal", 12, "Liberdade Provisória, Medidas Cautelares e Fiança"], ["Direito Processual Penal", 13, "Tribunal do Júri"], ["Direito Processual Penal", 14, "Procedimentos"], ["Direito Processual Penal", 16, "Nulidades e Recursos"], ["Direito Processual Penal", 16, "Recursos em Espécie e Ações de Impugnação"], ["Direito Processual Penal", 17, "Processo Penal Digital"], ["Leis Penais Especiais", 1, "Lei Maria da Penha (Lei 11.340/2006)"], ["Leis Penais Especiais", 3, "Estatuto do Desarmamento (Lei 10.826/2003)"], ["Leis Penais Especiais", 6, "Lei de Tortura (Lei 9.455/1997)"], ["Leis Penais Especiais", 6, "Lei de Crimes Ambientais (Lei 9.605/1998)"], ["Leis Penais Especiais", 8, "Lei dos Crimes de Preconceito Racial"], ["Leis Penais Especiais", 9, "Lei das Contravenções Penais (Decreto-Lei 3.688/1941)"], ["Leis Penais Especiais", 9, "Código de Trânsito Brasileiro (Lei 9.503/1997)"], ["Leis Penais Especiais", 9, "Lei de Abuso de Autoridade (Lei 13.869/2019)"], ["Leis Penais Especiais", 11, "Reestruturação do COAF"], ["Leis Penais Especiais", 12, "Lei Geral do Esporte"], ["Leis Penais Especiais", 12, "Lei de Interceptação Telefônica (Lei 9.296/1996)"], ["Leis Penais Especiais", 13, "Estatuto da Pessoa com Deficiência (Lei 13.146/2015)"], ["Leis Penais Especiais", 13, "Lei da Propriedade Industrial"], ["Leis Penais Especiais", 13, "Lei dos Crimes Falimentares (Lei 11.101/2005)"], ["Leis Penais Especiais", 14, "Código Eleitoral (Lei 4.737/1965)"], ["Leis Penais Especiais", 14, "Lei dos Juizados Especiais Criminais (Lei 9.099/1995)"], ["Leis Penais Especiais", 16, "Lei Henry Borel"], ["Leis Penais Especiais", 16, "Lei dos Crimes contra a Ordem Tributária"], ["Leis Penais Especiais", 16, "Lei de Lavagem de Capitais (Lei 9.613/1998)"], ["Leis Penais Especiais", 17, "Lei de Execução Penal — Parte 1"], ["Leis Penais Especiais", 17, "Lei de Execução Penal — Parte 2"], ["Leis Penais Especiais", 19, "Lei de Migração"], ["Leis Penais Especiais", 19, "Lei do Parcelamento do Solo Urbano"], ["Leis Penais Especiais", 19, "Lei 12.984/2014 (Discriminação ao Portador de HIV)"], ["Execução Penal Complementar", 21, "Objetivos, Princípios e Jurisdição na Execução Penal"], ["Execução Penal Complementar", 22, "Do Preso, do Trabalho Penitenciário e dos Órgãos da Execução Penal"], ["Execução Penal Complementar", 24, "Sistema Disciplinar"], ["Execução Penal Complementar", 26, "Direitos da Execução e Progressão de Regime"], ["Execução Penal Complementar", 37, "Livramento Condicional"], ["Criminologia", 6, "Conceito, Objeto, Classificação e Estatística Criminal"], ["Criminologia", 12, "História da Criminologia, Escola Clássica e Positivista"], ["Criminologia", 13, "Sociologia Criminal"], ["Criminologia", 16, "Crime Organizado, Classificação dos Criminosos e Prevenção Criminal"], ["Criminologia", 17, "Instâncias de Controle, Reincidência, Prognóstico Criminal, Exame Criminológico e Política Criminal Atuarial"], ["Criminologia", 17, "Criminologia Feminista, Racial, Queer e Verde"], ["Medicina Legal", 8, "Tanatologia Forense"], ["Medicina Legal", 14, "Sexologia Forense"], ["Medicina Legal", 17, "Toxicologia Forense"], ["Medicina Legal", 17, "Antropologia Forense"], ["Medicina Legal", 19, "Psiquiatria Forense"], ["Direito Constitucional", 1, "Direitos e Garantias Fundamentais"], ["Direito Constitucional", 2, "Teoria Constitucional"], ["Direito Constitucional", 2, "Tutela Constitucional das Liberdades"], ["Direito Constitucional", 3, "Direitos Políticos"], ["Direito Constitucional", 3, "Direitos da Nacionalidade"], ["Direito Constitucional", 6, "Administração Pública — Aspectos Constitucionais"], ["Direito Constitucional", 6, "Poder e Processo Legislativo"], ["Direito Constitucional", 8, "Poder Executivo"], ["Direito Constitucional", 8, "Poder Judiciário"], ["Direito Constitucional", 9, "Controle de Constitucionalidade"], ["Direito Constitucional", 11, "Funções Essenciais da Justiça"], ["Direito Constitucional", 11, "Estado de Defesa, Estado de Sítio e Segurança Pública"], ["Direito Constitucional", 13, "Ordem Social"], ["Direito Constitucional", 13, "Ordem Econômica e Financeira"], ["Direito Constitucional", 14, "Aspectos Constitucionais sobre o Sistema Tributário Nacional e Ordem Econômica e Financeira"], ["Direito Constitucional", 14, "Ciência, Tecnologia, Cultura e Desporto"], ["Direito Constitucional", 14, "Família, Criança, Adolescente, Jovem e Idoso"], ["Direito Administrativo", 1, "Noções Iniciais e Princípios"], ["Direito Administrativo", 3, "Entes da Administração"], ["Direito Administrativo", 6, "Poderes da Administração"], ["Direito Administrativo", 9, "Licitações"], ["Direito Administrativo", 12, "Contratos"], ["Direito Administrativo", 13, "Intervenção do Estado no Domínio Econômico"], ["Direito Administrativo", 13, "Intervenção do Estado na Propriedade"], ["Direito Administrativo", 16, "Bens Públicos"], ["Direito Administrativo", 17, "Agentes Públicos"], ["Direito Administrativo", 19, "Improbidade Administrativa"], ["Direito Administrativo", 19, "Controle da Administração Pública"], ["Direitos Humanos", 21, "Introdução e Teoria Geral dos Direitos Humanos"], ["Direitos Humanos", 21, "Interpretação, Eficácia e Direitos Humanos na Constituição Federal"], ["Direitos Humanos", 22, "Controle de Convencionalidade e Intervenção Federal para Garantia dos DH"], ["Direitos Humanos", 23, "Federalização dos Crimes contra DH e Programas Nacionais de DH (PNDH)"], ["Direitos Humanos", 24, "Direito Internacional dos Direitos Humanos"], ["Direitos Humanos", 28, "Direito à Integridade Física e Mental, Grupos Vulneráveis, Minorias e Defensores de DH"], ["Direitos Humanos", 33, "Direitos da Criança e do Adolescente, PcD, Idosos, População LGBTQIA+ e Pessoas Reclusas"], ["Direitos Humanos", 36, "Direitos dos Indígenas, Refugiados, População de Rua, Migrantes, Quilombolas e Defensores de DH"], ["Direitos Humanos", 36, "Direitos das Vítimas de Abuso de Criminalidade e Conduta dos Funcionários da Lei"], ["Direito Tributário e Financeiro", 23, "Legislação Tributária"], ["Direito Tributário e Financeiro", 24, "Conceito e Classificação dos Tributos"], ["Direito Tributário e Financeiro", 28, "Limitações ao Poder de Tributar e Competência Tributária"], ["Direito Tributário e Financeiro", 29, "Obrigação e Responsabilidade Tributária"], ["Direito Tributário e Financeiro", 31, "Crédito Tributário"], ["Direito Tributário e Financeiro", 37, "Administração Tributária"], ["Direito Tributário e Financeiro", 38, "Execução Fiscal e Processo Judicial Tributário"], ["Direito Tributário e Financeiro", 46, "Aspectos Constitucionais — Orçamento, Receita e Despesa"], ["Direito Tributário e Financeiro", 46, "Crédito Público"], ["Direito Tributário e Financeiro", 47, "Despesa e Receita Pública"], ["Direito Tributário e Financeiro", 47, "Fiscalização Financeira e Orçamentária"], ["Direito Tributário e Financeiro", 48, "Lei de Responsabilidade Fiscal (LRF)"], ["Direito Internacional Público", 46, "Introdução, Sujeitos, Imunidades e Nacionalidade"], ["Direito Internacional Público", 46, "Nacionalidade, Condição Jurídica do Estrangeiro, Domínio Público Internacional e Cooperação Internacional"], ["Direito Internacional Público", 46, "Direitos dos Portugueses e Condição do Estrangeiro"], ["Direito Internacional Público", 47, "Mercosul"], ["Direito Internacional Público", 49, "Crimes Limitadores da Cooperação Internacional"], ["Direito Internacional Público", 49, "Homologação de Sentença Estrangeira"], ["Direito Internacional Público", 49, "Direito Internacional Tributário, Ambiental e do Mar"], ["Direito Internacional Público", 49, "Cooperação Jurídica Internacional"], ["Direito Internacional Público", 49, "Conflitos Internacionais"], ["Direito Eleitoral", 23, "Conceitos e Princípios"], ["Direito Eleitoral", 23, "Justiça Eleitoral"], ["Direito Eleitoral", 26, "Elegibilidade, Inelegibilidade e Código Eleitoral"], ["Direito Eleitoral", 26, "Propaganda Eleitoral"], ["Direito Eleitoral", 27, "Partidos Políticos"], ["Direito Previdenciário", 46, "Seguridade Social"], ["Direito Previdenciário", 46, "Previdência Complementar"], ["Direito Previdenciário", 48, "Previdência Complementar (Aprofundamento)"], ["Direito Previdenciário", 48, "Dos Beneficiários"], ["Direito Previdenciário", 48, "Empregadores, Contribuições, Prescrição, Decadência e Crimes Previdenciários"], ["Direito Previdenciário", 49, "Acidente de Trabalho"], ["Direito Urbanístico", 46, "Conceitos e Aspectos Gerais"], ["Direito Urbanístico", 48, "Estatuto da Cidade"], ["Direito Urbanístico", 49, "Direito à Moradia"], ["Direito Civil", 19, "Lei do Inquilinato"], ["Direito Civil", 22, "Constitucionalização do Direito Civil e LINDB"], ["Direito Civil", 23, "Fatos Jurídicos, Negócio Jurídico, Prescrição e Decadência"], ["Direito Civil", 27, "Obrigações I"], ["Direito Civil", 28, "Dos Bens"], ["Direito Civil", 31, "Obrigações — Parte II"], ["Direito Civil", 32, "Teoria Geral dos Contratos"], ["Direito Civil", 33, "Contratos em Espécie"], ["Direito Civil", 33, "Responsabilidade Civil"], ["Direito Civil", 34, "Direito das Coisas"], ["Direito Civil", 36, "Família — Entidades Familiares"], ["Direito Civil", 37, "Família — Casamento"], ["Direito Civil", 38, "Família — Dissolução da Sociedade Conjugal"], ["Direito Civil", 39, "Família — União Estável"], ["Direito Civil", 41, "Família — Relações de Parentesco"], ["Direito Civil", 42, "Família — Tutela, Curatela e Tomada de Decisão Apoiada"], ["Direito Civil", 43, "Família — Alimentos"], ["Direito Civil", 44, "Família — Sucessões"], ["Direito Civil", 44, "Família — Alienação Parental"], ["Direito Processual Civil", 21, "Princípios, Jurisdição, Ação e Competência"], ["Direito Processual Civil", 22, "Dos Sujeitos do Processo"], ["Direito Processual Civil", 23, "Dos Atos Processuais"], ["Direito Processual Civil", 23, "Da Formação, Suspensão e Extinção do Processo"], ["Direito Processual Civil", 28, "Tutelas"], ["Direito Processual Civil", 31, "Processo de Conhecimento"], ["Direito Processual Civil", 32, "Sentença e Coisa Julgada"], ["Direito Processual Civil", 34, "Procedimentos Especiais e Procedimentos de Jurisdição Voluntária"], ["Direito Processual Civil", 36, "Teoria Geral das Provas e Provas em Espécie"], ["Direito Processual Civil", 39, "Processos nos Tribunais e Meios de Impugnação das Decisões Judiciais"], ["Estatuto da Criança e do Adolescente", 23, "Evolução, Princípios e Depoimento sem Dano"], ["Estatuto da Criança e do Adolescente", 24, "Direitos Fundamentais"], ["Estatuto da Criança e do Adolescente", 36, "Guarda, Tutela e Adoção"], ["Estatuto da Criança e do Adolescente", 37, "Poder Familiar"], ["Estatuto da Criança e do Adolescente", 42, "Medidas de Proteção"], ["Estatuto da Criança e do Adolescente", 42, "Acesso à Justiça"], ["Estatuto da Criança e do Adolescente", 42, "Ato Infracional"], ["Estatuto da Criança e do Adolescente", 43, "Medidas Socioeducativas"], ["Estatuto da Criança e do Adolescente", 43, "SINASE"], ["Estatuto da Criança e do Adolescente", 43, "Infrações Administrativas"], ["Estatuto da Criança e do Adolescente", 43, "LOAS e LDB"], ["Tutela Coletiva", 24, "Acesso à Justiça"], ["Tutela Coletiva", 24, "Microssistemas"], ["Tutela Coletiva", 39, "Legitimidade"], ["Tutela Coletiva", 41, "Aspectos Processuais e Ação Coletiva"], ["Tutela Coletiva", 41, "Competência, Litisconsórcio e Intervenção de Terceiros"], ["Tutela Coletiva", 42, "Sentença"], ["Tutela Coletiva", 42, "Meios Adequados de Solução de Conflitos"], ["Direito do Consumidor", 21, "Introdução"], ["Direito do Consumidor", 27, "Direitos Básicos e Responsabilidade Civil"], ["Direito do Consumidor", 28, "Práticas Comerciais e Lei do Cadastro Positivo"], ["Direito do Consumidor", 32, "Práticas Contratuais e Defesa em Juízo"], ["Direito do Consumidor", 37, "Contratos Bancários"], ["Direito do Consumidor", 41, "Plano de Saúde e Serviço Público Essencial"], ["Direito Ambiental", 21, "Direito Ambiental Constitucional"], ["Direito Ambiental", 22, "Código Florestal"], ["Direito Ambiental", 27, "Saneamento Básico"], ["Direito Ambiental", 28, "Recursos Hídricos"], ["Direito Ambiental", 28, "Responsabilidade Ambiental"], ["Direito Ambiental", 29, "Política Nacional do Meio Ambiente"], ["Direito Ambiental", 29, "Biossegurança e Biodiversidade"], ["Direito Empresarial", 26, "Empresário"], ["Direito Empresarial", 29, "Sociedades"], ["Direito Empresarial", 31, "Títulos de Crédito"], ["Direito Empresarial", 33, "Direito Falimentar"], ["Direito Empresarial", 36, "Propriedade Industrial"], ["Direito Empresarial", 37, "Ações Cambiais"], ["Princípios Institucionais do MP", 23, "Introdução"], ["Princípios Institucionais do MP", 24, "Procedimentos de Investigação"], ["Princípios Institucionais do MP", 26, "CNMP"], ["Legislações Específicas", 32, "Direito à Saúde"], ["Legislações Específicas", 38, "Direito da Pessoa Idosa — Geral"]];
-  const STOP = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'na', 'no', 'nas', 'nos', 'ao', 'para', 'com', 'por', 'sobre', 'direito', 'direitos', 'parte', 'lei', 'leis', 'geral']);
-  const tokens = (s) => nn(s).replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9 ]/g, ' ').split(' ')
+  const TRILHA_PADRAO = {"dd": [[1, "DIREITO PENAL - NOÇÕES INICIAIS E PRINCÍPIOS"], [1, "DIREITO PROCESSUAL PENAL - NOÇÕES INICIAIS E PRINCÍPIOS"], [1, "DIREITO CONSTITUCIONAL - DIREITOS E GARANTIAS FUNDAMENTAIS"], [1, "LEIS PENAIS ESPECIAIS - LEI MARIA DA PENHA - LEI 11.340/2006"], [1, "DIREITO ADMINISTRATIVO - NOÇÕES INICIAIS E PRINCÍPIOS"], [2, "DIREITO CONSTITUCIONAL - TEORIA CONSTITUCIONAL"], [2, "DIREITO PROCESSUAL PENAL - INQUERITO POLICIAL"], [2, "DIREITO CONSTITUCIONAL - TUTELA CONSTITUCIONAL DAS LIBERDADES"], [2, "DIREITO PENAL - APLICAÇÃO DA LEI PENAL"], [2, "DIREITO PENAL - TEORIA DO CRIME - PT. 1"], [2, "DIREITO PENAL - TEORIA DO CRIME - PT. 2"], [3, "DIREITO ADMINISTRATIVO - ENTES DA ADMINISTRAÇÃO"], [3, "DIREITO PROCESSUAL PENAL - AÇAO PENAL"], [3, "DIREITO PENAL - TEORIA DO CRIME - PT. 3"], [3, "DIREITO CONSTITUCIONAL - DIREITOS POLÍTICOS"], [3, "DIREITO CONSTITUCIONAL - DIREITOS DA NACIONALIDADE"], [3, "LEIS PENAIS ESPECIAIS - ESTATUTO DO DESARMAMENTO – LEI 10.826/2003"], [3, "LEIS ESPECIAIS - LEI DOS CRIMES HEDIONDOS - LEI 8.702/90"], [4, "DIREITO PENAL - CONCURSO DE PESSOAS E DE CRIMES"], [4, "LEIS PENAIS ESPECIAIS - CRIMES NO CÓDIGO DE DEFESA DO CONSUMIDOR – LEI 8.078/1990"], [4, "DIREITO CONSTITUCIONAL - ORGANIZAÇÃO DO ESTADO"], [4, "LEIS PENAIS ESPECIAIS - LEI ANTITERRORISMO – LEI 13.260/2016"], [4, "DIREITO ADMINISTRATIVO - SERVIÇOS PÚBLICOS"], [4, "LEIS PENAIS ESPECIAIS - LEIS PENAIS ESPECIAIS - DOS CRIMES PREVISTOS NO ESTATUTO DA PESSOA IDOSA"], [4, "LEIS PENAIS ESPECIAIS - ESTATUTO DA CRIANÇA E DO ADOLESCENTE – LEI 8.069/1990"], [4, "LEIS PENAIS ESPECIAIS - LEI DAS ORGANIZAÇÕES CRIMINOSAS – LEI 12.850/2013"], [6, "DIREITO PROCESSUAL PENAL - JURISDIÇAO E COMPETENCIA"], [6, "DIREITO CONSTITUCIONAL - ADMINISTRAÇÃO PÚBLICA - ASPECTOS CONSTITUCIONAIS"], [6, "DIREITO ADMINISTRATIVO - PODERES DA ADMINISTRAÇAO"], [6, "LEIS PENAIS ESPECIAIS - LEI DE TORTURA - LEI 9.455/1997"], [6, "CRIMINOLOGIA - CONCEITO, OBJETO, CLASSIFICAÇÃO E ESTATÍSTICA CRIMINAL"], [6, "DIREITO CONSTITUCIONAL - PODER E PROCESSO LEGISLATIVO"], [6, "LEIS PENAIS ESPECIAIS - LEI DE CRIMES AMBIENTAIS – LEI 9.605/1998"], [7, "DIREITO PENAL - TEORIA GERAL DA PENA"], [7, "LEIS PENAIS ESPECIAIS - LEI 14.540 2023"], [7, "DIREITO ADMINISTRATIVO - ATOS ADMINISTRATIVOS"], [7, "DIREITO ADMINISTRATIVO - PROCESSO ADMINISTRATIVO DISCIPLINAR"], [7, "DIREITO PROCESSUAL PENAL - QUESTÕES PREJUDICIAIS, PROCESSOS INCIDENTES, SUJEITOS DO PROCESSO, COMUNICAÇÃO DOS ATOS PROCESSUAIS, EMENDATIO E MUTATIO LIBELLI"], [7, "LEIS PENAIS ESPECIAIS - LEI DE DROGAS - LEI 11.343/2006"], [7, "MEDICINA LEGAL - TRAUMATOLOGIA FORENSE"], [8, "DIREITO PROCESSUAL PENAL - PROVAS"], [8, "DIREITO CONSTITUCIONAL - PODER EXECUTIVO"], [8, "DIREITO CONSTITUCIONAL - PODER JUDICIÁRIO"], [8, "DIREITO PENAL - AÇÃO PENAL E CAUSAS DE EXTINÇÃO DA PUNIBILIDADE"], [8, "MEDICINA LEGAL - TANATOLOGIA FORENSE"], [8, "LEIS PENAIS ESPECIAIS - LEI DOS CRIMES DE PRECONCEITO RACIAL"], [9, "DIREITO ADMINISTRATIVO - LICITAÇÕES"], [9, "LEIS PENAIS ESPECIAIS - LEI DAS CONTRAVENÇÕES PENAIS – DECRETO-LEI 3.688/1941"], [9, "DIREITO CONSTITUCIONAL - CONTROLE DE CONSTITUCIONALIDADE"], [9, "LEIS PENAIS ESPECIAIS - CÓDIGO DE TRÂNSITO BRASILEIRO – LEI 9.503/1997"], [9, "LEIS PENAIS ESPECIAIS - LEI DE ABUSO DE AUTORIDADE - LEI 13.869/2019"], [11, "DIREITO CONSTITUCIONAL - FUNÇÕES ESSENCIAIS DA JUSTIÇA"], [11, "DIREITO CONSTITUCIONAL - ESTADO DE DEFESA, ESTADO DE SÍTIO e SEGURANÇA PÚBLICA"], [11, "DIREITO PROCESSUAL PENAL - PRISÕES"], [11, "LEIS PENAIS ESPECIAIS - REESTRUTURACAO DO COAF"], [11, "DIREITO PENAL - CRIMES CONTRA A PESSOA"], [12, "DIREITO PROCESSUAL PENAL - LIBERDADE PROVISORIA, MED CAUTELARES, FIANÇA"], [12, "DIREITO ADMINISTRATIVO - CONTRATOS"], [12, "LEIS PENAIS ESPECIAIS - LEI GERAL DO ESPORTE"], [12, "LEIS PENAIS ESPECIAIS - LEI DE INTERCEPTAÇÃO TELEFÔNICA - LEI 9.296/1996"], [12, "CRIMINOLOGIA - HISTÓRIA DA CRIMINOLOGIA, ESCOLA CLÁSSICA E POSITIVISTA"], [12, "DIREITO PENAL - CRIMES CONTRA O PATRIMÔNIO"], [13, "DIREITO ADMINISTRATIVO - INTERVENÇÃO DO ESTADO NO DOMÍNIO ECONÔMICO"], [13, "DIREITO ADMINISTRATIVO - INTERVENÇÃO DO ESTADO NA PROPRIEDADE"], [13, "LEIS PENAIS ESPECIAIS - ESTATUTO DA PESSOA COM DEFICIÊNCIA – LEI 13.146/2015"], [13, "DIREITO PENAL - CRIMES CONTRA A PROPRIEDADE IMATERIAL"], [13, "DIREITO PENAL - CRIMES CONTRA A ORGANIZAÇÃO DO TRABALHO"], [13, "DIREITO PENAL - CRIMES CONTRA O SENTIMENTO RELIGIOSO E RESPEITO AOS MORTOS"], [13, "LEIS PENAIS ESPECIAIS - LEI DA PROPRIEDADE INDUSTRIAL"], [13, "DIREITO PROCESSUAL PENAL - TRIBUNAL DO JÚRI"], [13, "CRIMINOLOGIA - SOCIOLOGIA CRIMINAL"], [13, "DIREITO CONSTITUCIONAL - ORDEM SOCIAL"], [13, "DIREITO CONSTITUCIONAL - ORDEM ECONÔMICA E FINANCEIRA"], [13, "LEIS PENAIS ESPECIAIS - LEI DOS CRIMES FALIMENTARES – LEI 11.101/2005"], [14, "DIREITO PENAL - CRIMES CONTRA A DIGNIDADE SEXUAL"], [14, "DIREITO PROCESSUAL PENAL - PROCEDIMENTOS"], [14, "MEDICINA LEGAL - SEXOLOGIA FORENSE"], [14, "DIREITO CONSTITUCIONAL - ASPECTOS CONSTITUCIONAIS SOBRE O SISTEMA TRIBUTÁRIO NACIONAL E SOBRE A ORDEM ECONÔMICA E FINANCEIRA"], [14, "LEIS PENAIS ESPECIAIS - CÓDIGO ELEITORAL – LEI 4.737/1965"], [14, "LEIS PENAIS ESPECIAIS - LEI DOS JUIZADOS ESPECIAIS CRIMINAIS – LEI 9.099/1995"], [14, "DIREITO CONSTITUCIONAL - CIENCIA, TECNOLOGIA, CULTURA E DESPORTO"], [14, "DIREITO CONSTITUCIONAL - FAMILIA, CRIANÇA, ADOLESCENTE, JOVEM E IDOSO"], [16, "DIREITO PENAL - CRIMES CONTRA A FAMÍLIA"], [16, "DIREITO PENAL - CRIMES CONTRA A INCOLUMIDADE PÚBLICA"], [16, "CRIMINOLOGIA - CRIME ORGANIZADO, CLASSIFICAÇÃO DOS CRIMINOSOS E PREVENÇÃO CRIMINAL"], [16, "DIREITO PROCESSUAL PENAL - NULIDADES E RECURSOS"], [16, "LEIS PENAIS ESPECIAIS - LEI HENRY BOREL"], [16, "DIREITO ADMINISTRATIVO - BENS PUBLICOS"], [16, "LEIS PENAIS ESPECIAIS - LEI DOS CRIMES CONTRA A ORDEM TRIBUTARIA"], [16, "DIREITO PROCESSUAL PENAL - RECURSOS EM ESPÉCIE E AÇÕES DE IMPUGNAÇÃO"], [16, "DIREITO PENAL - CRIMES CONTRA A PAZ PÚBLICA"], [16, "LEIS PENAIS ESPECIAIS - LEI DE LAVAGEM DE CAPITAIS – LEI 9.613/1998"], [17, "DIREITO PENAL - CRIMES CONTRA A FÉ PÚBLICA"], [17, "CRIMINOLOGIA - INSTÂNCIAS DE CONTROLE, REINCIDÊNCIA, PROGNÓSTICO CRIMINAL, EXAME CRIMINOLÓGICO, DIREITO PENAL E DESIGUALDADE SOCIAL E POLÍTICA CRIMINAL ATUARIAL"], [17, "DIREITO ADMINISTRATIVO - AGENTES PÚBLICOS"], [17, "LEIS PENAIS ESPECIAIS - LEI DE EXECUÇAO PENAL - PARTE 1"], [17, "MEDICINA LEGAL - TOXICOLOGIA FORENSE"], [17, "LEIS PENAIS ESPECIAIS - LEI DE EXECUÇÃO PENAL - PARTE 2"], [17, "MEDICINA LEGAL - ANTROPOLOGIA FORENSE"], [17, "DIREITO PROCESSUAL PENAL - PROCESSO PENAL DIGITAL"], [17, "CRIMINOLOGIA - CRIMINOLOGIA FEMINISTA, RACIAL, QUEER E VERDE"], [18, "DIREITO ADMINISTRATIVO - RESPONSABILIDADE CIVIL DO ESTADO"], [18, "LEIS PENAIS ESPECIAIS - LEI DO GENOCIDIO"], [18, "DIREITO PENAL - CRIMES CONTRA A ADMINISTRAÇÃO PÚBLICA"], [18, "LEIS PENAIS ESPECIAIS - LEI DA ESCUTA PROTEGIDA"], [18, "CRIMINOLOGIA - LEGITIMAÇÃO DO DIREITO PENAL DESLEGITIMAÇÃO DO DIREITO PENAL DIREITO PENAL DO INIMIGO. REALISMO MARGINAL"], [18, "DIREITO PENAL - CRIMES DE LICITAÇÃO E CONTRATOS"], [18, "MEDICINA LEGAL - ENERGIAS FISICAS NÃO MECANICAS (Rascunho)"], [18, "MEDICINA LEGAL - INTRODUCAO E PERICIAS E PERITOS E DOCUMENTOS MEDICO LEGAIS E INFORTUNISTICA"], [18, "MEDICINA LEGAL - ASFIXIOLOGIA"], [19, "DIREITO ADMINISTRATIVO - IMPROBIDADE ADMINISTRATIVA"], [19, "DIREITO PENAL - CRIMES CONTRA AS FINANÇAS PÚBLICAS"], [19, "DIREITO PENAL - CRIMES CONTRA O ESTADO DEMOCRÁTICO DE DIREITO"], [19, "LEIS PENAIS ESPECIAIS - LEI DE MIGRAÇÃO"], [19, "MEDICINA LEGAL - PSIQUIATRIA FORENSE"], [19, "DIREITO ADMINISTRATIVO - CONTROLE DA ADMINISTRAÇÃO PÚBLICA"], [19, "LEIS PENAIS ESPECIAIS - LEI DO PARCELAMENTO DO SOLO URBANO"], [19, "LEIS PENAIS ESPECIAIS - LEI 12.984 2014"], [19, "DIREITO CIVIL - LEI DO INQUILINATO"], [21, "DIREITO PROCESSUAL CIVIL - PRINCIPIOS, JURISDIÇÃO AÇAO COMPETENCIA"], [21, "DIREITO DO CONSUMIDOR - INTRODUÇÃO - DELTA + MP"], [21, "DIREITOS HUMANOS - INTRODUÇÃO E TEORIA GERAL DOS DIREITOS HUMANOS"], [21, "DIREITOS HUMANOS - INTERPRETAÇÃO, EFICÁCIA E DIREITOS HUMANOS NA CONSTITUIÇÃO FEDERAL"], [21, "DIREITO AMBIENTAL - DIREITO AMBIENTAL CONSTITUCIONAL - DELTA+MP"], [21, "EXECUÇÃO PENAL - OBJETIVOS PRINCÍPIOS E JURISDIÇÃO NA EXECUÇÃO PENAL - DELTA+MP"], [22, "DIREITO CIVIL - CONSTITUCIONALIZAÇÃO DO DIREITO CIVIL E LINDB"], [22, "EXECUÇÃO PENAL - DO PRESO DO TRABALHO PENITENCIÁRIO E DOS ÓRGÃOS DA EXECUÇÃO PENAL - DELTA+MP"], [22, "DIREITO AMBIENTAL - CÓDIGO FLORESTAL, LEI DA MATA ATLÂNTICA E LEI DE GESTÃO FLORESTAL - DELTA+MP"], [22, "DIREITO PROCESSUAL CIVIL - DOS SUJEITOS DO PROCESSO"], [22, "DIREITOS HUMANOS - CONTROLE DE CONVENCIONALIDADE E INTERVENÇÃO FEDERAL PARA A GARANTIA DOS DIREITOS HUMANOS"], [23, "DIREITO CIVIL - FATOS JURÍDICOS, NEGOCIO JURIDICO, PRESCRIÇAO E DECADENCIA"], [23, "DIREITO PROCESSUAL CIVIL - DOS ATOS PROCESSUAIS"], [23, "DIREITO PROCESSUAL CIVIL - DA FORMAÇÃO, SUSPENSÃO E EXTINÇÃO DO PROCESSO"], [23, "PRINCÍPIOS INSTITUCIONAIS DO MP - INTRODUÇÃO - DELTA + MP"], [23, "DIREITO ELEITORAL - CONCEITOS E PRINCIPIOS - DELTA+MP"], [23, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - EVOLUÇAO, PRINCIPIOS, DEPOIMENTO SEM DANO - DELTA + MP"], [23, "DIREITOS HUMANOS - FEDERALIZAÇÃO DOS CRIMES CONTRA OS DIREITOS HUMANOS E OUTROS INSTRUMENTOS DE PROTEÇÃO DOS DIREITOS HUMANOS NA CONSTITUIÇÃO FEDERAL, POLÍTICA NACIONAL DE DIREITOS HUMANOS E OS PROGRAMAS NACIONAIS DE DIREITOS HUMANOS"], [23, "DIREITO ELEITORAL - JUSTIÇA ELEITORAL - DELTA+MP"], [23, "DIREITO TRIBUTÁRIO E FINANCEIRO - LEGISLAÇÃO TRIBUTÁRIA, COMPETÊNCIA, FONTES, VIGÊNCIA E APLICAÇÃO, INTERPRETAÇÃO E INTEGRAÇÃO DA LEGISLAÇÃO TRIBUTÁRIA"], [24, "DIREITO TRIBUTÁRIO E FINANCEIRO - CONCEITO, CLASSIFICAÇAO DOS TRIBUTOS"], [24, "DIREITOS HUMANOS - DIREITO INTERNACIONAL DOS DIREITOS HUMANOS"], [24, "TUTELA COLETIVA - ACESSO A JUSTIÇA"], [24, "TUTELA COLETIVA - MICROSSISTEMAS"], [24, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - DIREITOS FUNDAMENTAIS"], [24, "EXECUÇÃO PENAL - SISTEMA DISCIPLINAR"], [24, "PRINCÍPIOS INSTITUCIONAIS DO MP - PROCEDIMENTOS DE INVESTIGAÇÃO"], [26, "DIREITO EMPRESARIAL - EMPRESARIO"], [26, "PRINCÍPIOS INSTITUCIONAIS DO MP - CNMP"], [26, "DIREITO ELEITORAL - PROPAGANDA ELEITORAL"], [26, "EXECUÇAO PENAL - DIREITOS DA EXECUÇAO E PROGRESSAO DE REGIME"], [27, "DIREITO CIVIL - OBRIGAÇÕES I - DELTA + MP"], [27, "DIREITO DO CONSUMIDOR - DIREITOS BASICOS E RESPONSABILIDADE CIVIL"], [27, "DIREITO ELEITORAL - PARTIDOS POLITICOS"], [28, "DIREITO PROCESSUAL CIVIL - TUTELAS - DELTA + MP"], [28, "DIREITO AMBIENTAL - RECURSOS HIDRICOS - DELTA+MP"], [28, "DIREITOS HUMANOS - DIREITO À INTEGRIDADE FÍSICA E MENTAL e DIREITOS DOS GRUPOS VULNERAVEIS E DAS MINORIAS e DEFENSORES DE DIREITOS HUMANOS"], [28, "DIREITO AMBIENTAL - RESPONSABILIDADE AMBIENTAL - DELTA+MP"], [28, "DIREITO TRIBUTÁRIO E FINANCEIRO - LIMITAÇOES AO PODER DE TRIBUTAR E COMPETENCIA TRIBUTARIA"], [28, "DIREITO CIVIL - DOS BENS"], [28, "DIREITO DO CONSUMIDOR - PRATICAS COMERCIAIS E LEI DO CADASTRO POSITIVO"], [29, "DIREITO TRIBUTÁRIO E FINANCEIRO - OBRIGAÇÃO TRIBUTÁRIA, FATO GERADOR, SUJEITOS, RESPONSABILIDADE TRIBUTÁRIA, DENÚNCIA ESPONTÂNEA"], [29, "DIREITO AMBIENTAL - POLITICA NACIONAL DO MEIO AMBIENTE - DELTA+MP"], [29, "DIREITO AMBIENTAL - BIOSSEGURANÇA. BIODIVERSIDADE - DELTA+MP"], [29, "DIREITO EMPRESARIAL - SOCIEDADES - DELTA + MP"], [31, "DIREITO CIVIL - OBRIGAÇÕES - Parte II"], [31, "DIREITO PROCESSUAL CIVIL - PROCESSO DE CONHECIMENTO - DELTA + MP"], [31, "DIREITO EMPRESARIAL - TITULOS DE CREDITO - DELTA + MP"], [31, "DIREITO TRIBUTÁRIO E FINANCEIRO - CREDITO TRIBUTARIO - DELTA + MP"], [32, "DIREITO CIVIL - TEORIA GERAL DOS CONTRATOS - DELTA + MP"], [32, "DIREITO DO CONSUMIDOR - PRATICAS CONTRATUAIS E DEFESA EM JUIZO"], [32, "DIREITO À SAÚDE"], [32, "DIREITO PROCESSUAL CIVIL - SENTENÇA E COISA JULGADA - DELTA + MP"], [33, "DIREITO CIVIL - CONTRATOS EM ESPÉCIE - DELTA + MP"], [33, "DIREITO EMPRESARIAL - DIREITO FALIMENTAR - DELTA + MP"], [33, "DIREITO CIVIL - RESPONSABILIDADE CIVIL - DELTA + MP"], [33, "DIREITOS HUMANOS - DIREITOS DA CRIANÇA E DO ADOLESCENTE, DIREITOS DAS PESSOAS COM DEFICIÊNCIA, DIREITOS DAS PESSOAS IDOSAS, DIREITO À ORIENTAÇÃO SEXUAL E À IDENTIDADE DE GÊNERO, DIREITOS DAS PESSOAS RECLUSAS"], [34, "DIREITO CIVIL - DIREITO DAS COISAS"], [34, "DIREITO PROCESSUAL CIVIL - PROCEDIMENTOS ESPECIAIS E PROCEDIMENTOS DE JURISDIÇÃO VOLUNTÁRIA"], [36, "DIREITO CIVIL - FAMÍLIA - ENTIDADES FAMILIARES"], [36, "DIREITO PROCESSUAL CIVIL - TEORIA GERAL DAS PROVAS E PROVAS EM ESPÉCIE"], [36, "DIREITOS HUMANOS - DIREITOS DOS INDÍGENAS, DOS REFUGIADOS, DAS PESSOAS EM SITUAÇÃO DE RUA, DOS MIGRANTES, DOS QUILOMBOLAS E DOS DEFENSORES DOS DIREITOS HUMANOS"], [36, "DIREITOS HUMANOS - DIREITOS DAS VÍTIMAS DE ABUSO DE CRIMINALIDADE E CONDUTA DOS FUNCIONÁRIOS DA LEI"], [36, "DIREITO EMPRESARIAL - PROPRIEDADE INDUSTRIAL - DELTA + MP"], [36, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - GUARDA, TUTELA E ADOÇAO"], [37, "DIREITO EMPRESARIAL - AÇOES CAMBIAIS - DELTA + MP"], [37, "DIREITO DO CONSUMIDOR - CONTRATOS BANCÁRIOS"], [37, "DIREITO TRIBUTÁRIO E FINANCEIRO - ADMINISTRAÇÃO TRIBUTÁRIA - DELTA + MP"], [37, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - PODER FAMILIAR"], [37, "EXECUÇAO PENAL - LIVRAMENTO CONDICIONAL"], [37, "DIREITO CIVIL - FAMÍLIA - CASAMENTO"], [38, "DIREITO DA PESSOA IDOSA - GERAL"], [38, "DIREITO CIVIL - FAMÍLIA - DISSOLUÇÃO DA SOCIEDADE CONJUGAL"], [38, "DIREITO TRIBUTÁRIO E FINANCEIRO - EXECUÇAO FISCAL E PROCESSO JUDICIAL TRIBUTARIO - DELTA + MP"], [39, "DIREITO CIVIL - FAMÍLIA - UNIÃO ESTÁVEL"], [39, "DIREITO PROCESSUAL CIVIL - DOS PROCESSOS NOS TRIBUNAIS E DOS MEIOS DE IMPUGNAÇAO DAS DECISOES JUDICIAIS - DELTA + MP"], [39, "TUTELA COLETIVA - LEGITIMIDADE"], [41, "TUTELA COLETIVA - ASPECTOS PROCESSUAIS E AÇÃO COLETIVA"], [41, "DIREITO DO CONSUMIDOR - PLANO DE SAUDE E SERVIÇO PUBLICO ESSENCIAL"], [41, "DIREITO CIVIL - FAMÍLIA - RELAÇÕES DE PARENTESCO"], [41, "TUTELA COLETIVA - COMPETENCIA, LITISCONSORCIO, INTERVENÇAO DE TERCEIROS"], [42, "TUTELA COLETIVA - SENTENÇA"], [42, "TUTELA COLETIVA - MEIOS ADEQUADOS DE SOLUÇÃO DE CONFLITOS"], [42, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - MEDIDAS DE PROTEÇÃO"], [42, "DIREITO CIVIL - FAMÍLIA - TUTELA, CURATELA E DA TOMADA DE DECISÃO APOIADA"], [42, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - ACESSO À JUSTIÇA"], [42, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - ATO INFRACIONAL"], [43, "DIREITO CIVIL - FAMÍLIA - ALIMENTOS"], [43, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - MEDIDAS SOCIOEDUCATIVAS"], [43, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - SINASE"], [43, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - INFRAÇÕES ADMINISTRATIVAS"], [43, "ESTATUTO DA CRIANÇA E DO ADOLESCENTE - LOAS E LDB"], [44, "DIREITO CIVIL - FAMÍLIA - SUCESSÕES"], [44, "DIREITO CIVIL - FAMÍLIA - ALIENAÇÃO PARENTAL"], [46, "DIREITO INTERNACIONAL PUBLICO - INTRODUÇAO. SUJEITOS. IMUNIDADES. NACIONALIDADE"], [46, "DIREITO URBANÍSTICO - CONCEITOS E ASPECTOS GERAIS"], [46, "DIREITO TRIBUTÁRIO E FINANCEIRO - ASPECTOS CONSTITUCIONAIS ORÇAMENTO RECEITA E DESPESA - DELTA + MP"], [46, "DIREITO TRIBUTÁRIO E FINANCEIRO - CRÉDITO PÚBLICO - DELTA + MP"], [46, "DIREITO PREVIDENCIÁRIO - SEGURIDADE SOCIAL"], [46, "DIREITO PREVIDENCIÁRIO - PREVIDENCIA COMPLEMENTAR"], [46, "DIREITO INTERNACIONAL PUBLICO - NACIONALIDADE, CONDIÇÃO JURÍDICA DO ESTRAGEIRO, DOMINIO PUBLICO INTERNACIONAL, COOPERAÇAO INTERNACIONAL"], [46, "DIREITO INTERNACIONAL PUBLICO - DIREITOS DOS PORTUGUESES, CONDIÇAO DO ESTRANGEIRO"], [47, "DIREITO TRIBUTÁRIO E FINANCEIRO - DESPESA E RECEITA PUBLICA"], [47, "DIREITO TRIBUTÁRIO E FINANCEIRO - FISCALIZAÇAO FINANCEIRA E ORÇAMENTARIA - DELTA + MP"], [47, "DIREITO INTERNACIONAL PUBLICO - MERCOSUL"], [48, "DIREITO URBANÍSTICO - ESTATUTO DA CIDADE"], [48, "DIREITO PREVIDENCIÁRIO - PREVIDENCIA COMPLEMENTAR"], [48, "DIREITO PREVIDENCIÁRIO - DOS BENEFICIARIOS"], [48, "DIREITO TRIBUTÁRIO E FINANCEIRO - LEI DE RESPONSABILIDADE FISCAL"], [48, "DIREITO PREVIDENCIÁRIO - EMPREGADORES E CONTRIBUIÇOES. PRESCRIÇAO E DECADENCIA. CRIMES CONTRA A PREVIDENCIA SOCIAL"], [49, "DIREITO PREVIDENCIÁRIO - ACIDENTE DE TRABALHO"], [49, "DIREITO INTERNACIONAL PUBLICO - CRIMES LIMITADORES DA COOPERAÇÃO INTERNACIONAL"], [49, "DIREITO INTERNACIONAL PUBLICO - HOMOLOGAÇÃO DE SENTENÇA ESTRANGEIRA"], [49, "DIREITO URBANÍSTICO - DIREITO A MORADIA"], [49, "DIREITO INTERNACIONAL PUBLICO - DIREITO INTERNACIONAL TRIBUTARIO, AMBIENTAL E DO MAR"], [49, "DIREITO INTERNACIONAL PUBLICO - COOPERAÇAO JURÍDICA INTERNACIONAL"], [49, "DIREITO INTERNACIONAL PUBLICO - CONFLITOS INTERNACIONAIS"]], "rev": [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]};
+  const STOP = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'na', 'no', 'nas', 'nos', 'ao', 'aos', 'para', 'com', 'por', 'sobre', 'direito', 'direitos', 'parte', 'lei', 'leis', 'geral', 'pt']);
+  const expandir = (s) => nn(s).replace(/\bcdc\b/g, 'codigo defesa consumidor').replace(/\beca\b/g, 'estatuto crianca adolescente').replace(/\borcrim\b/g, 'organizacoes criminosas');
+  const tokens = (s) => expandir(s).replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9 ]/g, ' ').split(' ')
     .filter((w) => w && !STOP.has(w)).map((w) => (w.length >= 5 ? w.slice(0, 4) : w));
-  function casa(a, b, estrito) {
+  function pontuar(a, b) {
     const A = Array.from(new Set(tokens(a))), B = Array.from(new Set(tokens(b)));
-    if (!A.length || !B.length) return false;
+    if (!A.length || !B.length) return 0;
+    if (nn(a) === nn(b)) return 4;
     const inter = A.filter((w) => B.indexOf(w) >= 0).length;
-    if (!inter) return false;
-    const uniao = A.length + B.length - inter;
-    if (inter / uniao >= 0.75) return true;
-    return !estrito && (inter === A.length || inter === B.length);
+    if (!inter) return 0;
+    const jac = inter / (A.length + B.length - inter);
+    if (jac >= 0.75) return 3;
+    if (inter === A.length || inter === B.length) return 1 + jac;
+    return 0;
   }
-  const GRUPOS = (() => {
-    const g = {};
-    TEORIA_LISTA.forEach(([mat, sem, nome]) => { (g[mat] = g[mat] || []).push({ semana: sem, nome }); });
-    return Object.keys(g).map((mat) => ({ materia: mat, itens: g[mat] }));
-  })();
-  const grupoDaMateria = (nome) => GRUPOS.find((g) => casa(nome, g.materia, true)) || null;
+  const casa = (a, b, estrito) => pontuar(a, b) >= (estrito ? 3 : 1);
+  const chaveMateria = (nome) => (/^leis? (penais? )?(especia|extravag)/.test(nn(nome)) ? 'LPE' : nn(nome));
+  const mesmaMateria = (a, b) => chaveMateria(a) === chaveMateria(b) || casa(a, b, true);
+
+  const MIN = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'na', 'no', 'nas', 'nos', 'ao', 'aos', 'para', 'com', 'por']);
+  const SIGLAS = { cdc: 'CDC', eca: 'ECA', cf: 'CF', stf: 'STF', stj: 'STJ', dna: 'DNA', pad: 'PAD', lgpd: 'LGPD', coaf: 'COAF', sinase: 'SINASE', loas: 'LOAS', ldb: 'LDB', mercosul: 'Mercosul', ii: 'II', iii: 'III', iv: 'IV' };
+  function nomeBonito(raw) {
+    let s = String(raw || '').replace(/\s+/g, ' ').trim().replace(/\bPT\.\s*(\d+)/gi, 'PT.$1').replace(/\s+[-–]\s+/g, ' – ');
+    const cap = (w) => (w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w);
+    let inicio = true;
+    return s.split(' ').map((w) => {
+      if (w === '–') { inicio = true; return w; }
+      const abre = (w.match(/^[("]+/) || [''])[0], fecha = (w.match(/[)",.;:]+$/) || [''])[0];
+      const miolo = w.slice(abre.length, w.length - fecha.length);
+      const low = miolo.toLowerCase();
+      let r;
+      if (/^pt\.\d+$/i.test(miolo)) r = 'PT.' + miolo.slice(3);
+      else if (/\d/.test(miolo)) r = miolo;
+      else if (SIGLAS[low]) r = SIGLAS[low];
+      else if (!inicio && MIN.has(low)) r = low;
+      else r = miolo.split('-').map(cap).join('-');
+      inicio = false;
+      return abre + r + fecha;
+    }).join(' ');
+  }
+
+  function dividirLinhaDD(linha) {
+    const limpa = String(linha || '').replace(/^DD\s*-\s*/i, '').replace(/\s*-\s*DELTA\s*\+\s*MP\s*$/i, '');
+    const partes = limpa.split(/\s+-\s+/);
+    const mat = (partes.shift() || '').trim();
+    while (partes.length > 1 && nn(partes[0]) === nn(mat)) partes.shift();
+    let top = partes.join(' - ').trim();
+    if (!top) top = mat;
+    else if (/^geral$/i.test(top)) top = mat + ' - ' + top;
+    return { materiaRaw: mat, topicoRaw: top };
+  }
+
+  function parseTrilha(texto) {
+    const dd = [], rev = [];
+    let sem = null;
+    String(texto || '').split(/\r?\n/).forEach((l0) => {
+      const l = l0.trim();
+      const m = l.match(/^Semana\s+(\d+)(.*)$/i);
+      if (m) { sem = Number(m[1]); if (/revis/i.test(m[2])) rev.push(sem); return; }
+      if (sem && /^DD\s*-\s*/i.test(l)) dd.push([sem, l.replace(/^DD\s*-\s*/i, '')]);
+    });
+    return { dd, rev };
+  }
+
+  function trilhaAtual() {
+    const t = (ciclo.trilha && ciclo.trilha.texto) ? parseTrilha(ciclo.trilha.texto) : TRILHA_PADRAO;
+    const vistos = new Set();
+    return t.dd.map(([sem, raw], ordem) => {
+      const { materiaRaw, topicoRaw } = dividirLinhaDD('DD - ' + raw);
+      return { sem, ordem, materiaRaw, topicoRaw, nome: nomeBonito(topicoRaw) };
+    }).filter((e) => { const k = e.sem + '|' + nn(e.materiaRaw) + '|' + nn(e.topicoRaw); if (vistos.has(k)) return false; vistos.add(k); return true; });
+  }
+
   const pausa = () => { ciclo.pausa = ciclo.pausa || {}; ['metas', 'topicos', 'materias'].forEach((k) => { ciclo.pausa[k] = ciclo.pausa[k] || {}; }); return ciclo.pausa; };
   const temPausa = () => { const p = ciclo.pausa || {}; return ['metas', 'topicos', 'materias'].some((k) => p[k] && Object.keys(p[k]).length); };
 
@@ -16577,7 +16632,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     } catch (e) { return 0; }
   }
 
-  /* Recalcula a distribuição só com a Teoria: partes abertas a partir de hoje são redistribuídas em sequência. */
+  /* Recalcula a distribuição só com o que ficou: partes abertas de hoje em diante são redistribuídas em sequência. */
   async function compactarCronograma() {
     if (!Array.isArray(CRON_METAS)) return;
     const hoje = hojeYMD();
@@ -16599,55 +16654,93 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     } catch (e) { /* mantém local */ }
   }
 
-  /* ---- classificação ---- */
-  function nomesDaMeta(m) {
-    const out = [m.topico];
+  /* ---- plano: o que a trilha manda fazer ---- */
+  const nomesDaMeta = (m) => {
+    const out = [];
     String(m.topico || '').split('+').forEach((x) => out.push(x));
     (m.subtopicos || []).forEach((st) => out.push(st.nome));
     return out.filter(Boolean);
+  };
+
+  function subConcluido(m, st) {
+    if (m.status === 'Concluído' || st.concluido) return true;
+    let exigidas = 0, feitas = 0;
+    for (let p = 0; p < (m.totalPartes || 0); p++) {
+      if (!celulaExigida(st, m.totalPartes, p)) continue;
+      exigidas++;
+      if (st.partesStatus && st.partesStatus[p] && st.partesStatus[p].concluida) feitas++;
+    }
+    return exigidas > 0 && feitas === exigidas;
   }
 
-  function classificar() {
+  function planoTrilha() {
+    const entradas = trilhaAtual();
     const metas = (CRON_METAS || []).concat(window.CRON_METAS_OCULTAS || []).filter((m, i, a) => a.findIndex((x) => x.id === m.id) === i);
-    const p = pausa();
-    const linhas = [];
-    const porMat = {};
-    metas.forEach((m) => {
-      const g = grupoDaMateria(m.materia);
-      const hit = g ? g.itens.some((e) => nomesDaMeta(m).some((c) => casa(c, e.nome))) : false;
-      const k = nn(m.materia);
-      porMat[k] = porMat[k] || { n: 0, h: 0 };
-      porMat[k].n++; if (hit) porMat[k].h++;
-      const prog = (m.partesConcluidas || 0) > 0;
-      linhas.push({ tipo: 'meta', id: m.id, materia: m.materia, rotulo: 'Sem ' + String(m.numeroSemana).padStart(2, '0') + ' • Meta ' + m.numeroMeta + ' • ' + m.topico, semana: m.numeroSemana, g, hit, prog, pausado: Boolean(p.metas[m.id]), obj: m });
+    metas.forEach((m) => { try { derivarStatusMeta(m); } catch (e) { /* ignora */ } });
+    const regT = (ciclo.pausa && ciclo.pausa.topicos) || {};
+    const metasSair = [], metasFicam = [], metasTitulo = [], metasRevisar = [];
+    const ehRev = (m) => m.tipoSemana === 'REVISAO' || /^revis/i.test(String(m.materia || ''));
+    const conteudo = metas.filter((m) => !ehRev(m));
+    metasFicam.push.apply(metasFicam, metas.filter(ehRev));
+    conteudo.forEach((m) => { m.__entradas = []; });
+    /* 1) por nome (nomes repetidos entre matérias exigem a mesma matéria) */
+    entradas.forEach((e) => {
+      const igual = entradas.filter((o) => o.sem === e.sem && o !== e && pontuar(o.nome, e.nome) >= 3).length > 0;
+      conteudo.filter((m) => Number(m.numeroSemana) === e.sem).forEach((m) => {
+        if (!nomesDaMeta(m).some((c) => casa(c, e.nome))) return;
+        if (igual && !mesmaMateria(m.materia, e.materiaRaw)) return;
+        m.__entradas.push(e);
+      });
     });
-    const metasTeoria = linhas.filter((r) => r.tipo === 'meta' && r.hit && !r.pausado).map((r) => r.obj);
-    const topicos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || p.topicos[t.id]);
-    const porMatT = {};
-    topicos.forEach((t) => {
-      const g = grupoDaMateria(t.materia);
-      const hit = g ? (g.itens.some((e) => casa(t.topico, e.nome)) || metasTeoria.some((m) => casa(m.materia, t.materia, true) && nomesDaMeta(m).some((c) => casa(c, t.topico)))) : false;
-      const k = nn(t.materia);
-      porMatT[k] = porMatT[k] || { n: 0, h: 0 };
-      porMatT[k].n++; if (hit) porMatT[k].h++;
-      linhas.push({ tipo: 'topico', id: t.id, materia: t.materia, rotulo: t.topico, g, hit, prog: (t.resolvidasTotal || 0) > 0, pausado: Boolean(p.topicos[t.id]), obj: t });
+    /* 2) o que sobrou na semana é pareado por matéria */
+    entradas.forEach((e) => {
+      if (conteudo.some((m) => m.__entradas.indexOf(e) >= 0)) return;
+      const daSemana = conteudo.filter((m) => Number(m.numeroSemana) === e.sem);
+      const mesma = daSemana.filter((m) => mesmaMateria(m.materia, e.materiaRaw));
+      const vazias = daSemana.filter((m) => !m.__entradas.length);
+      const alvo = mesma.find((m) => !m.__entradas.length) || (vazias.length === 1 && !mesma.length ? vazias[0] : null) || mesma[0] || null;
+      if (alvo) alvo.__entradas.push(e);
     });
-    const mats = ((ESTADO && ESTADO.materias) || []).filter((m) => m.status === 'Ativo' || p.materias[m.id]);
-    mats.forEach((m) => linhas.push({ tipo: 'materia', id: m.id, materia: m.nome, rotulo: 'Matéria inteira: ' + m.nome, g: grupoDaMateria(m.nome), hit: Boolean(grupoDaMateria(m.nome)), prog: false, pausado: Boolean(p.materias[m.id]), obj: m }));
-    linhas.forEach((r) => {
-      if (r.pausado) { r.sugestao = 'lei'; r.motivo = 'já está em Lei Seca (temporário)'; return; }
-      if (r.tipo === 'materia') { r.sugestao = r.hit ? 'teoria' : 'lei'; r.motivo = r.hit ? 'matéria consta na lista de Teoria' : 'matéria não consta na lista de Teoria'; return; }
-      if (!r.g) { r.sugestao = 'lei'; r.motivo = 'matéria fora da lista de Teoria'; return; }
-      if (r.hit) { r.sugestao = 'teoria'; r.motivo = 'consta na lista de Teoria'; return; }
-      const al = (r.tipo === 'meta' ? porMat : porMatT)[nn(r.materia)] || { n: 0, h: 0 };
-      if (al.n && al.h / al.n >= 0.5) { r.sugestao = 'lei'; r.motivo = 'não consta na lista de Teoria desta matéria'; }
-      else { r.sugestao = 'verificar'; r.motivo = 'os nomes desta matéria não batem com a lista: confira antes de retirar'; }
+    conteudo.forEach((m) => {
+      const dela = m.__entradas;
+      if (!dela.length) { metasRevisar.push(m); metasFicam.push(m); return; }
+      metasFicam.push(m);
+      const pedacos = String(m.topico || '').split('+').filter((x) => x.trim()).length;
+      const novo = dela.slice().sort((a, b) => a.ordem - b.ordem).map((e) => e.nome).join(' + ');
+      if (m.status !== 'Concluído' && dela.length >= pedacos && nn(novo) !== nn(m.topico)) metasTitulo.push({ m, de: m.topico, para: novo });
     });
-    return linhas;
+    entradas.forEach((e) => {
+      e.metas = metasFicam.filter((m) => (m.__entradas || []).indexOf(e) >= 0);
+      e.estudada = e.metas.some((m) => {
+        const subs = (m.subtopicos || []).filter((st) => casa(st.nome, e.nome));
+        return subs.length ? subs.every((st) => subConcluido(m, st)) : m.status === 'Concluído';
+      });
+      e.materia = ((ESTADO && ESTADO.materias) || []).find((x) => (x.status === 'Ativo' || (ciclo.pausa && ciclo.pausa.materias && ciclo.pausa.materias[x.id])) && mesmaMateria(x.nome, e.materiaRaw)) || null;
+      e.topico = null;
+    });
+    const topicos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || regT[t.id]);
+    const pares = [];
+    entradas.forEach((e) => {
+      topicos.filter((t) => (e.materia ? t.idMateria === e.materia.id : mesmaMateria(t.materia, e.materiaRaw))).forEach((t) => { const sc = pontuar(t.topico, e.nome); if (sc >= 1) pares.push({ e, t, sc }); });
+    });
+    pares.sort((a, b) => (b.sc - a.sc) || ((b.e.estudada ? 1 : 0) - (a.e.estudada ? 1 : 0)));
+    const usadosT = new Set();
+    pares.forEach((p) => { if (p.e.topico || usadosT.has(p.t.id)) return; p.e.topico = p.t; usadosT.add(p.t.id); });
+    const criar = [], renomear = [], semMateria = [], futuros = [], manter = [];
+    entradas.forEach((e) => {
+      if (e.estudada) {
+        if (e.topico) { manter.push(e); if (nn(e.topico.topico) !== nn(e.nome)) renomear.push(e); }
+        else if (e.materia) criar.push(e);
+        else semMateria.push(e);
+      } else if (e.topico) futuros.push(e);
+    });
+    const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo'));
+    const reativar = entradas.filter((e) => e.estudada && e.topico && e.topico.status !== 'Ativo');
+    return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar };
   }
-  window.__FCX_CLASSIFICAR__ = classificar;
+  window.__FCX_PLANO_TRILHA__ = planoTrilha;
 
-  /* ---- aplicar / devolver ---- */
+  /* ---- aplicar ---- */
   async function atualizarEstadoGeral() {
     try {
       if (typeof recalcularERetornarEstado_ === 'function' && typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -16656,139 +16749,217 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       }
     } catch (e) { /* ignora */ }
     try { renderizarAtalhosTopicosHojeFC(); renderizarVisaoDeckFC(); } catch (e) { /* ignora */ }
+    try { if (typeof renderizarCartoesPendentes === 'function') renderizarCartoesPendentes(); } catch (e) { /* ignora */ }
     try { if (typeof renderizarDashboardCronograma === 'function') { renderizarDashboardCronograma(); renderizarListaSemanasCronograma(); } } catch (e) { /* ignora */ }
     try { if (typeof sincronizarPlanejamentoDiario3Areas === 'function') sincronizarPlanejamentoDiario3Areas(false); } catch (e) { /* ignora */ }
   }
 
-  async function definirStatusDB(tabela, ids, status) {
+  async function dbStatus(tabela, ids, status) {
     if (!ids.length) return;
-    try {
-      if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from(tabela).update({ status }).in('id', ids);
-    } catch (e) { /* mantém local */ }
+    try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from(tabela).update({ status }).in('id', ids); } catch (e) { /* mantém local */ }
     const lista = tabela === 'topicos' ? ESTADO.topicos : ESTADO.materias;
     (lista || []).forEach((x) => { if (ids.indexOf(x.id) >= 0) x.status = status; });
   }
 
-  async function aplicarSeparacao(pausar, devolver) {
+  async function aplicarPlanoTrilha(plano, opc) {
+    opc = opc || {};
+    if (!Array.isArray(CRON_METAS) || !CRON_METAS.length || !ESTADO || !Array.isArray(ESTADO.topicos) || !plano.entradas.length) { aviso('Cronograma ou tópicos ainda não carregaram. Tente novamente em instantes.', true); return; }
     const p = pausa();
     const agora = Date.now();
-    pausar.forEach((r) => {
-      const chave = r.tipo === 'meta' ? 'metas' : (r.tipo === 'topico' ? 'topicos' : 'materias');
-      p[chave][r.id] = { nome: r.rotulo, materia: r.materia, t: agora };
-    });
-    const devMetas = devolver.filter((r) => r.tipo === 'meta').map((r) => r.id);
-    const devTop = devolver.filter((r) => r.tipo === 'topico').map((r) => r.id);
-    const devMat = devolver.filter((r) => r.tipo === 'materia').map((r) => r.id);
-    devMetas.forEach((id) => { delete p.metas[id]; });
-    devTop.forEach((id) => { delete p.topicos[id]; });
-    devMat.forEach((id) => { delete p.materias[id]; });
-    p.t = agora;
-    ciclo.t = agora;
-    persistirCiclo();
-    await definirStatusDB('topicos', pausar.filter((r) => r.tipo === 'topico').map((r) => r.id), 'Inativo');
-    await definirStatusDB('materias', pausar.filter((r) => r.tipo === 'materia').map((r) => r.id), 'Inativo');
-    await definirStatusDB('topicos', devTop, 'Ativo');
-    await definirStatusDB('materias', devMat, 'Ativo');
-    if (devMetas.length || devTop.length || devMat.length) {
-      const voltam = (window.CRON_METAS_OCULTAS || []).filter((m) => devMetas.indexOf(m.id) >= 0);
-      window.CRON_METAS_OCULTAS = (window.CRON_METAS_OCULTAS || []).filter((m) => devMetas.indexOf(m.id) < 0);
-      if (voltam.length) {
-        CRON_METAS = CRON_METAS.concat(voltam).sort((x, y) => (x.numeroSemana - y.numeroSemana) || (x.numeroMeta - y.numeroMeta));
-      }
-      if (devMetas.length) {
-        try {
-          if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof carregarCronogramaSupabase === 'function') {
-            window.CRON_METAS_OCULTAS = [];
-            await carregarCronogramaSupabase();
-          }
-        } catch (e) { /* ignora */ }
-      }
-      try { if (typeof carregarFlashcardsSupabase === 'function') { window.FC_DECK_PAUSADOS = []; await carregarFlashcardsSupabase(); } } catch (e) { /* ignora */ }
+    let nTop = 0;
+    /* tópicos: nomes idênticos à trilha */
+    for (const e of plano.renomear) {
+      const t = e.topico;
+      try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('topicos').update({ topico: e.nome }).eq('id', t.id); } catch (er) { /* local */ }
+      t.topico = e.nome; nTop++;
     }
+    for (const e of plano.criar) {
+      const id = gerarId_('TOP');
+      const linha = { id, id_materia: e.materia.id, materia: e.materia.nome, topico: e.nome, status: 'Ativo', rodada_atual: 1, total_banco: 0, resolvidas_rodada: 0, restantes_rodada: 0, acertos_total: 0, erros_total: 0, aproveitamento: 0, conclusao_banco: 0, prioridade_calculada: 'Prioridade 1 (Máxima - 0 Questões)', situacao: 'Primeira Bateria Pendente', motivo_prioridade: 'Tópico da trilha estudado (0 questões)', modo_banco: 'Agregado', ultima_data: '', ultima_obs: '', bloco: '1ª Bateria Pós-Teoria' };
+      try { if (typeof supabaseClient !== 'undefined' && supabaseClient) await supabaseClient.from('topicos').insert(linha); } catch (er) { /* local */ }
+      ESTADO.topicos.push({ id, idMateria: e.materia.id, materia: e.materia.nome, topico: e.nome, status: 'Ativo', materiaAtiva: true, resolvidasTotal: 0 });
+      nTop++;
+    }
+    /* ativar / pausar tópicos */
+    const ativar = plano.reativar.map((e) => e.topico.id);
+    ativar.forEach((id) => { delete p.topicos[id]; });
+    await dbStatus('topicos', ativar, 'Ativo');
+    const pausarFora = plano.fora.map((t) => ({ t, motivo: 'fora da trilha' }));
+    const pausarFut = plano.futuros.filter((e) => e.topico.status === 'Ativo').map((e) => ({ t: e.topico, motivo: 'ainda não estudado na trilha' }));
+    const lote = pausarFora.concat(pausarFut);
+    lote.forEach(({ t, motivo }) => { p.topicos[t.id] = { nome: t.topico, materia: t.materia, motivo, t: agora }; });
+    await dbStatus('topicos', lote.map((x) => x.t.id), 'Inativo');
+    /* futuros que viraram estudados deixam o registro */
+    plano.manter.forEach((e) => { delete p.topicos[e.topico.id]; });
+    /* cronograma */
+    let mudouCron = false;
+    plano.metasSair.forEach((m) => { p.metas[m.id] = { nome: m.topico, materia: m.materia, semana: m.numeroSemana, t: agora }; mudouCron = true; });
+    const alteradas = [];
+    if (!opc.silencioso) {
+      plano.metasTitulo.forEach(({ m, para }) => { m.topico = para; alteradas.push(m); });
+    }
+    ciclo.trilha = Object.assign({}, ciclo.trilha, { ativo: true, t: agora });
+    p.t = agora; ciclo.t = agora;
+    persistirCiclo();
     filtrarMetasOcultas();
     filtrarDeckPausado();
     const nAg = limparAgendaPausada();
-    await compactarCronograma();
+    if (mudouCron) await compactarCronograma();
+    try {
+      if (alteradas.length && typeof supabaseClient !== 'undefined' && supabaseClient) {
+        await supabaseClient.from('cronograma_metas').upsert(alteradas.map(serializarMetaParaColunasSupabase_), { onConflict: 'id' });
+      }
+    } catch (e) { /* local */ }
     await atualizarEstadoGeral();
     persistirCiclo();
-    aviso('Separação aplicada: ' + pausar.length + ' item(ns) saíram da Teoria' + (devolver.length ? ', ' + devolver.length + ' voltaram' : '') + (nAg ? ' • ' + nAg + ' atividade(s) da agenda removida(s)' : '') + '. Nada foi excluído.');
-    atualizarChipLeiSeca();
+    atualizarChipTrilha();
+    if (!opc.silencioso) {
+      aviso('Trilha aplicada: ' + plano.manter.length + ' tópico(s) ativos (estudados), ' + plano.criar.length + ' criado(s), ' + plano.metasSair.length + ' meta(s) fora da trilha, ' + lote.length + ' tópico(s) pausado(s)' + (nAg ? ', ' + nAg + ' atividade(s) da agenda removida(s)' : '') + '. Nada foi excluído.');
+    }
   }
 
+  async function desfazerTrilha() {
+    const p = pausa();
+    const ids = Object.keys(p.topicos), mats = Object.keys(p.materias);
+    p.topicos = {}; p.materias = {}; p.metas = {};
+    ciclo.trilha = Object.assign({}, ciclo.trilha, { ativo: false });
+    ciclo.t = Date.now();
+    persistirCiclo();
+    await dbStatus('topicos', ids, 'Ativo');
+    await dbStatus('materias', mats, 'Ativo');
+    window.CRON_METAS_OCULTAS = [];
+    try { if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof carregarCronogramaSupabase === 'function') await carregarCronogramaSupabase(); } catch (e) { /* ignora */ }
+    try { if (typeof carregarFlashcardsSupabase === 'function') { window.FC_DECK_PAUSADOS = []; await carregarFlashcardsSupabase(); } } catch (e) { /* ignora */ }
+    await atualizarEstadoGeral();
+    atualizarChipTrilha();
+    aviso('Trilha desfeita: tudo voltou para a organização anterior.');
+  }
+
+  /* ---- sincronização automática (novos conteúdos estudados entram sozinhos) ---- */
+  let timerSync = null;
+  function agendarSyncTrilha() {
+    if (!(ciclo.trilha && ciclo.trilha.ativo)) return;
+    clearTimeout(timerSync);
+    timerSync = setTimeout(async () => {
+      try {
+        const pl = planoTrilha();
+        if (pl.criar.length || pl.reativar.length || pl.futuros.some((e) => e.topico.status === 'Ativo') || pl.metasSair.length) {
+          await aplicarPlanoTrilha(pl, { silencioso: true });
+          aviso('Trilha sincronizada com o que você já estudou.');
+        }
+      } catch (e) { /* ignora */ }
+    }, 1500);
+  }
+  if (typeof finalizarAlteracaoMeta === 'function') {
+    const _fam = finalizarAlteracaoMeta;
+    finalizarAlteracaoMeta = async function () { const r = await _fam.apply(this, arguments); agendarSyncTrilha(); return r; };
+  }
+
+  /* ---- cartões pendentes de PDF-base: um item por tópico da trilha já estudado ---- */
+  envolver('montarSituacaoCartoesPendentes_', (orig) => {
+    if (!(ciclo.trilha && ciclo.trilha.ativo)) return orig();
+    const deck = Array.isArray(FC_DECK) ? FC_DECK : [];
+    const pl = planoTrilha();
+    const reg = (typeof CP_REGISTRO !== 'undefined' && CP_REGISTRO && CP_REGISTRO.itens) || {};
+    return pl.entradas.filter((e) => e.estudada).map((e) => {
+      const meta = e.metas[0] || null;
+      const matNome = e.materia ? e.materia.nome : e.materiaRaw;
+      const chave = cpChave_(matNome, e.nome);
+      let r = reg[chave] || null;
+      if (!r && meta) {
+        (meta.subtopicos || []).filter((st) => casa(st.nome, e.nome)).forEach((st) => { const o = reg[cpChave_(meta.materia, st.nome)]; if (o && o.concluido) r = o; });
+      }
+      const top = e.topico;
+      const cs = top ? deck.filter((c) => c.idTopico === top.id) : [];
+      const base = cs.filter((c) => c.tipo === 'PDF_BASE').length;
+      return {
+        chave, materia: matNome, topico: e.nome, tituloMeta: meta ? meta.topico : '', semana: e.sem, meta: meta ? meta.numeroMeta : null,
+        idMeta: meta ? meta.id : '', idxPdf: 0, paginas: 0, ordem: (meta && meta.ordemGlobal) || (e.sem * 100 + e.ordem), leituraConcluida: true,
+        origemEstudo: 'CRONOGRAMA', topicoCadastrado: top, registro: r, cartoesConcluidos: Boolean(r && r.concluido),
+        qtdCartoes: cs.length, qtdCartoesBase: base, semCartoesBase: base === 0, questoesResolvidas: top ? Number(top.resolvidasTotal || 0) : 0
+      };
+    }).sort((x, y) => x.ordem - y.ordem);
+  });
+
   /* ---- interface ---- */
-  function atualizarChipLeiSeca() {
+  function atualizarChipTrilha() {
     const b = $('fcxBtnLeiSeca');
     if (!b) return;
     const p = ciclo.pausa || {};
     const n = ['metas', 'topicos', 'materias'].reduce((a, k) => a + Object.keys(p[k] || {}).length, 0);
-    b.textContent = n ? 'Teoria × Lei Seca (' + n + ' fora)' : 'Teoria × Lei Seca';
+    b.textContent = (ciclo.trilha && ciclo.trilha.ativo) ? 'Trilha de estudos ✓ (' + n + ' fora)' : 'Trilha de estudos';
   }
 
-  window.fcxFecharSeparacao = function () { const m = $('fcxModalLeiSeca'); if (m) m.remove(); };
+  window.fcxFecharTrilha = function () { const m = $('fcxModalLeiSeca'); if (m) m.remove(); };
 
   window.fcxAbrirSeparacaoLeiSeca = function () {
-    window.fcxFecharSeparacao();
-    const linhas = classificar();
-    window.__fcxLinhasSep = linhas;
-    const rot = { meta: 'Metas do cronograma', topico: 'Tópicos da fila de questões / cartões', materia: 'Matérias inteiras' };
-    const blocos = ['materia', 'meta', 'topico'].map((tp) => {
-      const ls = linhas.filter((r) => r.tipo === tp && !r.pausado && r.sugestao !== 'teoria');
-      if (!ls.length) return '';
-      const itens = ls.map((r, i) => {
-        const idx = linhas.indexOf(r);
-        return '<label class="flex items-start gap-2 p-2 rounded-lg border ' + (r.sugestao === 'lei' ? 'border-rose-800 bg-rose-950/30' : 'border-amber-700 bg-amber-950/30') + '">' +
-          '<input type="checkbox" data-fcx-sep="' + idx + '" ' + (r.sugestao === 'lei' ? 'checked' : '') + ' class="mt-0.5">' +
-          '<span class="text-[11px] text-slate-200"><strong>' + esc(r.materia) + '</strong> — ' + esc(r.rotulo) +
-          (r.prog ? ' <span class="text-amber-300 font-bold">⚠ tem andamento/histórico</span>' : '') +
-          '<br><span class="text-slate-400">' + esc(r.motivo) + '</span></span></label>';
-      }).join('');
-      return '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-indigo-300">' + rot[tp] + ' que sairiam da Teoria</div>' + itens + '</div>';
-    }).join('');
-    const ja = linhas.filter((r) => r.pausado).map((r) => {
-      const idx = linhas.indexOf(r);
-      return '<label class="flex items-start gap-2 p-2 rounded-lg border border-emerald-800 bg-emerald-950/20"><input type="checkbox" data-fcx-dev="' + idx + '" class="mt-0.5"><span class="text-[11px] text-slate-200"><strong>' + esc(r.materia) + '</strong> — ' + esc(r.rotulo) + '</span></label>';
-    }).join('');
-    const mantidos = linhas.filter((r) => !r.pausado && r.sugestao === 'teoria').length;
+    window.fcxFecharTrilha();
+    const pl = planoTrilha();
+    window.__fcxPlanoTrilha = pl;
+    const li = (arr, f) => arr.map((x) => '<li>' + f(x) + '</li>').join('') || '<li class="text-slate-500">nenhum</li>';
+    const det = (tit, cor, arr, f) => '<details class="rounded-lg border border-slate-700 bg-slate-950/60 p-2"><summary class="cursor-pointer text-[11px] font-extrabold ' + cor + '">' + tit + ' (' + arr.length + ')</summary><ul class="mt-1.5 space-y-0.5 text-[11px] text-slate-300 list-disc pl-5">' + li(arr, f) + '</ul></details>';
+    const eNome = (e) => 'Sem ' + String(e.sem).padStart(2, '0') + ' • ' + esc((e.materia ? e.materia.nome : e.materiaRaw)) + ' — ' + esc(e.nome);
     const box = document.createElement('div');
     box.id = 'fcxModalLeiSeca';
-    box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(2,6,23,.85);display:flex;align-items:center;justify-content:center;padding:12px';
-    box.innerHTML = '<div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 space-y-3">' +
-      '<div class="flex items-start justify-between gap-3"><div><h3 class="text-base font-extrabold text-white">Separar Teoria de Lei Seca (temporário)</h3>' +
-      '<p class="text-[11px] text-slate-400 mt-1">Regra: não misturar Teoria com Lei Seca. O que não está na lista de Teoria sai do cronograma, da fila de questões, dos cartões, da agenda e dos indicadores. Nada é excluído: dá para devolver depois.</p></div>' +
-      '<button type="button" onclick="fcxFecharSeparacao()" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-xs">Fechar</button></div>' +
-      '<div class="text-[11px] text-emerald-300 font-bold">Permanecem na Teoria: ' + mantidos + ' item(ns) que constam na lista.</div>' +
-      (blocos || '<div class="text-xs text-slate-300">Nenhum item fora da lista foi encontrado.</div>') +
-      '<div class="text-[10px] text-amber-300">Itens em âmbar não batem com os nomes da lista: só saem se você marcar. Confira os que têm ⚠ antes de aplicar.</div>' +
-      (ja ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-emerald-300">Já em Lei Seca (marque para devolver à Teoria)</div>' + ja + '</div>' : '') +
-      '<div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800"><button type="button" onclick="fcxAplicarSeparacao()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Aplicar separação</button>' +
-      '<button type="button" onclick="fcxFecharSeparacao()" class="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 text-xs">Cancelar</button></div></div>';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(2,6,23,.88);display:flex;align-items:center;justify-content:center;padding:12px';
+    const ativa = ciclo.trilha && ciclo.trilha.ativo;
+    box.innerHTML = '<div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-5 space-y-3">' +
+      '<div class="flex items-start justify-between gap-3"><div><h3 class="text-base font-extrabold text-white">Trilha de estudos — fonte única da Teoria</h3>' +
+      '<p class="text-[11px] text-slate-400 mt-1">Cronograma, tópicos, PDFs-base pendentes, fila de questões, cartões, agenda e indicadores passam a seguir a trilha, com os nomes idênticos aos dela. O que está fora fica guardado (Lei Seca ou futuro) e pode voltar.</p></div>' +
+      '<button type="button" onclick="fcxFecharTrilha()" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-xs">Fechar</button></div>' +
+      '<div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">' +
+      [['Trilha', pl.entradas.length, 'tópicos de teoria (' + (ciclo.trilha && ciclo.trilha.texto ? 'lista colada' : 'lista enviada') + ')', 'text-indigo-300'],
+       ['Estudados', pl.manter.length + pl.criar.length + pl.semMateria.length, 'viram tópicos ativos', 'text-emerald-300'],
+       ['Títulos', pl.metasTitulo.length, 'de metas ajustados', 'text-rose-300'],
+       ['Tópicos fora', pl.fora.length + pl.futuros.filter((e) => e.topico.status === 'Ativo').length, 'pausados (fora/futuro)', 'text-amber-300']]
+        .map(([a, b, c, d]) => '<div class="p-2 rounded-lg bg-slate-950 border border-slate-800"><div class="text-[10px] font-bold uppercase ' + d + '">' + a + '</div><div class="text-lg font-extrabold text-white">' + b + '</div><div class="text-[10px] text-slate-400">' + c + '</div></div>').join('') + '</div>' +
+      det('Metas do cronograma sem correspondência na trilha (conferir; não saem sozinhas)', 'text-rose-300', pl.metasRevisar, (m) => 'Sem ' + String(m.numeroSemana).padStart(2, '0') + ' • Meta ' + m.numeroMeta + ' • ' + esc(m.materia) + ' — ' + esc(m.topico)) +
+      det('Tópicos estudados que serão criados', 'text-emerald-300', pl.criar, eNome) +
+      det('Tópicos renomeados para o nome da trilha', 'text-sky-300', pl.renomear, (e) => esc(e.topico.topico) + ' → <strong>' + esc(e.nome) + '</strong>') +
+      det('Títulos de metas ajustados', 'text-sky-300', pl.metasTitulo, (x) => esc(x.de) + ' → <strong>' + esc(x.para) + '</strong>') +
+      det('Tópicos cadastrados fora da trilha (pausados)', 'text-amber-300', pl.fora, (t) => esc(t.materia) + ' — ' + esc(t.topico) + ((t.resolvidasTotal || 0) > 0 ? ' <span class="text-amber-300">⚠ ' + t.resolvidasTotal + ' questões respondidas</span>' : '')) +
+      det('Tópicos da trilha ainda não estudados (aguardam)', 'text-slate-300', pl.futuros.filter((e) => e.topico.status === 'Ativo'), eNome) +
+      (pl.semMateria.length ? det('Estudados, mas sem matéria cadastrada correspondente', 'text-rose-300', pl.semMateria, (e) => eNome(e) + ' — cadastre a matéria "' + esc(nomeBonito(e.materiaRaw)) + '"') : '') +
+      '<details class="rounded-lg border border-slate-700 bg-slate-950/60 p-2"><summary class="cursor-pointer text-[11px] font-extrabold text-indigo-300">Colar uma nova lista (Ctrl+C / Ctrl+V da trilha)</summary>' +
+      '<textarea id="fcxTrilhaTexto" rows="6" placeholder="Cole aqui a trilha inteira. Serão lidas as linhas \'Semana NN\' e \'DD - MATÉRIA - TÓPICO\'." class="w-full mt-2 rounded-lg border px-2 py-1.5 text-[11px] font-mono"></textarea>' +
+      '<button type="button" onclick="fcxTrilhaNovaLista()" class="mt-1.5 px-3 py-1.5 rounded-lg bg-indigo-700 hover:bg-indigo-600 text-white font-bold text-[11px]">Usar esta lista e recalcular</button></details>' +
+      '<div class="flex flex-wrap gap-2 pt-2 border-t border-slate-800"><button type="button" onclick="fcxAplicarTrilha()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">' + (ativa ? 'Recalcular e aplicar' : 'Aplicar trilha') + '</button>' +
+      (ativa ? '<button type="button" onclick="fcxDesfazerTrilha()" class="px-4 py-2 rounded-lg border border-rose-800 text-rose-300 text-xs">Desfazer (voltar ao anterior)</button>' : '') +
+      '<button type="button" onclick="fcxFecharTrilha()" class="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 text-xs">Cancelar</button></div></div>';
     document.body.appendChild(box);
   };
 
-  window.fcxAplicarSeparacao = async function () {
-    const linhas = window.__fcxLinhasSep || [];
-    const pausar = [], devolver = [];
-    document.querySelectorAll('#fcxModalLeiSeca input[data-fcx-sep]').forEach((c) => { if (c.checked) pausar.push(linhas[Number(c.getAttribute('data-fcx-sep'))]); });
-    document.querySelectorAll('#fcxModalLeiSeca input[data-fcx-dev]').forEach((c) => { if (c.checked) devolver.push(linhas[Number(c.getAttribute('data-fcx-dev'))]); });
-    window.fcxFecharSeparacao();
-    if (!pausar.length && !devolver.length) { aviso('Nada selecionado.'); return; }
-    await aplicarSeparacao(pausar, devolver);
+  window.fcxTrilhaNovaLista = function () {
+    const txt = ($('fcxTrilhaTexto') || {}).value || '';
+    const t = parseTrilha(txt);
+    if (t.dd.length < 5) { aviso('Não encontrei linhas "DD - MATÉRIA - TÓPICO" suficientes na lista colada.', true); return; }
+    ciclo.trilha = Object.assign({}, ciclo.trilha, { texto: txt, t: Date.now() });
+    ciclo.t = Date.now();
+    persistirCiclo();
+    window.fcxAbrirSeparacaoLeiSeca();
   };
 
-  function montarBotaoLeiSeca() {
+  window.fcxAplicarTrilha = async function () {
+    const pl = planoTrilha();
+    window.fcxFecharTrilha();
+    await aplicarPlanoTrilha(pl, {});
+  };
+  window.fcxDesfazerTrilha = async function () { window.fcxFecharTrilha(); await desfazerTrilha(); };
+
+  function montarBotaoTrilha() {
     if ($('fcxBtnLeiSeca') || typeof document.querySelector !== 'function') return;
     const ref = document.querySelector('button[onclick="fcxReorganizarCronograma()"]');
     if (!ref || !ref.parentNode) return;
     const b = document.createElement('button');
     b.type = 'button'; b.id = 'fcxBtnLeiSeca';
     b.className = 'px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-600 text-white font-extrabold text-[11px] transition';
-    b.title = 'Separar Teoria de Lei Seca sem excluir nada';
+    b.title = 'Aplicar a trilha de estudos como fonte única da Teoria';
     b.setAttribute('onclick', 'fcxAbrirSeparacaoLeiSeca()');
     ref.parentNode.insertBefore(b, ref);
-    atualizarChipLeiSeca();
+    atualizarChipTrilha();
   }
 
-  /* ---- ganchos: mantêm a separação a cada recarga ---- */
+  /* ---- ganchos: mantêm a trilha a cada recarga ---- */
   envolver('recalcularDatasCronogramaDinamico', (orig, ...args) => { filtrarMetasOcultas(); return orig(...args); });
   if (typeof window.carregarFlashcardsSupabase === 'function') {
     const origCF = window.carregarFlashcardsSupabase;
@@ -16815,6 +16986,17 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   envolver('sincronizarPlanejamentoDiario3Areas', (orig, ...args) => { limparAgendaPausada(); return orig(...args); });
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
+  /* na primeira abertura do dia, mostra a prévia para você confirmar */
+  function avisoInicialTrilha() {
+    try {
+      if (ciclo.trilha && ciclo.trilha.ativo) return;
+      const hoje = hojeYMD();
+      if (localStorage.getItem('GR_FCX_TRILHA_AVISO') === hoje) return;
+      localStorage.setItem('GR_FCX_TRILHA_AVISO', hoje);
+      setTimeout(() => { if (ESTADO && ESTADO.topicos && CRON_METAS && CRON_METAS.length && !$('fcxModalLeiSeca')) window.fcxAbrirSeparacaoLeiSeca(); }, 4000);
+    } catch (e) { /* ignora */ }
+  }
+
 
   /* ========================================================================
    * INICIALIZAÇÃO
@@ -16822,12 +17004,12 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    classificar, aplicarSeparacao, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
+    planoTrilha, aplicarPlanoTrilha, desfazerTrilha, nomeBonito, parseTrilha, casa, filtrarMetasOcultas, compactarCronograma, derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
     inicializarUI();
-    try { montarBotaoLeiSeca(); } catch (e) { /* ignora */ }
+    try { montarBotaoTrilha(); avisoInicialTrilha(); } catch (e) { /* ignora */ }
     if (typeof renderizarDashboardCronograma === 'function' && CRON_METAS && CRON_METAS.length) {
       CRON_METAS.forEach(derivarStatusMeta);
       renderizarDashboardCronograma();
