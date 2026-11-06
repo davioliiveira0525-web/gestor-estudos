@@ -15619,7 +15619,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
    *      progresso dos blocos, composição fixa dos blocos, zeradas de decoreba e vínculo de matérias */
   const K_CICLO = 'GR_FCX_CICLO_V2';
   const K_CICLO_NUVEM = 'GR_FCX_CICLO_JSON';
-  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {}, mapaT: {}, inicio: {}, plano: {} });
+  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {}, mapaT: {}, inicio: {}, plano: {}, estudo: {}, recon: {} });
   let ciclo = Object.assign(cicloVazio(), lerJSON(K_CICLO, {}));
   if (!ciclo.t) { /* migra a versão anterior (somente navegador) */
     ciclo.blocos = lerJSON('GR_FCX_BLOCOS_V1', {});
@@ -15678,6 +15678,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const existia = Boolean(FC_ESTADO_BLOCOS_MAP && FC_ESTADO_BLOCOS_MAP[chave]);
     const blocos = orig(cards);
     if (!blocos.length) return blocos;
+    const esEstudo = chave.indexOf('E__') === 0;
     const sv = ciclo.blocos[chave];
     if (!existia && sv && sv.length === blocos.length) {
       blocos.forEach((b, i) => {
@@ -15688,7 +15689,13 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     }
     let comp = ciclo.comp[chave];
     if (!comp || comp.length !== blocos.length) {
-      comp = blocos.map((b) => b.cardsOriginais.map((c) => c.id));
+      if (esEstudo) { /* blocos de estudo seguem a ordem de criação dos cartões (bloco 1 = primeiros cartões) */
+        const ord = cards.slice().sort((a, b) => (a.ordemCriacao - b.ordemCriacao) || (a.indiceBruto - b.indiceBruto));
+        let cur = 0;
+        comp = blocos.map((b) => { const n = b.cardsOriginais.length; const ids = ord.slice(cur, cur + n).map((c) => c.id); cur += n; return ids; });
+      } else {
+        comp = blocos.map((b) => b.cardsOriginais.map((c) => c.id));
+      }
       ciclo.comp[chave] = comp;
     }
     const emAlgum = new Set();
@@ -15706,6 +15713,23 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       b.cardsOriginais = comp[i].filter((id) => porId.has(id)).map((id) => porId.get(id)).sort((x, y) => pos.get(x.id) - pos.get(y.id));
       b.totalBloco = b.cardsOriginais.length;
     });
+    /* recupera o que já foi estudado (desempenho registrado nos cartões) uma única vez por conjunto de blocos */
+    if (esEstudo && !sv && !ciclo.recon[chave]) {
+      const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
+      const per = typeof periodoAtual === 'function' ? periodoAtual() : null;
+      const ini = per ? per.inicio : '';
+      blocos.forEach((b) => {
+        b.cardsOriginais.forEach((c) => {
+          const t = tel[c.id];
+          const estudado = c.totalRevisoes > 0 && (!t || !t.ultimaDataEstudo || !ini || t.ultimaDataEstudo >= ini);
+          if (!estudado) return;
+          b.respondidosSet[c.id] = true; b.dominadosSet[c.id] = true; b.acertosPorCard[c.id] = Math.max(1, Number(FC_CRITERIO_DOMINIO) || 1);
+        });
+        b.concluido = b.cardsOriginais.length > 0 && b.cardsOriginais.every((c) => b.dominadosSet[c.id]);
+      });
+      ciclo.recon[chave] = true;
+      salvarBlocos();
+    }
     return blocos;
   });
 
@@ -15718,6 +15742,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const chave = obterChaveFiltroAtualBlocos_();
     delete ciclo.blocos[chave];
     delete ciclo.comp[chave];
+    ciclo.recon[chave] = true;
     persistirCiclo();
     return orig();
   });
@@ -15814,90 +15839,180 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   });
 
   /* K4 — abas "Estudos do dia" e "Revisões do dia".
-     Estudos do dia usa a MESMA central de configuração dos cartões (blocos, retorno de erros, filtros,
-     modalidade, ordem), já programada pela meta do cronograma. Revisões do dia é a central como sempre foi. */
+     Estudos do dia = SOMENTE cartões de estudo da meta atual (PDF-Base e Caderno de Erros dos tópicos do período),
+     com estatísticas da meta, divisão em blocos e retorno de erros. Config e progresso ficam salvos pelo período todo.
+     Revisões do dia = a central original (bateria de questões, decoreba, filtros livres). */
   const K_ABA = 'GR_FCX_ABA_AQUECIMENTO';
   let abaAq = lerJSON(K_ABA, 'estudos');
-  let unidadeAtiva = 0;
-  let resumoConfig = '';
   let emConfig = false;
-  let configurouNaEntrada = false;
+  let snapRev = null;
   let cardConfig = null;
+  let memoPeriodo = { t: 0, v: null };
 
-  function unidadesDoDia() {
-    const out = [];
-    const vistos = new Set();
-    let pl;
-    try { pl = planoDeHoje(); } catch (e) { return out; }
-    const add = (m, st, estado) => {
-      const k = semAcento(m.materia) + '|' + semAcento(st.nome);
-      if (vistos.has(k)) return;
-      vistos.add(k);
-      out.push({ materia: m.materia, nome: st.nome, estado, chave: k });
-    };
-    pl.hojeLista.forEach(({ m, p }) => m.subtopicos.forEach((st) => { if (celulaExigida(st, m.totalPartes, p)) add(m, st, 'hoje'); }));
-    pl.pendencias.forEach((x) => add(x.m, x.st, 'atrasado'));
-    pl.previstasHojeConcluidas.forEach(({ m, p }) => m.subtopicos.forEach((st) => { if (celulaExigida(st, m.totalPartes, p)) add(m, st, 'adiantado'); }));
-    return out;
+  function topicoGlobal(nome, materiaPref) {
+    const alvo = semAcento(nome);
+    const ativos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo');
+    const man = ciclo.mapaT[alvo];
+    if (man) { const v = ativos.find((t) => t.id === man); if (v) return v; }
+    let cand = ativos.filter((t) => semAcento(t.topico) === alvo);
+    if (!cand.length) cand = ativos.filter((t) => alvo.length > 3 && (semAcento(t.topico).includes(alvo) || alvo.includes(semAcento(t.topico))) && semAcento(t.topico).length > 3);
+    if (!cand.length) return null;
+    const pref = semAcento(materiaPref || '');
+    const dePref = cand.find((t) => { const m = ((ESTADO && ESTADO.materias) || []).find((x) => x.id === t.idMateria); return m && pref && semAcento(m.nome) === pref; });
+    return dePref || cand[0];
   }
-  window.__FCX_unidadesDoDia = unidadesDoDia;
 
-  function configurarUnidade(u) {
-    if (!u || emConfig) return;
+  /* período de estudo = datas planejadas da meta atual (ex.: 05/11 a 07/11) */
+  function periodoAtual(forcar) {
+    const agora = Date.now();
+    if (!forcar && memoPeriodo.v !== null && agora - memoPeriodo.t < 400) return memoPeriodo.v;
+    let res = null;
+    try {
+      const pl = planoDeHoje();
+      const hoje = hojeYMD();
+      let meta = (pl.hojeLista[0] && pl.hojeLista[0].m) || (pl.previstasHojeConcluidas[0] && pl.previstasHojeConcluidas[0].m) || null;
+      if (!meta) meta = (CRON_METAS || []).find((m) => m.status !== 'Concluído' && m.detalhesPartes.some((pt) => pt.dataPlanejada <= hoje) && m.detalhesPartes.some((pt) => pt.dataPlanejada >= hoje)) || null;
+      if (!meta) meta = (pl.pendencias[0] && pl.pendencias[0].m) || (pl.proximos[0] && pl.proximos[0].m) || null;
+      if (meta) {
+        const datas = meta.detalhesPartes.map((p) => p.dataPlanejada).filter(Boolean).sort();
+        const inicio = datas[0] || hoje;
+        const fim = datas[datas.length - 1] || hoje;
+        const dias = diffDias(fim, inicio) + 1;
+        const dia = Math.min(dias, Math.max(1, diffDias(hoje, inicio) + 1));
+        const topicos = meta.subtopicos.map((st) => ({ nome: st.nome, topico: topicoGlobal(st.nome, meta.materia) }));
+        const permitidos = new Set(topicos.filter((x) => x.topico).map((x) => x.topico.id));
+        const materias = Array.from(new Set(topicos.filter((x) => x.topico).map((x) => x.topico.idMateria)));
+        res = { meta, id: meta.id, inicio, fim, dias, dia, topicos, permitidos, materias, naoLigados: topicos.filter((x) => !x.topico).map((x) => x.nome) };
+      }
+    } catch (e) { res = null; }
+    memoPeriodo = { t: agora, v: res };
+    return res;
+  }
+
+  /* filtros restritos ao período; modalidades somente PDF-Base / Caderno de Erros */
+  function restringirFiltros() {
+    if (abaAq !== 'estudos') return;
+    const per = periodoAtual();
+    const selM = $('fcFiltroMateria'), selT = $('fcFiltroTopico'), selTp = $('fcFiltroTipo');
+    if (!per || !per.permitidos.size || !selM || !selT || !selTp) return;
+    const mats = ((ESTADO && ESTADO.materias) || []).filter((m) => per.materias.indexOf(m.id) >= 0);
+    const htmlM = '<option value="">Todas as matérias do período</option>' + mats.map((m) => '<option value="' + m.id + '">' + esc(m.nome) + '</option>').join('');
+    const vM = selM.value;
+    if (selM.innerHTML !== htmlM) selM.innerHTML = htmlM;
+    selM.value = mats.some((m) => m.id === vM) ? vM : '';
+    const tops = ((ESTADO && ESTADO.topicos) || []).filter((t) => per.permitidos.has(t.id) && (!selM.value || t.idMateria === selM.value));
+    const htmlT = '<option value="">Todos os tópicos do período</option>' + tops.map((t) => '<option value="' + t.id + '">' + esc(t.topico) + '</option>').join('');
+    const vT = selT.value;
+    if (selT.innerHTML !== htmlT) selT.innerHTML = htmlT;
+    selT.value = tops.some((t) => t.id === vT) ? vT : '';
+    const htmlTp = '<option value="CICLO">PDF-Base + Caderno de Erros</option><option value="PDF_BASE">1. PDF-Base (C/E)</option><option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>';
+    const vTp = selTp.value;
+    if (selTp.innerHTML !== htmlTp) selTp.innerHTML = htmlTp;
+    selTp.value = ['CICLO', 'PDF_BASE', 'CADERNO_ERROS'].indexOf(vTp) >= 0 ? vTp : 'CICLO';
+  }
+
+  envolver('obterCardsFiltradosFC', (orig) => {
+    const lista = orig();
+    if (abaAq !== 'estudos') return lista;
+    const per = periodoAtual();
+    if (!per || !per.permitidos.size) return lista;
+    return lista.filter((c) => per.permitidos.has(c.idTopico) && (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS'));
+  });
+
+  /* chave estável dos blocos durante todo o período (não muda com modalidade/ordem) */
+  envolver('obterChaveFiltroAtualBlocos_', (orig) => {
+    if (abaAq === 'estudos') {
+      const per = periodoAtual();
+      if (per) return 'E__' + per.id + '__' + (($('fcFiltroTopico') && $('fcFiltroTopico').value) || 'ALL') + '__B' + FC_QTD_BLOCOS;
+    }
+    return orig();
+  });
+
+  function salvarConfigEstudo() {
+    const per = periodoAtual();
+    if (!per) return;
+    const ant = ciclo.estudo[per.id] || {};
+    const v = (id) => ($(id) ? $(id).value : '');
+    const cfg = {
+      materia: v('fcFiltroMateria'), topico: v('fcFiltroTopico'), tipo: v('fcFiltroTipo'), ordem: v('fcSelectOrdemApresentacao'),
+      qtd: FC_QTD_BLOCOS, ret: FC_INTERVALO_RETORNO,
+      manualTipo: Boolean(ant.manualTipo) || (!emConfig && ant.tipo !== undefined && ant.tipo !== v('fcFiltroTipo')),
+      manualOrdem: Boolean(ant.manualOrdem) || (!emConfig && ant.ordem !== undefined && ant.ordem !== v('fcSelectOrdemApresentacao'))
+    };
+    if (JSON.stringify(cfg) !== JSON.stringify(ant)) { ciclo.estudo[per.id] = cfg; persistirCiclo(); }
+  }
+
+  ['aoMudarMateriaFiltroFC', 'aoMudarFiltroDeckResetarBlocos', 'atualizarOrdemApresentacaoUI', 'atualizarDivisaoBlocosAquecimentoUI', 'atualizarIntervaloRetornoAquecimentoUI'].forEach((nome) => {
+    if (typeof window[nome] !== 'function') return;
+    envolver(nome, (orig, ...args) => {
+      const r = orig(...args);
+      if (abaAq === 'estudos' && !emConfig) {
+        try { restringirFiltros(); salvarConfigEstudo(); if (nome === 'aoMudarMateriaFiltroFC') renderizarVisaoDeckFC(); } catch (e) { /* ignora */ }
+      }
+      return r;
+    });
+  });
+
+  function setVal(id, v) { const el = $(id); if (el) el.value = v; }
+
+  function entrarEstudos() {
+    const per = periodoAtual(true);
+    if (!per) return;
     emConfig = true;
     try {
-      const set = (id, v) => { const el = $(id); if (el) el.value = v; };
-      const mat = materiaDoSistema(u.materia);
-      if (!mat) { resumoConfig = 'Ligue a matéria "' + u.materia + '" a uma matéria dos cartões (lista abaixo) para configurar automaticamente.'; return; }
-      set('fcFiltroMateria', mat.id);
-      if (typeof aoMudarMateriaFiltroFC === 'function') aoMudarMateriaFiltroFC();
-      const top = topicoDoSistema(mat.id, u.nome, u.chave);
-      set('fcFiltroTopico', top ? top.id : '');
-      const ini = top ? ciclo.inicio[top.id] : '';
-      const diaCiclo = ini ? Math.max(1, diffDias(hojeYMD(), ini) + 1) : 1;
-      const modal = diaCiclo > 1 ? 'CICLO' : 'PDF_BASE';
-      const ordem = diaCiclo > 1 ? 'PRIORIDADE_ERROS' : 'SEQUENCIAL_INICIAL_DEPOIS_ERROS';
-      set('fcFiltroTipo', modal);
-      set('fcSelectOrdemApresentacao', ordem);
-      if (typeof renderizarVisaoDeckFC === 'function') renderizarVisaoDeckFC();
-      resumoConfig = 'Configurado pela meta: ' + mat.nome + ' • ' + (top ? top.topico : 'tópico não ligado') + ' • ' +
-        (modal === 'CICLO' ? 'PDF-Base + Caderno de Erros' : 'PDF-Base') + ' • dia ' + diaCiclo + ' do ciclo • ' +
-        (diaCiclo > 1 ? 'mais errados primeiro' : 'sequencial (depois por erros)');
+      const cfg = ciclo.estudo[per.id] || {};
+      restringirFiltros();
+      const primeiro = per.topicos.find((x) => x.topico);
+      const dia2 = per.dia > 1;
+      const tipo = (cfg.manualTipo && cfg.tipo) ? cfg.tipo : (dia2 ? 'CICLO' : 'PDF_BASE');
+      const ordem = (cfg.manualOrdem && cfg.ordem) ? cfg.ordem : (dia2 ? 'PRIORIDADE_ERROS' : 'SEQUENCIAL_INICIAL_DEPOIS_ERROS');
+      setVal('fcFiltroMateria', cfg.materia !== undefined ? cfg.materia : (primeiro ? primeiro.topico.idMateria : ''));
+      restringirFiltros();
+      setVal('fcFiltroTopico', cfg.topico !== undefined ? cfg.topico : (primeiro ? primeiro.topico.id : ''));
+      restringirFiltros();
+      setVal('fcFiltroTipo', tipo);
+      setVal('fcSelectOrdemApresentacao', ordem);
+      if (cfg.qtd) { FC_QTD_BLOCOS = Math.max(1, Math.min(50, Number(cfg.qtd))); setVal('fcInputQtdBlocos', FC_QTD_BLOCOS); }
+      if (cfg.ret) { FC_INTERVALO_RETORNO = Math.max(1, Math.min(50, Number(cfg.ret))); setVal('fcInputIntervaloRetorno', FC_INTERVALO_RETORNO); }
+      salvarConfigEstudo();
     } finally { emConfig = false; }
   }
 
-  window.fcxSelecionarUnidade = function (idx) {
-    unidadeAtiva = Number(idx) || 0;
-    configurarUnidade(unidadesDoDia()[unidadeAtiva]);
-    renderizarEstudosDoDia();
-  };
+  function snapshotRevisoes() {
+    const g = (id) => ($(id) ? $(id).value : '');
+    snapRev = {
+      mat: g('fcFiltroMateria'), top: g('fcFiltroTopico'), tipo: g('fcFiltroTipo'), ordem: g('fcSelectOrdemApresentacao'),
+      qtd: FC_QTD_BLOCOS, ret: FC_INTERVALO_RETORNO,
+      htmlM: $('fcFiltroMateria') ? $('fcFiltroMateria').innerHTML : '', htmlTp: $('fcFiltroTipo') ? $('fcFiltroTipo').innerHTML : ''
+    };
+  }
 
-  window.fcxVincularMateria = function (nomeCron, idMateria) {
-    const chave = semAcento(nomeCron);
-    if (idMateria) ciclo.mapa[chave] = idMateria; else delete ciclo.mapa[chave];
-    persistirCiclo();
-    configurarUnidade(unidadesDoDia()[unidadeAtiva]);
-    renderizarEstudosDoDia();
-    aviso(idMateria ? 'Matéria vinculada.' : 'Vínculo removido (volta ao automático).');
-  };
-  window.fcxVincularTopico = function (chave, idTopico) {
-    if (idTopico) ciclo.mapaT[chave] = idTopico; else delete ciclo.mapaT[chave];
-    persistirCiclo();
-    configurarUnidade(unidadesDoDia()[unidadeAtiva]);
-    renderizarEstudosDoDia();
-    aviso(idTopico ? 'Tópico vinculado.' : 'Vínculo removido (volta ao automático).');
-  };
-
-  envolver('iniciarBlocoAquecimentoPorIndice', (orig, ...args) => {
+  function restaurarRevisoes() {
+    if (!snapRev) return;
+    emConfig = true;
     try {
-      const top = $('fcFiltroTopico') && $('fcFiltroTopico').value;
-      if (abaAq === 'estudos' && top && !ciclo.inicio[top]) { ciclo.inicio[top] = hojeYMD(); persistirCiclo(); }
-    } catch (e) { /* ignora */ }
-    return orig(...args);
-  });
+      const s = snapRev;
+      if ($('fcFiltroMateria')) $('fcFiltroMateria').innerHTML = s.htmlM;
+      if ($('fcFiltroTipo')) $('fcFiltroTipo').innerHTML = s.htmlTp;
+      setVal('fcFiltroMateria', s.mat);
+      if (typeof aoMudarMateriaFiltroFC === 'function') aoMudarMateriaFiltroFC();
+      setVal('fcFiltroTopico', s.top);
+      setVal('fcFiltroTipo', s.tipo);
+      setVal('fcSelectOrdemApresentacao', s.ordem);
+      FC_QTD_BLOCOS = s.qtd; setVal('fcInputQtdBlocos', s.qtd);
+      FC_INTERVALO_RETORNO = s.ret; setVal('fcInputIntervaloRetorno', s.ret);
+    } finally { emConfig = false; }
+    snapRev = null;
+  }
 
   function definirAbaAquecimento(aba) {
-    abaAq = aba === 'revisoes' ? 'revisoes' : 'estudos';
+    const nova = aba === 'revisoes' ? 'revisoes' : 'estudos';
+    const mudou = nova !== abaAq || !$('fcxAbasAq') || !$('fcxAbasAq').dataset.ini;
+    if ($('fcxAbasAq')) $('fcxAbasAq').dataset.ini = '1';
+    if (nova === 'estudos' && (mudou || !snapRev) && abaAq !== 'estudos') snapshotRevisoes();
+    if (nova === 'estudos' && !snapRev && abaAq === 'estudos') snapshotRevisoes();
+    const anterior = abaAq;
+    abaAq = nova;
     gravarJSON(K_ABA, abaAq);
     const cont = $('containerDeckFlashcards');
     if (cont) cont.classList.toggle('fcx-tab-estudos', abaAq === 'estudos');
@@ -15910,102 +16025,87 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       if (abaAq === 'estudos') slot.appendChild(cardConfig);
       else painel.insertBefore(cardConfig, painel.firstChild);
     }
-    configurouNaEntrada = false;
-    if (abaAq === 'estudos') aplicarConfigDaEntrada();
-    renderizarEstudosDoDia();
+    if (abaAq === 'estudos') { entrarEstudos(); renderizarVisaoDeckFC(); }
+    else if (anterior === 'estudos') { restaurarRevisoes(); renderizarVisaoDeckFC(); }
+    renderizarEstatisticasMeta();
   }
   window.fcxAbaAquecimento = definirAbaAquecimento;
 
-  function aplicarConfigDaEntrada() {
-    if (configurouNaEntrada || abaAq !== 'estudos') return;
-    const us = unidadesDoDia();
-    if (!us.length) return;
-    configurouNaEntrada = true;
-    unidadeAtiva = Math.min(unidadeAtiva, us.length - 1);
-    configurarUnidade(us[unidadeAtiva]);
-  }
-
-  function linhaCelulaHTML(m, p, i, st, rotulo, adiantando) {
-    const cel = st.partesStatus && st.partesStatus[p];
-    const feita = Boolean(cel && cel.concluida);
-    const plan = (m.detalhesPartes[p] || {}).dataPlanejada || '';
-    const pag = cotaCelula(st, m.totalPartes, p);
-    const antecipada = feita && cel.data && plan && cel.data < plan;
-    return '<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded-lg bg-slate-950 border ' + (feita ? 'border-emerald-700/70' : 'border-slate-800') + '">' +
-      '<div class="min-w-0"><div class="text-xs font-bold text-white truncate">' + esc(st.nome) + '</div>' +
-      '<div class="text-[10px] text-slate-400">' + rotulo + ' • Parte ' + (p + 1) + ' de ' + m.totalPartes + (pag ? ' • ' + pag + ' pág.' : '') + (plan ? ' • prevista ' + esc(fmtData(plan)) : '') +
-      (feita ? ' • concluída em ' + esc(fmtData(cel.data || '')) : '') +
-      (antecipada ? ' <span class="px-1.5 py-0.5 rounded bg-sky-900 text-sky-200 font-bold">ADIANTADA</span>' : '') + '</div></div>' +
-      (feita
-        ? '<button type="button" onclick="fcxEstudoCelula(\'' + m.id + '\',' + p + ',' + i + ',false)" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-[11px]">Desfazer</button>'
-        : '<button type="button" onclick="fcxEstudoCelula(\'' + m.id + '\',' + p + ',' + i + ',true)" class="px-3 py-1.5 rounded-lg ' + (adiantando ? 'bg-sky-600 hover:bg-sky-500' : 'bg-emerald-600 hover:bg-emerald-500') + ' text-white font-extrabold text-[11px]">' + (adiantando ? 'Concluí (adiantando)' : 'Concluí esta parte') + '</button>') +
-      '</div>';
-  }
-
-  function renderizarEstudosDoDia() {
-    const box = $('fcxEstudosDia');
-    const topo = $('fcxEstudosTopo');
-    if (!box || !topo) return;
-    let pl = null;
-    try { pl = planoDeHoje(); } catch (e) { pl = null; }
-    const hoje = hojeYMD();
-    const blocoGrupo = (titulo, itens, extra) => itens
-      ? '<div class="rounded-xl border border-slate-800 bg-slate-900 p-3 space-y-2"><div class="flex flex-wrap items-center justify-between gap-2"><div class="text-xs font-extrabold text-white">' + titulo + '</div>' + (extra || '') + '</div>' + itens + '</div>'
-      : '';
-    let html = '<div class="text-[11px] font-extrabold uppercase text-emerald-300">Estudos do dia — conforme o cronograma (datas fixas)</div>';
-    if (pl) {
-      const nPend = pl.pendencias.length;
-      if (nPend) {
-        const desde = pl.pendencias.reduce((a, x) => (x.desde < a ? x.desde : a), pl.pendencias[0].desde);
-        html += '<div class="rounded-xl border border-amber-700 bg-amber-950/40 p-3 flex flex-wrap items-center justify-between gap-2">' +
-          '<div class="text-xs text-amber-200"><strong>Você está atrasado:</strong> ' + nPend + ' atividade(s) pendente(s), a mais antiga prevista para ' + esc(fmtData(desde)) + '. O cronograma só muda se você pedir.</div>' +
-          '<button type="button" onclick="fcxReorganizarCronograma()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px]">Reorganizar cronograma</button></div>';
-      }
-      const itensHoje = [];
-      pl.hojeLista.forEach(({ m, p }) => m.subtopicos.forEach((st, i) => { if (celulaExigida(st, m.totalPartes, p)) itensHoje.push(linhaCelulaHTML(m, p, i, st, 'Meta ' + m.numeroMeta + ' • ' + esc(m.materia), false)); }));
-      pl.previstasHojeConcluidas.forEach(({ m, p }) => m.subtopicos.forEach((st, i) => { if (celulaExigida(st, m.totalPartes, p)) itensHoje.push(linhaCelulaHTML(m, p, i, st, 'Meta ' + m.numeroMeta + ' • ' + esc(m.materia), false)); }));
-      html += blocoGrupo('Previstas para hoje (' + esc(fmtData(hoje)) + ')', itensHoje.join('')) || '<div class="text-xs text-slate-400">Nada previsto no cronograma para hoje.</div>';
-      const itensPend = pl.pendencias.map((x) => linhaCelulaHTML(x.m, x.p, x.i, x.st, 'Atrasada desde ' + esc(fmtData(x.desde)) + ' • ' + esc(x.m.materia), false));
-      html += blocoGrupo('Pendências atrasadas', itensPend.join(''));
-      const itensProx = [];
-      pl.proximos.forEach(({ m, p }) => m.subtopicos.forEach((st, i) => { if (celulaExigida(st, m.totalPartes, p)) itensProx.push(linhaCelulaHTML(m, p, i, st, 'Meta ' + m.numeroMeta + ' • ' + esc(m.materia), true)); }));
-      if (itensProx.length) {
-        const dProx = pl.proximos[0].data;
-        html += blocoGrupo('Próxima meta (' + esc(fmtData(dProx)) + ') — adiantar não altera o cronograma', itensProx.join(''));
-      }
-    }
-    const us = unidadesDoDia();
-    if (us.length) {
-      unidadeAtiva = Math.min(unidadeAtiva, us.length - 1);
-      const u = us[unidadeAtiva];
-      const mat = materiaDoSistema(u.materia);
-      const rotuloEstado = { hoje: 'hoje', atrasado: 'atrasado', adiantado: 'adiantado' };
-      html += '<div class="rounded-xl border border-indigo-800/70 bg-indigo-950/30 p-3 space-y-2">' +
-        '<div class="text-[11px] font-extrabold uppercase text-indigo-300">Cartões de estudo da meta (configuração automática — pode ajustar abaixo)</div>' +
-        '<div class="flex flex-wrap gap-2">' + us.map((x, i) =>
-          '<button type="button" onclick="fcxSelecionarUnidade(' + i + ')" class="px-3 py-1.5 rounded-lg text-xs font-extrabold ' + (i === unidadeAtiva ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700') + '">' +
-          esc(x.nome) + ' <span class="opacity-70 font-semibold">(' + rotuloEstado[x.estado] + ')</span></button>').join('') + '</div>';
-      const optsMat = ((ESTADO && ESTADO.materias) || []).map((m) => '<option value="' + m.id + '"' + (mat && mat.id === m.id ? ' selected' : '') + '>' + esc(m.nome) + '</option>').join('');
-      html += '<div class="flex flex-wrap items-center gap-2 text-[11px]"><span class="text-slate-400">Matéria dos cartões para "' + esc(u.materia) + '":</span>' +
-        '<select onchange="fcxVincularMateria(\'' + esc(u.materia).replace(/'/g, '') + '\', this.value)" class="rounded border px-2 py-1 font-bold"><option value="">' + (mat ? '(automático)' : 'Escolher...') + '</option>' + optsMat + '</select>';
-      if (mat) {
-        const top = topicoDoSistema(mat.id, u.nome, u.chave);
-        const optsTop = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.idMateria === mat.id && t.status === 'Ativo')
-          .map((t) => '<option value="' + t.id + '"' + (top && top.id === t.id ? ' selected' : '') + '>' + esc(t.topico) + '</option>').join('');
-        html += '<span class="text-slate-400">Tópico dos cartões para "' + esc(u.nome) + '":</span>' +
-          '<select onchange="fcxVincularTopico(\'' + u.chave.replace(/'/g, '') + '\', this.value)" class="rounded border px-2 py-1 font-bold"><option value="">' + (top ? '(automático)' : 'Escolher...') + '</option>' + optsTop + '</select>';
-      }
-      html += '</div>' + (resumoConfig ? '<div class="text-[11px] font-semibold text-emerald-300">' + esc(resumoConfig) + '</div>' : '') + '</div>';
-    } else {
-      html += '<div class="text-xs text-slate-400">Sem matéria do cronograma para hoje. Use a configuração abaixo normalmente.</div>';
-    }
-    topo.innerHTML = html;
-  }
-
-  window.fcxEstudoCelula = async function (idMeta, p, i, marcado) {
-    await alternarConclusaoCelulaCron(idMeta, p, i, marcado);
-    renderizarEstudosDoDia();
+  const fmtDur = (s) => {
+    s = Math.max(0, Math.round(s || 0));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h > 0 ? h + 'h' + String(m).padStart(2, '0') : m + ' min';
   };
+
+  window.fcxVincularTopicoNome = function (nome, idTopico) {
+    const alvo = semAcento(nome);
+    if (idTopico) ciclo.mapaT[alvo] = idTopico; else delete ciclo.mapaT[alvo];
+    persistirCiclo();
+    memoPeriodo = { t: 0, v: null };
+    if (abaAq === 'estudos') entrarEstudos();
+    renderizarVisaoDeckFC();
+    aviso(idTopico ? 'Tópico ligado.' : 'Ligação removida (volta ao automático).');
+  };
+
+  function renderizarEstatisticasMeta() {
+    const topo = $('fcxEstudosTopo');
+    if (!topo) return;
+    const per = periodoAtual();
+    if (!per) { topo.innerHTML = '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-400">Nenhuma meta do cronograma encontrada para este período.</div>'; return; }
+    const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
+    const cards = FC_DECK.filter((c) => per.permitidos.has(c.idTopico) && (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS'));
+    const estud = cards.filter((c) => c.totalRevisoes > 0);
+    const pctEst = cards.length ? Math.round((estud.length / cards.length) * 100) : 0;
+    const esperado = Math.round((per.dia / per.dias) * 100);
+    const acertos = cards.reduce((a, c) => a + (c.totalAcertos || 0), 0);
+    const erros = cards.reduce((a, c) => a + (c.totalErros || 0), 0);
+    const taxa = acertos + erros > 0 ? Math.round((acertos / (acertos + erros)) * 100) : 0;
+    const seg = cards.reduce((a, c) => a + (c.segundosAcumulados || 0), 0);
+    const nResp = cards.reduce((a, c) => a + (c.totalRevisoes || 0), 0);
+    let blocos = [];
+    try { if (cards.length && typeof construirEstruturaBlocosFiltroAtual_ === 'function') blocos = construirEstruturaBlocosFiltroAtual_(obterCardsFiltradosFC()); } catch (e) { blocos = []; }
+    const bConc = blocos.filter((b) => b.concluido).length;
+    const dom = blocos.reduce((a, b) => a + Object.keys(b.dominadosSet || {}).filter((k) => b.dominadosSet[k]).length, 0);
+    const totBl = blocos.reduce((a, b) => a + (b.totalBloco || 0), 0);
+    const dias = [];
+    for (let i = 0; i < per.dias; i++) {
+      const d = deDias(diasDe(per.inicio) + i);
+      const n = cards.filter((c) => tel[c.id] && tel[c.id].ultimaDataEstudo === d).length;
+      dias.push({ d, n, hoje: d === hojeYMD() });
+    }
+    const kpi = (rot, val, sub, cor) => '<div class="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800"><span class="text-[10px] font-bold uppercase ' + (cor || 'text-indigo-400') + ' block">' + rot + '</span><div class="text-base font-extrabold text-white mt-0.5">' + val + '</div><span class="text-[10px] text-slate-400">' + sub + '</span></div>';
+    const linhasTop = per.topicos.filter((x) => x.topico).map((x) => {
+      const cs = cards.filter((c) => c.idTopico === x.topico.id);
+      const es = cs.filter((c) => c.totalRevisoes > 0);
+      const a = cs.reduce((s, c) => s + (c.totalAcertos || 0), 0), e = cs.reduce((s, c) => s + (c.totalErros || 0), 0);
+      return '<div class="flex flex-wrap items-center justify-between gap-2 text-[11px] py-1 border-t border-slate-800"><span class="font-bold text-white">' + esc(x.topico.topico) + '</span>' +
+        '<span class="text-slate-300">' + es.length + '/' + cs.length + ' estudados • acerto ' + (a + e ? Math.round((a / (a + e)) * 100) : 0) + '%</span></div>';
+    }).join('');
+    let aviso_ = '';
+    if (per.naoLigados.length) {
+      const todos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo');
+      aviso_ = per.naoLigados.map((nome) => '<div class="flex flex-wrap items-center gap-2 text-[11px] p-2 rounded-lg bg-amber-950/50 border border-amber-800 text-amber-200">' +
+        '<span>Tópico "' + esc(nome) + '" do cronograma não encontrado nos cartões. Ligar a:</span>' +
+        '<select onchange="fcxVincularTopicoNome(\'' + esc(nome).replace(/'/g, '') + '\', this.value)" class="rounded border px-2 py-1 font-bold"><option value="">Escolher...</option>' +
+        todos.map((t) => '<option value="' + t.id + '">' + esc(t.topico) + '</option>').join('') + '</select></div>').join('');
+    }
+    topo.innerHTML = '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">' +
+      '<div class="flex flex-wrap items-center justify-between gap-2"><div><span class="text-[10px] font-extrabold uppercase text-emerald-400">Estatísticas da meta atual</span>' +
+      '<h3 class="text-sm font-extrabold text-white">Meta ' + per.meta.numeroMeta + ' • ' + esc(per.topicos.map((x) => x.nome).join(' + ')) + '</h3></div>' +
+      '<span class="px-2.5 py-1 rounded-lg bg-indigo-950 border border-indigo-800 text-indigo-200 text-[11px] font-extrabold">' + esc(fmtData(per.inicio)) + ' a ' + esc(fmtData(per.fim)) + ' • Dia ' + per.dia + ' de ' + per.dias + '</span></div>' +
+      aviso_ +
+      '<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">' +
+      kpi('Cartões do período', cards.length, 'PDF-Base ' + cards.filter((c) => c.tipo === 'PDF_BASE').length + ' • Erros ' + cards.filter((c) => c.tipo === 'CADERNO_ERROS').length) +
+      kpi('Estudados', estud.length + ' (' + pctEst + '%)', 'esperado até hoje: ' + esperado + '%', pctEst >= esperado ? 'text-emerald-400' : 'text-amber-400') +
+      kpi('Blocos concluídos', bConc + '/' + blocos.length, 'dominados: ' + dom + '/' + totBl, 'text-teal-400') +
+      kpi('Acertos / Erros', acertos + 'C / ' + erros + 'E', 'taxa de acerto: ' + taxa + '%', 'text-emerald-400') +
+      kpi('Tempo total', fmtDur(seg), nResp ? 'média ' + (seg / nResp).toFixed(1) + 's por resposta' : 'sem respostas', 'text-amber-400') +
+      kpi('Respostas', nResp, 'repetições somadas', 'text-rose-400') + '</div>' +
+      '<div class="space-y-1"><div class="flex items-center justify-between text-[10px] text-slate-400"><span>Progresso real x ritmo esperado</span><span>' + pctEst + '% / ' + esperado + '%</span></div>' +
+      '<div class="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500" style="width:' + pctEst + '%"></div><div class="absolute top-0 h-full w-0.5 bg-amber-400" style="left:' + esperado + '%"></div></div></div>' +
+      '<div class="flex flex-wrap gap-2">' + dias.map((x) => '<div class="px-2.5 py-1.5 rounded-lg border text-[11px] ' + (x.hoje ? 'border-indigo-500 bg-indigo-950/50' : 'border-slate-800 bg-slate-950') + '"><div class="font-extrabold text-white">' + esc(fmtData(x.d).slice(0, 5)) + (x.hoje ? ' (hoje)' : '') + '</div><div class="text-slate-300">' + x.n + ' cartão(ões) estudado(s)</div></div>').join('') + '</div>' +
+      '<div>' + linhasTop + '</div></div>';
+  }
 
   function montarAbasAquecimento() {
     const aq = $('subaba-fc-aquecimento');
@@ -16033,14 +16133,16 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         sel.insertBefore(op, sel.options[1] || null);
       }
     }
+    const crit = $('fcSelectCriterioDominio');
+    if (crit && crit.parentElement) crit.parentElement.classList.add('fcx-so-revisoes');
+    snapshotRevisoes();
     definirAbaAquecimento(abaAq);
   }
 
   envolver('renderizarVisaoDeckFC', (orig, ...args) => {
+    if (abaAq === 'estudos' && !emConfig) { try { restringirFiltros(); } catch (e) { /* ignora */ } }
     const r = orig(...args);
-    try {
-      if (abaAq === 'estudos' && !emConfig) { aplicarConfigDaEntrada(); renderizarEstudosDoDia(); }
-    } catch (e) { /* ignora */ }
+    try { if (abaAq === 'estudos' && !emConfig) renderizarEstatisticasMeta(); } catch (e) { /* ignora */ }
     return r;
   });
 
@@ -16052,6 +16154,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       '#fcxEstudosDia{display:none}' +
       '#containerDeckFlashcards.fcx-tab-estudos #fcPainelSelecao{display:none!important}' +
       '#containerDeckFlashcards.fcx-tab-estudos #fcxEstudosDia{display:block}' +
+      '#containerDeckFlashcards.fcx-tab-estudos .fcx-so-revisoes{display:none!important}' +
       '#fcSessaoPlayer:not(.hidden) ~ #fcxEstudosDia,#fcPainelDiagnosticoFinal:not(.hidden) ~ #fcxEstudosDia{display:none!important}';
     document.head.appendChild(st);
   })();
@@ -16185,7 +16288,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     aviso('Cronograma reorganizado: o que estava atrasado passou para hoje (' + delta + ' dia(s)) e as demais atividades abertas acompanharam.');
     return delta;
   }
-  window.fcxReorganizarCronograma = async function () { await reorganizarCronograma(); renderizarEstudosDoDia(); };
+  window.fcxReorganizarCronograma = async function () { await reorganizarCronograma(); renderizarEstatisticasMeta(); };
 
   /* Substitui o recálculo automático por progresso: as datas ficam fixas; só são semeadas na primeira vez. */
   window.recalcularDatasCronogramaDinamico = async function () {
@@ -16200,13 +16303,41 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (typeof renderizarListaSemanasCronograma === 'function') renderizarListaSemanasCronograma();
   };
 
+
+  /* Agenda: atividades do cronograma só existem na data certa. Remove as que foram inseridas antes da hora. */
+  function limparAgendaFuturaCronograma() {
+    try {
+      if (typeof AG_STATE === 'undefined' || !AG_STATE || !Array.isArray(AG_STATE.atividades) || !CRON_METAS || !CRON_METAS.length) return 0;
+      garantirPlanoFixo();
+      const hoje = hojeYMD();
+      const vistos = new Set();
+      const antes = AG_STATE.atividades.length;
+      AG_STATE.atividades = AG_STATE.atividades.filter((a) => {
+        const v = a && a.vinculo;
+        if (!v || v.area !== 'CRONOGRAMA') return true;
+        if (agAtividadeConcluida_(a) || Number(a.segundosEstudados || 0) > 0) return true;
+        const m = CRON_METAS.find((x) => x.id === v.idMeta);
+        const plan = m && m.detalhesPartes[v.idxParte] && m.detalhesPartes[v.idxParte].dataPlanejada;
+        if (plan && plan > hoje && a.data <= hoje) return false;
+        const chave = (a.origemSistemaId || '') + '|' + a.data;
+        if (vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+      });
+      const removidas = antes - AG_STATE.atividades.length;
+      if (removidas > 0 && typeof salvarEstadoAgendaStorage_ === 'function') salvarEstadoAgendaStorage_();
+      return removidas;
+    } catch (e) { return 0; }
+  }
+  envolver('sincronizarPlanejamentoDiario3Areas', (orig, ...args) => { limparAgendaFuturaCronograma(); return orig(...args); });
+
   /* ========================================================================
    * INICIALIZAÇÃO
    * ======================================================================== */
   window.__FCX__ = {
     parseVersoCampos, montarVerso, analisarCartaoCompleto, inferirGabaritoExplicacao, estimarIdeias,
     aplicarMarkupEscapado, montarTextoExportacao,
-    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, unidadesDoDia, configurarUnidade,  cotaCelula, celulaExigida, limitePalavras, textoPuro
+    derivarStatusMeta, normalizarPartesPorPdf, planoDeHoje, salvarBlocos, persistirCiclo, garantirPlanoFixo, reorganizarCronograma, periodoAtual, entrarEstudos, renderizarEstatisticasMeta, limparAgendaFuturaCronograma,  cotaCelula, celulaExigida, limitePalavras, textoPuro
   };
 
   if (!window.__FCX_SEM_UI__) {
