@@ -15620,7 +15620,10 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   });
 
   envolver('montarCandidatosDoDia_', (orig) => {
-    const base = orig().filter((c) => !(c.vinculo && c.vinculo.area === 'CRONOGRAMA'));
+    const hojeAg = hojeYMD();
+    const idsBatHoje = new Set((((ESTADO && ESTADO.painel && ESTADO.painel.atividadesHoje) || []).filter((i) => i.dataPlanejada === hojeAg)).map((i) => i.idRevisao));
+    /* BATERIA DO DIA: só o que está programado para hoje (atrasos ficam no dia em que foram programados) */
+    const base = orig().filter((c) => !(c.vinculo && c.vinculo.area === 'CRONOGRAMA') && idsBatHoje.has(c.vinculo && c.vinculo.idRevisao));
     try {
       const plano = planoDeHoje();
       const info = obterInfoMediaTempoPorPagina_();
@@ -15638,8 +15641,37 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
           if (celulaExigida(st, m.totalPartes, p) && !st.partesStatus[p].concluida) lista.push(mk(m, p, i, st, cotaCelula(st, m.totalPartes, p), ''));
         });
       });
+      /* ESTUDOS DO DIA: cartões e questões do dia, só dos tópicos da meta de hoje */
+      try {
+        const pl = planoTrilha(), topicosHoje = [];
+        plano.hojeLista.concat(plano.previstasHojeConcluidas || []).forEach(({ m, p }) => {
+          m.subtopicos.forEach((st) => {
+            if (!celulaExigida(st, m.totalPartes, p)) return;
+            let es = pl.entradas.filter((e) => e.topico && (e.metas || []).indexOf(m) >= 0 && casa(st.nome, e.nome));
+            if (!es.length) es = pl.entradas.filter((e) => e.topico && (e.metas || []).indexOf(m) >= 0);
+            es.forEach((e) => { if (topicosHoje.indexOf(e.topico) < 0) topicosHoje.push(e.topico); });
+          });
+        });
+        const nQ = Number(((ESTADO && ESTADO.config) || {}).Meta_Questoes_Dia || 0) || 10;
+        topicosHoje.forEach((t) => {
+          const nCards = (typeof FC_DECK !== 'undefined' && Array.isArray(FC_DECK) ? FC_DECK : []).filter((c) => c.idTopico === t.id).length;
+          lista.push({
+            tipo: 'REVISAO', titulo: t.topico, materia: t.materia, paginas: 0, questoes: 0, cartoes: nCards,
+            duracaoMin: nCards > 0 ? Math.max(10, Math.min(60, Math.ceil(nCards * 0.4 / 5) * 5)) : 15,
+            origemSistemaId: 'SYS_CRT_' + t.id + '_' + hojeAg,
+            vinculo: { area: 'CARTOES', idRevisao: 'CRT_' + t.id + '_' + hojeAg, idTopico: t.id, idMateria: t.idMateria },
+            detalhe: nCards > 0 ? 'Cartões • ' + nCards + ' cartões do tópico estudado hoje' : 'Cartões • tópico estudado hoje ainda sem cartões'
+          });
+          lista.push({
+            tipo: 'QUESTOES', titulo: t.topico, materia: t.materia, paginas: 0, questoes: nQ, duracaoMin: Math.max(20, Math.round((nQ * 2) / 5) * 5),
+            origemSistemaId: 'SYS_QD_' + t.id + '_' + hojeAg,
+            vinculo: { area: 'QUESTOES', idRevisao: 'QD_' + t.id + '_' + hojeAg, idTopico: t.id, idMateria: t.idMateria },
+            detalhe: 'Questões do dia • somente do tópico estudado hoje'
+          });
+        });
+      } catch (e) { /* sem cartões/questões do dia */ }
       return lista.concat(base);
-    } catch (e) { return orig(); }
+    } catch (e) { return base; }
   });
 
   /* ========================================================================
@@ -17003,9 +17035,17 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     try {
       if (ciclo.trilha && ciclo.trilha.ativo && Array.isArray(CRON_METAS) && CRON_METAS.length && ESTADO && Array.isArray(ESTADO.topicos) && ESTADO.topicos.length) {
         const pl = planoTrilha();
+        const bloq = {};
         pl.entradas.forEach((e) => {
           if (!e.topico || !e.metas || !e.metas.length) return;
-          if (!e.metas.every(metaConcluida)) ids.add(e.topico.id);
+          const abertas = e.metas.filter((m) => !metaConcluida(m));
+          if (abertas.length) { const o = bloq[e.topico.id] = bloq[e.topico.id] || { metas: [] }; abertas.forEach((m) => o.metas.push(m)); }
+        });
+        /* questões feitas DURANTE o estudo atual (ex.: "Questões do Dia") não contam como histórico; as anteriores e as importadas do curso, sim */
+        Object.keys(bloq).forEach((id) => {
+          const ini = bloq[id].metas.map(inicioDaMeta).filter(Boolean).sort()[0] || hojeYMD();
+          const hist = ((ESTADO && ESTADO.sessoes) || []).some((x) => x.idTopico === id && (String(x.dataSessao || '') < ini || ehAjuste(x) || ehImportado(x)));
+          if (!hist) ids.add(id);
         });
       }
     } catch (er) { /* sem bloqueio em caso de erro */ }
@@ -17022,7 +17062,6 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
   const casaFixo = (fx, nome) => { const n = nn(nome); return fx.some((f) => f.re.test(n)); };
   window.__FCX_FORA_BATERIA__ = (id, nome, resolvidas) => {
-    if (Number(resolvidas) > 0) return false;
     try { if (casaFixo(fixosDoDia(hojeYMD()), nome)) return false; } catch (e) { /* ignora */ }
     return topicosEmEstudo().has(id);
   };
@@ -17175,7 +17214,199 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
   /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
-  const VERSAO_TRILHA = 'Trilha 06/11 v12';
+
+  /* ========================================================================
+   * W. AGENDA — dois conjuntos independentes, corte às 3h, pendências decididas por você
+   *    ESTUDOS DO DIA: Leitura do PDF · Cartões · Questões do Dia (só tópicos da meta de hoje)
+   *    BATERIA DE QUESTÕES DO DIA: Aquecimento · Bateria de Questões (só matérias da bateria de hoje)
+   *    Nada é transferido sozinho: sem conclusão até as 3h do dia seguinte, a tarefa vira PENDENTE (vermelha)
+   *    e continua no dia em que foi programada até você reprogramá-la.
+   * ======================================================================== */
+  const CORTE_H = 3;
+  const diaLogico = () => formatarDataYMD_(new Date(Date.now() - CORTE_H * 3600000));
+  function concluidaAg(a) { try { return agAtividadeConcluida_(a); } catch (e) { return false; } }
+  function pendenteAg(a) {
+    if (!a || !a.data || a.tipo === 'COMPROMISSO') return false;
+    if (a.data >= diaLogico()) return false;
+    return !concluidaAg(a);
+  }
+  function infoTarefa(a) {
+    const o = String((a && a.origemSistemaId) || '');
+    if (/^SYS_CONT_/.test(o)) return { conj: 'ESTUDOS', rot: 'Leitura do PDF', cor: '#3b82f6' };
+    if (/^SYS_CRT_/.test(o)) return { conj: 'ESTUDOS', rot: 'Cartões', cor: '#a855f7' };
+    if (/^SYS_QD_/.test(o)) return { conj: 'ESTUDOS', rot: 'Questões do Dia', cor: '#10b981' };
+    if (/^SYS_AQ_/.test(o)) return { conj: 'BATERIA', rot: 'Aquecimento', cor: '#a855f7' };
+    if (/^SYS_BAT_/.test(o)) return { conj: 'BATERIA', rot: 'Bateria de Questões', cor: '#10b981' };
+    return { conj: 'OUTRAS', rot: 'Atividade', cor: '#64748b' };
+  }
+  window.__FCX_INFO_TAREFA__ = infoTarefa;
+  window.__FCX_PENDENTE_AG__ = pendenteAg;
+
+  /* migração única: tarefas que o sistema antigo empurrou sozinho voltam ao dia em que foram programadas (viram pendentes) */
+  function migrarAgendaTransferencias() {
+    ciclo.mig = ciclo.mig || {};
+    if (ciclo.mig.ag1 || !(AG_STATE.atividades || []).length) return;
+    const dl = diaLogico(), hoje = agHoje_();
+    let n = 0;
+    (AG_STATE.atividades || []).forEach((a) => {
+      if (!a || !a.data || a.tipo === 'COMPROMISSO' || !a.dataOriginal || !(a.transferencias && a.transferencias.length) || a.reprogramada) return;
+      if (!(a.dataOriginal < a.data && a.dataOriginal < dl) || concluidaAg(a)) return;
+      const v = a.vinculo;
+      if (v && v.area === 'CRONOGRAMA' && ciclo.transf && ciclo.transf[v.idMeta + '|' + v.idxParte + '|' + v.idxPdf] === hoje) { a.reprogramada = true; return; }
+      a.data = a.dataOriginal; n++;
+    });
+    ciclo.mig.ag1 = Date.now();
+    persistirCiclo();
+    if (n) salvarEstadoAgendaStorage_();
+  }
+
+  /* virada do dia SEM transferência automática (mantém só a limpeza de concluídas muito antigas) */
+  window.executarViradaDeDiaAgenda_ = function () {
+    if (!agDadosProntos_()) return 0;
+    try { migrarAgendaTransferencias(); } catch (e) { /* ignora */ }
+    const hoje = agHoje_();
+    const limite = somarDiasYMD_(hoje, -AG_DIAS_RETENCAO_CONCLUIDAS);
+    const antes = AG_STATE.atividades.length;
+    AG_STATE.atividades = AG_STATE.atividades.filter((a) => !(a.data && a.data < limite && agAtividadeConcluida_(a)));
+    AG_STATE.ultimaVirada = hoje;
+    if (antes !== AG_STATE.atividades.length) salvarEstadoAgendaStorage_();
+    return 0;
+  };
+
+  /* pós-sincronização: remove tarefas de sistema que não pertencem mais ao dia e cria tarefa para cada leitura pendente */
+  function posProcessarAgenda() {
+    if (!agDadosProntos_() || !ESTADO || !ESTADO.painel) return false;
+    const hoje = agHoje_();
+    let mudou = false;
+    const cand = new Set(montarCandidatosDoDia_().map((c) => c.origemSistemaId));
+    const antes = AG_STATE.atividades.length;
+    AG_STATE.atividades = AG_STATE.atividades.filter((a) => {
+      const o = a.origemSistemaId || '';
+      if (!/^SYS_(AQ|BAT|CRT|QD)_/.test(o) || !a.data || a.data < hoje || a.reprogramada || cand.has(o)) return true;
+      return concluidaAg(a) || Number(a.segundosEstudados || 0) > 0;
+    });
+    if (AG_STATE.atividades.length !== antes) mudou = true;
+    try {
+      const pl = planoDeHoje();
+      const existentes = new Set(AG_STATE.atividades.map((a) => a.origemSistemaId));
+      const info = obterInfoMediaTempoPorPagina_();
+      pl.pendencias.filter((x) => !x.transferida).forEach((x) => {
+        const origem = 'SYS_CONT_' + x.m.id + '_' + x.i + '_P' + x.p;
+        if (existentes.has(origem) || !x.desde) return;
+        const dur = Math.max(20, Math.min(240, Math.round((Math.max(1, x.pag) * info.minutosPorPagina) / 5) * 5));
+        let ini = 480; try { ini = encontrarHorarioLivre_(x.desde, dur, Number(AG_STATE.configExpediente?.horaInicio ?? 8) * 60); } catch (e) { /* padrão */ }
+        AG_STATE.atividades.push({
+          id: gerarId_('AGA'), origemSistemaId: origem, tipo: 'ESTUDO', titulo: x.st.nome, materia: x.m.materia,
+          detalhe: 'Semana ' + String(x.m.numeroSemana).padStart(2, '0') + ' • Meta ' + x.m.numeroMeta + ' • Parte ' + (x.p + 1) + '/' + x.m.totalPartes,
+          questoes: 0, paginas: x.pag, cartoes: 0, data: x.desde, dataOriginal: x.desde, inicioMin: ini, duracaoMin: dur, emSequencia: true,
+          concluidaManual: false, segundosEstudados: 0, vinculo: { area: 'CRONOGRAMA', idMeta: x.m.id, idxParte: x.p, idxPdf: x.i }, transferencias: [], criadoEm: Date.now()
+        });
+        mudou = true;
+      });
+    } catch (e) { /* ignora */ }
+    return mudou;
+  }
+  envolver('sincronizarPlanejamentoDiario3Areas', (orig, ...args) => {
+    const r = orig(...args);
+    try { if (posProcessarAgenda()) { salvarEstadoAgendaStorage_(); renderizarAgendaCompletaUI(); } } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  /* ---- painel de pendências: você escolhe o que muda de data ---- */
+  const selPend = new Set();
+  function listaPendentes() {
+    return ((typeof AG_STATE !== 'undefined' && AG_STATE && AG_STATE.atividades) || []).filter(pendenteAg)
+      .sort((a, b) => a.data.localeCompare(b.data) || (a.inicioMin || 0) - (b.inicioMin || 0));
+  }
+  function htmlPendentesAgenda() {
+    let l = [];
+    try { l = listaPendentes(); } catch (e) { return ''; }
+    if (!l.length) return '';
+    const dias = {};
+    l.forEach((a) => { (dias[a.data] = dias[a.data] || []).push(a); });
+    const linhas = Object.keys(dias).sort().map((d) =>
+      '<div class="text-[10px] font-extrabold uppercase text-rose-300 pt-1">Programadas para ' + esc(fmtData(d)) + '</div>' +
+      dias[d].map((a) => {
+        const inf = infoTarefa(a);
+        return '<label class="flex items-start gap-2 p-2 rounded-lg border border-rose-700 bg-rose-950/40 text-[11px] cursor-pointer">' +
+          '<input type="checkbox" ' + (selPend.has(a.id) ? 'checked ' : '') + 'onchange="fcxPendSel(\'' + a.id + '\',this.checked)" class="mt-0.5">' +
+          '<span class="min-w-0"><span class="font-extrabold text-rose-200">' + esc(inf.rot) + '</span> <span class="text-rose-300">(' + (inf.conj === 'ESTUDOS' ? 'Estudos do dia' : inf.conj === 'BATERIA' ? 'Bateria do dia' : 'Outras') + ')</span>' +
+          '<span class="block font-bold text-rose-100 truncate">' + esc(a.titulo) + (a.materia ? ' — ' + esc(a.materia) : '') + '</span></span></label>';
+      }).join('')).join('');
+    return '<div class="rounded-xl border border-rose-600 bg-rose-950/30 p-3 space-y-2">' +
+      '<div class="flex flex-wrap items-center justify-between gap-2"><span class="text-[11px] font-extrabold uppercase text-rose-300">⚠ ' + l.length + ' tarefa(s) pendente(s) — nada é transferido automaticamente</span>' +
+      '<span class="flex flex-wrap items-center gap-1.5 text-[11px]"><button type="button" onclick="fcxPendTodas(true)" class="px-2 py-1 rounded border border-rose-700 text-rose-300 font-bold">Selecionar todas</button>' +
+      '<button type="button" onclick="fcxPendTodas(false)" class="px-2 py-1 rounded border border-rose-700 text-rose-300 font-bold">Limpar</button></span></div>' +
+      linhas +
+      '<div class="flex flex-wrap items-center gap-2 pt-1"><span class="text-[11px] text-rose-200 font-bold">Reprogramar selecionadas para:</span>' +
+      '<input id="fcxPendDest" type="date" value="' + esc(agHoje_()) + '" class="rounded border px-1.5 py-1 text-[11px] font-bold">' +
+      '<button type="button" onclick="fcxPendTransferir()" class="px-2.5 py-1 rounded-lg bg-rose-700 hover:bg-rose-600 text-white text-[11px] font-extrabold">Transferir selecionadas</button></div></div>';
+  }
+  window.fcxPendSel = function (id, on) { if (on) selPend.add(id); else selPend.delete(id); };
+  window.fcxPendTodas = function (on) { listaPendentes().forEach((a) => { if (on) selPend.add(a.id); else selPend.delete(a.id); }); faixaPendenciasAgenda(); };
+  window.fcxPendTransferir = function () {
+    const hoje = agHoje_();
+    const dest = ($('fcxPendDest') || {}).value || hoje;
+    if (dest < hoje) { aviso('Escolha hoje ou uma data futura.', true); return; }
+    const sel = listaPendentes().filter((a) => selPend.has(a.id));
+    if (!sel.length) { aviso('Selecione ao menos uma tarefa pendente.', true); return; }
+    const ini = dest === hoje ? Math.ceil(agMinutosAgora_() / 5) * 5 : Number(AG_STATE.configExpediente?.horaInicio ?? 8) * 60;
+    sel.forEach((a) => {
+      if (!Array.isArray(a.transferencias)) a.transferencias = [];
+      a.transferencias.push({ de: a.data, para: dest, em: new Date().toISOString(), manual: true });
+      a.data = dest; a.reprogramada = true;
+      try { a.inicioMin = encontrarHorarioLivre_(dest, a.duracaoMin, ini); } catch (e) { /* mantém */ }
+      const v = a.vinculo;
+      if (dest === hoje && v && v.area === 'CRONOGRAMA' && Number.isInteger(v.idxParte) && Number.isInteger(v.idxPdf)) { ciclo.transf = ciclo.transf || {}; ciclo.transf[v.idMeta + '|' + v.idxParte + '|' + v.idxPdf] = hoje; }
+      selPend.delete(a.id);
+    });
+    ciclo.t = Date.now(); persistirCiclo();
+    salvarEstadoAgendaStorage_();
+    atualizarTudoF();
+    aviso(sel.length + ' tarefa(s) reprogramada(s) para ' + fmtData(dest) + '.');
+  };
+
+  /* ---- lista do dia em dois conjuntos independentes ---- */
+  window.renderizarPlanejamentoEstruturadoAgenda_ = function () {
+    const cont = document.getElementById('agListaPlanejamento');
+    if (!cont) return;
+    const dias = obterDiasVisiveisAgenda_();
+    const hoje = agHoje_();
+    const agoraMin = agMinutosAgora_();
+    const resumoTopo = document.getElementById('agResumoListaTopo');
+    if (resumoTopo) {
+      const m = calcularMetricasDoDiaAgenda_(dias[0]);
+      resumoTopo.textContent = m.qtdAtividades + ' atividade(s) • ' + formatarMinutosHorasCurto_(m.minEstudo) + ' de estudo • ' + formatarMinutosHorasCurto_(m.minLivre) + ' livres';
+    }
+    cont.innerHTML = dias.map((dia) => {
+      const segs = obterSegmentosDoDia_(dia);
+      const conflitos = obterConflitosDoDia_(dia);
+      const metr = calcularMetricasDoDiaAgenda_(dia);
+      const isHoje = dia === hoje;
+      const g = { ESTUDOS: [], BATERIA: [], OUTRAS: [], FIXOS: [] };
+      segs.forEach((s) => { if (s.tipoItem === 'CMP') g.FIXOS.push(s); else g[infoTarefa(s.ref).conj].push(s); });
+      const linha = (s) => {
+        const a = s.ref, inf = infoTarefa(a), pend = pendenteAg(a);
+        return '<div class="space-y-0.5"><div class="text-[10px] font-extrabold uppercase tracking-wide" style="color:' + inf.cor + '">' + esc(inf.rot) +
+          (pend ? ' <span style="color:#f43f5e">• PENDENTE desde ' + esc(fmtData(a.data)) + '</span>' : '') + '</div>' +
+          '<div' + (pend ? ' style="border-left:3px solid #f43f5e;border-radius:10px;background:rgba(244,63,94,.10)"' : '') + '>' + gerarLinhaAtividadeLista_(s, dia, conflitos, isHoje, agoraMin) + '</div></div>';
+      };
+      const sec = (tit, sub, arr) => arr.length ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-indigo-300">' + tit + ' <span class="text-slate-400 normal-case font-semibold">' + sub + '</span></div>' + arr.map(linha).join('') + '</div>' : '';
+      const corpo =
+        sec('Estudos do dia', 'Leitura do PDF • Cartões • Questões do Dia', g.ESTUDOS) +
+        sec('Bateria de questões do dia', 'Aquecimento • Bateria de Questões', g.BATERIA) +
+        sec('Outras atividades', '', g.OUTRAS) +
+        (g.FIXOS.length ? '<div class="space-y-1.5"><div class="text-[11px] font-extrabold uppercase text-slate-400">Compromissos fixos</div>' + g.FIXOS.map(gerarLinhaCompromissoLista_).join('') + '</div>' : '');
+      return '<div class="space-y-2.5">' +
+        '<div class="flex items-center justify-between gap-2 sticky top-0 z-10 bg-slate-900/95 backdrop-blur py-1 ' + (dias.length > 1 ? 'border-b border-slate-800' : '') + '">' +
+        '<div class="flex items-center gap-1.5 ag-dia-chip"><span class="text-xs font-extrabold ' + (isHoje ? 'text-indigo-400' : 'text-white') + '">' + agDiaSemanaCurto_(dia) + ', ' + formatarDataBR(dia).slice(0, 5) + '</span>' +
+        (isHoje ? '<span class="px-1.5 rounded bg-indigo-600 text-white font-extrabold text-[9px] uppercase">Hoje</span>' : '') + '</div>' +
+        '<span class="text-[10px] text-slate-400 font-semibold whitespace-nowrap">Estudo ' + formatarMinutosHorasCurto_(metr.minEstudo) + ' • Fixos ' + formatarMinutosHorasCurto_(metr.minCompromissos) + ' • Livre ' + formatarMinutosHorasCurto_(metr.minLivre) + '</span></div>' +
+        (corpo || '<div class="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 text-center">Nenhuma tarefa neste dia.</div>') + '</div>';
+    }).join('');
+  };
+
+  const VERSAO_TRILHA = 'Trilha 06/11 v13';
   function selo(txt, cor) {
     let el = $('fcxSeloTrilha');
     if (!el && typeof document.createElement === 'function' && document.body) {
@@ -17432,15 +17663,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
 
   /* agenda: faixa de pendências + blocos atrasados em vermelho */
-  function atrasada(a) {
-    const hoje = hojeYMD();
-    if (!a || !a.data) return false;
-    if (a.tipo === 'COMPROMISSO') return false;
-    let concl = false;
-    try { concl = agAtividadeConcluida_(a); } catch (e) { concl = false; }
-    if (concl) return false;
-    return a.data < hoje || (a.dataOriginal && a.dataOriginal < hoje && a.data <= hoje);
-  }
+  function atrasada(a) { return pendenteAg(a); }
   function pintarAtrasadasAgenda() {
     try {
       if (typeof document.querySelectorAll !== 'function' || typeof AG_STATE === 'undefined' || !AG_STATE) return;
@@ -17463,7 +17686,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       if (!cont || !cont.parentNode) return;
       let b = $('fcxPendAgenda');
       if (!b) { b = document.createElement('div'); b.id = 'fcxPendAgenda'; b.className = 'px-3 py-2'; cont.parentNode.insertBefore(b, cont); }
-      b.innerHTML = htmlPendencias();
+      b.innerHTML = htmlPendentesAgenda();
     } catch (e) { /* ignora */ }
   }
   envolver('renderizarAgendaCompletaUI', (orig, ...args) => { const r = orig(...args); faixaPendenciasAgenda(); pintarAtrasadasAgenda(); return r; });
