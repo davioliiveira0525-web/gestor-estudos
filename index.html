@@ -1266,6 +1266,10 @@
                 Reorganizar (atraso)
               </button>
 
+              <button type="button" onclick="fcxAbrirDatas()" title="Escolher manualmente a data de cada parte do cronograma" class="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white font-extrabold text-[11px] transition">
+                📅 Ajustar datas
+              </button>
+
               <button type="button" onclick="exportarCronograma50SemanasExcel()" class="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px] transition">
                 Exportar Planilha (.xlsx)
               </button>
@@ -16562,6 +16566,99 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     return delta;
   }
   window.fcxReorganizarCronograma = async function () { await reorganizarCronograma(); renderizarEstatisticasMeta(); };
+
+  /* ---- Datas personalizáveis: o usuário define a data de cada parte (e, se quiser, as seguintes acompanham) ---- */
+  function partesAbertasEmOrdem() {
+    const out = [];
+    (CRON_METAS || []).forEach((m) => {
+      if (m.status === 'Concluído') return;
+      (m.detalhesPartes || []).forEach((pt, p) => { if (celulasPendentesDoSlot(m, p).length) out.push({ m, p, pt }); });
+    });
+    return out;
+  }
+
+  async function salvarDatasEditadas(mudadas) {
+    garantirPlanoFixo();
+    (mudadas || []).forEach((m) => {
+      if (!ciclo.plano) ciclo.plano = {};
+      ciclo.plano[m.id] = m.detalhesPartes.map((pt) => pt.dataPlanejada || '');
+    });
+    ciclo.t = Date.now();
+    persistirCiclo();
+    try { await salvarMetasLote(Array.from(new Set(mudadas || []))); } catch (e) { /* mantém local */ }
+    try { atualizarTudoF(); } catch (e) { /* ignora */ }
+    try { if (typeof renderizarDashboardCronograma === 'function') renderizarDashboardCronograma(); if (typeof renderizarListaSemanasCronograma === 'function') renderizarListaSemanasCronograma(); } catch (e) { /* ignora */ }
+  }
+
+  window.fcxFecharDatas = function () { const el = $('fcxModalDatas'); if (el) el.remove(); };
+
+  window.fcxAbrirDatas = function () {
+    window.fcxFecharDatas();
+    garantirPlanoFixo();
+    const hoje = hojeYMD();
+    const fmt = (ymd) => ymd ? ymd.split('-').reverse().join('/') : '—';
+    const sem = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const dsem = (ymd) => ymd ? sem[new Date(ymd + 'T12:00:00Z').getUTCDay()] : '';
+    const metas = (CRON_METAS || []).filter((m) => m.status !== 'Concluído').slice(0, 20);
+    const linhas = metas.map((m) => {
+      const partes = (m.detalhesPartes || []).map((pt, p) => {
+        const aberta = celulasPendentesDoSlot(m, p).length > 0;
+        const d = pt.dataPlanejada || '';
+        const cor = !aberta ? 'text-emerald-300' : (d && d < hoje ? 'text-rose-300' : (d === hoje ? 'text-amber-300' : 'text-slate-300'));
+        return '<div class="flex items-center gap-2 py-0.5"><span class="w-16 text-[11px] font-bold ' + cor + '">Parte ' + (p + 1) + '</span>' +
+          (aberta
+            ? '<input type="date" value="' + d + '" onchange="fcxMudarDataParte(\'' + m.id + '\',' + p + ',this.value)" class="rounded border px-1.5 py-0.5 text-[11px]">' +
+              '<span class="text-[10px] text-slate-400">' + dsem(d) + (d === hoje ? ' • <b class="text-amber-300">hoje</b>' : (d && d < hoje ? ' • <b class="text-rose-300">atrasada</b>' : '')) + '</span>'
+            : '<span class="text-[11px] text-emerald-300">✓ concluída em ' + fmt(d) + '</span>') + '</div>';
+      }).join('');
+      return '<div class="rounded-lg border border-slate-800 bg-slate-950/60 p-2"><div class="text-[11px] font-extrabold text-white">Sem ' + String(m.numeroSemana || '').padStart(2, '0') + ' • ' + esc(m.materia || '') + ' — ' + esc(m.topico || '') + '</div>' + partes + '</div>';
+    }).join('') || '<p class="text-[11px] text-slate-400">Nenhuma meta em aberto.</p>';
+    const box = document.createElement('div');
+    box.id = 'fcxModalDatas';
+    box.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(2,6,23,.88);display:flex;align-items:center;justify-content:center;padding:12px';
+    box.innerHTML = '<div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto p-5 space-y-3">' +
+      '<div class="flex items-start justify-between gap-3"><div><h3 class="text-base font-extrabold text-white">Ajustar datas do cronograma</h3>' +
+      '<p class="text-[11px] text-slate-400 mt-1">Hoje: <b class="text-amber-300">' + fmt(hoje) + ' (' + dsem(hoje) + ')</b>. Escolha a data de cada parte. As datas escolhidas ficam fixas.</p></div>' +
+      '<button type="button" onclick="fcxFecharDatas()" class="px-2.5 py-1 rounded-lg border border-slate-700 text-slate-300 text-xs">Fechar</button></div>' +
+      '<div class="flex flex-wrap items-center gap-3 p-2 rounded-lg border border-slate-800 bg-slate-950/60">' +
+      '<label class="flex items-center gap-1.5 text-[11px] text-slate-300"><input type="checkbox" id="fcxDatasCascata" ' + (ciclo.datasCascata === false ? '' : 'checked') + ' onchange="fcxDatasCascataMudou(this.checked)"> Ao mudar uma parte, as partes seguintes acompanham</label>' +
+      '<button type="button" onclick="fcxProximaParteHoje()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-[11px]">Próxima parte em aberto = hoje</button></div>' +
+      '<div class="space-y-2">' + linhas + '</div></div>';
+    document.body.appendChild(box);
+  };
+
+  window.fcxDatasCascataMudou = function (v) { ciclo.datasCascata = Boolean(v); ciclo.t = Date.now(); persistirCiclo(); };
+
+  window.fcxMudarDataParte = async function (idMeta, p, valor) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(valor || ''))) return;
+    const abertas = partesAbertasEmOrdem();
+    const idx = abertas.findIndex((x) => x.m.id === idMeta && x.p === p);
+    if (idx < 0) return;
+    const alvo = abertas[idx];
+    const antiga = alvo.pt.dataPlanejada || valor;
+    const delta = diffDias(valor, antiga);
+    const mud = new Set([alvo.m]);
+    alvo.pt.dataPlanejada = valor;
+    if (ciclo.datasCascata !== false && delta) {
+      abertas.slice(idx + 1).forEach(({ m, pt }) => { if (pt.dataPlanejada) { pt.dataPlanejada = deDias(diasDe(pt.dataPlanejada) + delta); mud.add(m); } });
+    }
+    await salvarDatasEditadas(Array.from(mud));
+    window.fcxAbrirDatas();
+    aviso('Data ajustada' + (ciclo.datasCascata !== false && delta ? ' (' + (mud.size) + ' meta(s) acompanharam)' : '') + '.');
+  };
+
+  window.fcxProximaParteHoje = async function () {
+    const abertas = partesAbertasEmOrdem().filter((x) => x.pt.dataPlanejada);
+    if (!abertas.length) { aviso('Não há partes em aberto.'); return; }
+    const min = abertas.map((x) => x.pt.dataPlanejada).sort()[0];
+    const delta = diffDias(hojeYMD(), min);
+    if (!delta) { aviso('A próxima parte em aberto já está marcada para hoje.'); window.fcxAbrirDatas(); return; }
+    const mud = new Set();
+    abertas.forEach(({ m, pt }) => { pt.dataPlanejada = deDias(diasDe(pt.dataPlanejada) + delta); mud.add(m); });
+    await salvarDatasEditadas(Array.from(mud));
+    window.fcxAbrirDatas();
+    aviso('Cronograma ajustado: a próxima parte em aberto agora é hoje e as demais acompanharam.');
+  };
 
   /* Substitui o recálculo automático por progresso: as datas ficam fixas; só são semeadas na primeira vez. */
   window.recalcularDatasCronogramaDinamico = async function () {
