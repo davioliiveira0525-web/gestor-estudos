@@ -16798,7 +16798,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (!opc.silencioso) {
       plano.metasTitulo.forEach(({ m, para }) => { m.topico = para; alteradas.push(m); });
     }
-    ciclo.trilha = Object.assign({}, ciclo.trilha, { ativo: true, t: agora });
+    ciclo.trilha = Object.assign({}, ciclo.trilha, { ativo: true, recusou: false, t: agora });
     p.t = agora; ciclo.t = agora;
     persistirCiclo();
     filtrarMetasOcultas();
@@ -16813,6 +16813,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     await atualizarEstadoGeral();
     persistirCiclo();
     atualizarChipTrilha();
+    selo('aplicada • ' + plano.entradas.filter((e) => e.estudada).length + ' tópicos estudados (clique p/ detalhes)', '#047857');
     if (!opc.silencioso) {
       aviso('Trilha aplicada: ' + plano.manter.length + ' tópico(s) ativos (estudados), ' + plano.criar.length + ' criado(s), ' + plano.metasSair.length + ' meta(s) fora da trilha, ' + lote.length + ' tópico(s) pausado(s)' + (nAg ? ', ' + nAg + ' atividade(s) da agenda removida(s)' : '') + '. Nada foi excluído.');
     }
@@ -16822,7 +16823,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const p = pausa();
     const ids = Object.keys(p.topicos), mats = Object.keys(p.materias);
     p.topicos = {}; p.materias = {}; p.metas = {};
-    ciclo.trilha = Object.assign({}, ciclo.trilha, { ativo: false });
+    ciclo.trilha = Object.assign({}, ciclo.trilha, { ativo: false, recusou: true });
     ciclo.t = Date.now();
     persistirCiclo();
     await dbStatus('topicos', ids, 'Ativo');
@@ -16832,6 +16833,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     try { if (typeof carregarFlashcardsSupabase === 'function') { window.FC_DECK_PAUSADOS = []; await carregarFlashcardsSupabase(); } } catch (e) { /* ignora */ }
     await atualizarEstadoGeral();
     atualizarChipTrilha();
+    selo('desfeita (clique p/ reaplicar)', '#475569');
     aviso('Trilha desfeita: tudo voltou para a organização anterior.');
   }
 
@@ -16986,17 +16988,42 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   envolver('sincronizarPlanejamentoDiario3Areas', (orig, ...args) => { limparAgendaPausada(); return orig(...args); });
   try { filtrarMetasOcultas(); } catch (e) { /* ignora */ }
 
-  /* na primeira abertura do dia, mostra a prévia para você confirmar */
-  function avisoInicialTrilha() {
-    try {
-      if (ciclo.trilha && ciclo.trilha.ativo) return;
-      const hoje = hojeYMD();
-      if (localStorage.getItem('GR_FCX_TRILHA_AVISO') === hoje) return;
-      localStorage.setItem('GR_FCX_TRILHA_AVISO', hoje);
-      setTimeout(() => { if (ESTADO && ESTADO.topicos && CRON_METAS && CRON_METAS.length && !$('fcxModalLeiSeca')) window.fcxAbrirSeparacaoLeiSeca(); }, 4000);
-    } catch (e) { /* ignora */ }
+  /* aplica a trilha sozinha assim que os dados carregam (e mostra um selo de status sempre visível) */
+  const VERSAO_TRILHA = 'Trilha 06/11 v3';
+  function selo(txt, cor) {
+    let el = $('fcxSeloTrilha');
+    if (!el && typeof document.createElement === 'function' && document.body) {
+      el = document.createElement('button');
+      el.id = 'fcxSeloTrilha'; el.type = 'button';
+      el.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9998;padding:4px 10px;border-radius:999px;font:700 11px sans-serif;color:#fff;border:0;cursor:pointer;opacity:.92';
+      el.onclick = () => window.fcxAbrirSeparacaoLeiSeca();
+      document.body.appendChild(el);
+    }
+    if (el) { el.textContent = VERSAO_TRILHA + ' • ' + txt; el.style.background = cor; }
   }
-
+  function avisoInicialTrilha() {
+    selo('aguardando dados…', '#475569');
+    let tent = 0;
+    const iv = setInterval(async () => {
+      tent++;
+      try {
+        const pronto = ESTADO && Array.isArray(ESTADO.topicos) && ESTADO.topicos.length && Array.isArray(CRON_METAS) && CRON_METAS.length &&
+          (window.FC_DECK_CARREGADO || typeof supabaseClient === 'undefined' || !supabaseClient);
+        if (!pronto) { if (tent > 120) { clearInterval(iv); selo('dados não carregaram (clique para abrir)', '#b91c1c'); } return; }
+        clearInterval(iv);
+        if (!(ciclo.trilha && ciclo.trilha.ativo) && !(ciclo.trilha && ciclo.trilha.recusou)) {
+          selo('aplicando…', '#b45309');
+          await aplicarPlanoTrilha(planoTrilha(), {});
+        } else if (ciclo.trilha && ciclo.trilha.ativo) {
+          const pl = planoTrilha();
+          if (pl.criar.length || pl.reativar.length || pl.futuros.some((e) => e.topico.status === 'Ativo')) await aplicarPlanoTrilha(pl, { silencioso: true });
+        }
+        const ativa = ciclo.trilha && ciclo.trilha.ativo;
+        const n = planoTrilha().entradas.filter((e) => e.estudada).length;
+        selo(ativa ? 'aplicada • ' + n + ' tópicos estudados (clique p/ detalhes)' : 'desfeita (clique p/ reaplicar)', ativa ? '#047857' : '#475569');
+      } catch (e) { clearInterval(iv); selo('erro: ' + String(e && e.message || e).slice(0, 60), '#b91c1c'); }
+    }, 2000);
+  }
 
   /* ========================================================================
    * INICIALIZAÇÃO
