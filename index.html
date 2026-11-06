@@ -15619,7 +15619,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
    *      progresso dos blocos, composição fixa dos blocos, zeradas de decoreba e vínculo de matérias */
   const K_CICLO = 'GR_FCX_CICLO_V2';
   const K_CICLO_NUVEM = 'GR_FCX_CICLO_JSON';
-  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {}, mapaT: {}, inicio: {}, plano: {}, estudo: {}, recon: {} });
+  const cicloVazio = () => ({ t: 0, blocos: {}, comp: {}, dec: {}, mapa: {}, mapaT: {}, inicio: {}, plano: {}, estudo: {}, recon: {}, rev: {} });
   let ciclo = Object.assign(cicloVazio(), lerJSON(K_CICLO, {}));
   if (!ciclo.t) { /* migra a versão anterior (somente navegador) */
     ciclo.blocos = lerJSON('GR_FCX_BLOCOS_V1', {});
@@ -15678,7 +15678,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const existia = Boolean(FC_ESTADO_BLOCOS_MAP && FC_ESTADO_BLOCOS_MAP[chave]);
     const blocos = orig(cards);
     if (!blocos.length) return blocos;
-    const esEstudo = chave.indexOf('E__') === 0;
+    const esEstudo = chave.indexOf('E__') === 0 || chave.indexOf('R__') === 0;
     const sv = ciclo.blocos[chave];
     if (!existia && sv && sv.length === blocos.length) {
       blocos.forEach((b, i) => {
@@ -15714,7 +15714,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       b.totalBloco = b.cardsOriginais.length;
     });
     /* recupera o que já foi estudado (desempenho registrado nos cartões) uma única vez por conjunto de blocos */
-    if (esEstudo && !sv && !ciclo.recon[chave]) {
+    if (chave.indexOf('E__') === 0 && !sv && !ciclo.recon[chave]) {
       const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
       const per = typeof periodoAtual === 'function' ? periodoAtual() : null;
       const ini = per ? per.inicio : '';
@@ -15848,6 +15848,10 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   let snapRev = null;
   let cardConfig = null;
   let memoPeriodo = { t: 0, v: null };
+  let revCtx = null;
+  let qtdAntesRev = null;
+  const TIPOS_REV = ['PDF_BASE', 'CADERNO_ERROS', 'LEI_SECA'];
+  const cfgRev = (id) => { ciclo.rev = ciclo.rev || {}; return ciclo.rev[id] || { qtd: 1 }; };
 
   function topicoGlobal(nome, materiaPref) {
     const alvo = semAcento(nome);
@@ -15912,6 +15916,10 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
 
   envolver('obterCardsFiltradosFC', (orig) => {
+    if (abaAq === 'revisoes' && revCtx) {
+      return FC_DECK.filter((c) => c.idTopico === revCtx.id && TIPOS_REV.indexOf(c.tipo) >= 0)
+        .sort((a, b) => (b.isNovo ? 1 : 0) - (a.isNovo ? 1 : 0) || (a.isNovo ? a.ordemCriacao - b.ordemCriacao : (b.scoreUrgencia || 0) - (a.scoreUrgencia || 0)) || a.ordemCriacao - b.ordemCriacao);
+    }
     const lista = orig();
     if (abaAq !== 'estudos') return lista;
     const per = periodoAtual();
@@ -15921,6 +15929,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
 
   /* chave estável dos blocos durante todo o período (não muda com modalidade/ordem) */
   envolver('obterChaveFiltroAtualBlocos_', (orig) => {
+    if (abaAq === 'revisoes' && revCtx) return 'R__' + revCtx.id + '__B' + FC_QTD_BLOCOS;
     if (abaAq === 'estudos') {
       const per = periodoAtual();
       if (per) return 'E__' + per.id + '__' + (($('fcFiltroTopico') && $('fcFiltroTopico').value) || 'ALL') + '__B' + FC_QTD_BLOCOS;
@@ -15992,7 +16001,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     emConfig = true;
     try {
       const s = snapRev;
-      if ($('fcFiltroMateria')) $('fcFiltroMateria').innerHTML = s.htmlM;
+      if (typeof inicializarFiltrosFlashcardsUI === 'function') inicializarFiltrosFlashcardsUI();
       if ($('fcFiltroTipo')) $('fcFiltroTipo').innerHTML = s.htmlTp;
       setVal('fcFiltroMateria', s.mat);
       if (typeof aoMudarMateriaFiltroFC === 'function') aoMudarMateriaFiltroFC();
@@ -16005,28 +16014,36 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     snapRev = null;
   }
 
+  const ABAS = ['estudos', 'revisoes', 'livres'];
+  function syncQtdInput() { setVal('fcInputQtdBlocos', FC_QTD_BLOCOS); }
+
   function definirAbaAquecimento(aba) {
-    const nova = aba === 'revisoes' ? 'revisoes' : 'estudos';
-    const mudou = nova !== abaAq || !$('fcxAbasAq') || !$('fcxAbasAq').dataset.ini;
-    if ($('fcxAbasAq')) $('fcxAbasAq').dataset.ini = '1';
-    if (nova === 'estudos' && (mudou || !snapRev) && abaAq !== 'estudos') snapshotRevisoes();
-    if (nova === 'estudos' && !snapRev && abaAq === 'estudos') snapshotRevisoes();
-    const anterior = abaAq;
+    const nova = ABAS.indexOf(aba) >= 0 ? aba : 'estudos';
+    const barra = $('fcxAbasAq');
+    const primeira = !barra || !barra.dataset.ini;
+    if (barra) barra.dataset.ini = '1';
+    const ant = primeira ? null : abaAq;
+    if (ant && ant === nova) { renderizarVisaoDeckFC(); return; }
+    if (ant === 'estudos') restaurarRevisoes();
+    if (ant === 'revisoes') { if (qtdAntesRev !== null) { FC_QTD_BLOCOS = qtdAntesRev; syncQtdInput(); } revCtx = null; qtdAntesRev = null; }
+    if (nova === 'estudos') snapshotRevisoes();
+    if (nova === 'revisoes') { qtdAntesRev = FC_QTD_BLOCOS; revCtx = null; }
     abaAq = nova;
     gravarJSON(K_ABA, abaAq);
     const cont = $('containerDeckFlashcards');
-    if (cont) cont.classList.toggle('fcx-tab-estudos', abaAq === 'estudos');
-    const be = $('fcxAbaEstudos'), br = $('fcxAbaRevisoes');
-    if (be) be.className = 'px-3.5 py-1.5 rounded-lg transition ' + (abaAq === 'estudos' ? 'subtab-active' : 'subtab-inactive');
-    if (br) br.className = 'px-3.5 py-1.5 rounded-lg transition ' + (abaAq === 'revisoes' ? 'subtab-active' : 'subtab-inactive');
+    if (cont) ABAS.forEach((x) => cont.classList.toggle('fcx-tab-' + x, abaAq === x));
+    [['estudos', 'fcxAbaEstudos'], ['revisoes', 'fcxAbaRevisoes'], ['livres', 'fcxAbaLivres']].forEach(([k, id]) => {
+      const el = $(id);
+      if (el) el.className = 'px-3.5 py-1.5 rounded-lg transition ' + (abaAq === k ? 'subtab-active' : 'subtab-inactive');
+    });
     const slot = $('fcxSlotConfig');
     const painel = $('fcPainelSelecao');
     if (cardConfig && slot && painel) {
       if (abaAq === 'estudos') slot.appendChild(cardConfig);
       else painel.insertBefore(cardConfig, painel.firstChild);
     }
-    if (abaAq === 'estudos') { entrarEstudos(); renderizarVisaoDeckFC(); }
-    else if (anterior === 'estudos') { restaurarRevisoes(); renderizarVisaoDeckFC(); }
+    if (abaAq === 'estudos') entrarEstudos();
+    renderizarVisaoDeckFC();
     renderizarEstatisticasMeta();
   }
   window.fcxAbaAquecimento = definirAbaAquecimento;
@@ -16115,7 +16132,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     barra.id = 'fcxAbasAq';
     barra.className = 'bg-slate-900 rounded-xl border border-slate-800 p-2 flex flex-wrap items-center gap-1.5 text-xs no-print';
     barra.innerHTML = '<button type="button" id="fcxAbaEstudos" onclick="fcxAbaAquecimento(\'estudos\')">Estudos do dia</button>' +
-      '<button type="button" id="fcxAbaRevisoes" onclick="fcxAbaAquecimento(\'revisoes\')">Revisões do dia</button>';
+      '<button type="button" id="fcxAbaRevisoes" onclick="fcxAbaAquecimento(\'revisoes\')">Revisões do dia</button>' +
+      '<button type="button" id="fcxAbaLivres" onclick="fcxAbaAquecimento(\'livres\')">Revisões livres</button>';
     aq.insertBefore(barra, aq.firstChild);
     const box = document.createElement('div');
     box.id = 'fcxEstudosDia';
@@ -16133,6 +16151,28 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         sel.insertBefore(op, sel.options[1] || null);
       }
     }
+    const marca = (el, cls) => { if (el) el.classList.add(cls); };
+    marca(cardConfig, 'fcx-liv');
+    marca($('decBadgeStatusHoje') && $('decBadgeStatusHoje').closest('.rounded-xl'), 'fcx-rev');
+    marca($('fcCountPdfBase') && $('fcCountPdfBase').closest('.grid'), 'fcx-liv');
+    marca($('fcTabelaPreviewDeck') && $('fcTabelaPreviewDeck').closest('.rounded-xl'), 'fcx-liv');
+    const cardBat = $('fcListaAtalhosHoje') && $('fcListaAtalhosHoje').closest('.rounded-xl');
+    marca(cardBat, 'fcx-rev');
+    const cardDec = $('decBadgeStatusHoje') && $('decBadgeStatusHoje').closest('.rounded-xl');
+    if (cardDec && !$('fcxTituloDecGeral')) {
+      const h = document.createElement('div');
+      h.id = 'fcxTituloDecGeral';
+      h.className = 'text-sm font-extrabold uppercase tracking-wide text-purple-200';
+      h.textContent = 'DECOREBA DO DIA (GERAL)';
+      cardDec.insertBefore(h, cardDec.firstChild);
+    }
+    if (cardBat) {
+      const tit = cardBat.firstElementChild;
+      if (tit) { tit.id = 'fcxTituloBateria'; tit.className = 'text-sm font-extrabold uppercase tracking-wide text-indigo-200'; }
+      if (!$('fcxRevProd')) { const pr = document.createElement('div'); pr.id = 'fcxRevProd'; cardBat.insertBefore(pr, $('fcListaAtalhosHoje')); }
+      const l = $('fcListaAtalhosHoje'); if (l) l.className = 'grid grid-cols-1 lg:grid-cols-2 gap-2.5';
+    }
+    if (cardDec && cardBat && cardBat.parentElement === cardDec.parentElement) cardDec.parentElement.insertBefore(cardDec, cardBat);
     const crit = $('fcSelectCriterioDominio');
     if (crit && crit.parentElement) crit.parentElement.classList.add('fcx-so-revisoes');
     snapshotRevisoes();
@@ -16143,8 +16183,137 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (abaAq === 'estudos' && !emConfig) { try { restringirFiltros(); } catch (e) { /* ignora */ } }
     const r = orig(...args);
     try { if (abaAq === 'estudos' && !emConfig) renderizarEstatisticasMeta(); } catch (e) { /* ignora */ }
+    try { if (abaAq === 'revisoes') renderizarRevisoesDoDia(); } catch (e) { /* ignora */ }
     return r;
   });
+
+
+  /* ===== Revisões do dia: tópicos programados na fila de questões, com produtividade, execução individual e blocos ===== */
+  function blocosDoTopico(id, qtd) {
+    const sv = { c: revCtx, q: FC_QTD_BLOCOS };
+    revCtx = { id }; FC_QTD_BLOCOS = qtd;
+    try { return construirEstruturaBlocosFiltroAtual_(obterCardsFiltradosFC()); }
+    catch (e) { return []; }
+    finally { revCtx = sv.c; FC_QTD_BLOCOS = sv.q; }
+  }
+
+  function dadosRevisoesDoDia() {
+    const lista = (ESTADO && ESTADO.painel && ESTADO.painel.atividadesHoje) || [];
+    const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
+    const hoje = hojeYMD();
+    const visto = new Set();
+    return lista.filter((a) => a.idTopico && !visto.has(a.idTopico) && visto.add(a.idTopico)).map((a) => {
+      const cards = FC_DECK.filter((c) => c.idTopico === a.idTopico && TIPOS_REV.indexOf(c.tipo) >= 0);
+      const qtd = Math.max(1, Math.min(cards.length || 1, Number(cfgRev(a.idTopico).qtd) || 1));
+      const blocos = cards.length ? blocosDoTopico(a.idTopico, qtd) : [];
+      const feitosHoje = cards.filter((c) => tel[c.id] && tel[c.id].ultimaDataEstudo === hoje).length;
+      const ac = cards.reduce((n, c) => n + (c.totalAcertos || 0), 0);
+      const er = cards.reduce((n, c) => n + (c.totalErros || 0), 0);
+      const dom = blocos.reduce((n, b) => n + Object.keys(b.dominadosSet || {}).filter((k) => b.dominadosSet[k]).length, 0);
+      return { a, cards, qtd, blocos, feitosHoje, taxa: ac + er ? Math.round((ac / (ac + er)) * 100) : 0, dom, bConc: blocos.filter((b) => b.concluido).length };
+    });
+  }
+
+  function htmlTopicoRevisao(d) {
+    const a = d.a, id = a.idTopico;
+    const pct = d.cards.length ? Math.round((d.dom / d.cards.length) * 100) : 0;
+    const chips = d.blocos.map((b, i) => {
+      const dm = Object.keys(b.dominadosSet || {}).filter((k) => b.dominadosSet[k]).length;
+      const cor = b.concluido ? 'bg-emerald-900/60 border-emerald-600 text-emerald-200' : (dm > 0 ? 'bg-amber-900/40 border-amber-600 text-amber-200' : 'bg-slate-950 border-slate-700 text-slate-200');
+      return '<button type="button" onclick="fcxRevIniciarBloco(\'' + id + '\',' + i + ')" class="px-2 py-1 rounded-lg border text-[10px] font-bold ' + cor + '">' + (b.concluido ? '✓ ' : '') + 'Bloco ' + (i + 1) + ' • ' + dm + '/' + b.totalBloco + '</button>';
+    }).join('');
+    return '<div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col gap-2">' +
+      '<div><div class="flex items-center justify-between gap-1"><span class="text-[10px] font-extrabold uppercase text-indigo-400">' + esc(a.materia) + '</span>' +
+      '<span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px]">' + d.cards.length + ' cartão(ões)</span></div>' +
+      '<div class="text-xs font-extrabold text-white mt-0.5">' + esc(a.topico) + '</div>' +
+      '<div class="text-[10px] text-slate-400 mt-0.5">Revisados hoje: <strong class="text-slate-100">' + d.feitosHoje + '</strong> • acerto: <strong class="text-slate-100">' + d.taxa + '%</strong> • blocos: <strong class="text-slate-100">' + d.bConc + '/' + d.blocos.length + '</strong></div>' +
+      '<div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-1.5"><div class="h-full bg-emerald-500" style="width:' + pct + '%"></div></div>' +
+      '<div class="text-[10px] text-slate-400 mt-0.5">Andamento: ' + d.dom + '/' + d.cards.length + ' dominados (' + pct + '%)</div></div>' +
+      (d.cards.length ? '<div class="flex flex-wrap items-center gap-1.5">' +
+        '<label class="text-[10px] font-bold text-indigo-300">Dividir em</label>' +
+        '<input type="number" min="1" max="' + Math.max(1, d.cards.length) + '" value="' + d.qtd + '" onchange="fcxRevDefinirQtd(\'' + id + '\',this.value)" class="w-14 rounded border px-1.5 py-0.5 text-[11px] font-extrabold text-indigo-400">' +
+        '<span class="text-[10px] text-slate-400">bloco(s)</span>' +
+        '<button type="button" onclick="fcxRevResetar(\'' + id + '\')" class="ml-auto px-1.5 py-0.5 rounded border border-slate-700 text-slate-300 text-[10px]" title="Zerar o progresso desta divisão">↺ zerar blocos</button></div>' +
+        '<div class="flex flex-wrap gap-1.5">' + chips + '</div>' : '<div class="text-[10px] text-amber-300">Este tópico ainda não tem cartões de PDF-Base, Caderno de Erros ou Lei Seca.</div>') +
+      '<div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-800">' +
+      '<button type="button" ' + (d.cards.length ? '' : 'disabled ') + 'onclick="fcxRevExecutar(\'' + id + '\')" class="flex-1 py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-[11px] transition">▶ Executar este tópico</button>' +
+      '<button type="button" onclick="atalhoRegistrarEstudo(\'' + a.idMateria + '\',\'' + id + '\',' + (a.questoesPlanejadas || 0) + ')" class="py-1.5 px-2.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-200 font-semibold text-[11px]">Questões</button></div>' +
+      htmlDecTopico(a) + '</div>';
+  }
+
+  function renderizarRevisoesDoDia() {
+    const cont = $('fcListaAtalhosHoje');
+    if (!cont) return;
+    const tit = $('fcxTituloBateria');
+    if (tit) tit.textContent = 'CARTÕES DA BATERIA DE QUESTÕES DO DIA [' + fmtData(hojeYMD()) + ']';
+    const dados = dadosRevisoesDoDia();
+    const prod = $('fcxRevProd');
+    if (!dados.length) {
+      if (prod) prod.innerHTML = '';
+      cont.innerHTML = '<div class="col-span-full text-xs text-slate-400 py-1.5">Nenhum tópico programado na fila de questões de hoje. Use a aba Revisões livres para revisar qualquer cartão.</div>';
+      return;
+    }
+    const tot = dados.reduce((n, d) => n + d.cards.length, 0);
+    const feitos = dados.reduce((n, d) => n + d.feitosHoje, 0);
+    const dom = dados.reduce((n, d) => n + d.dom, 0);
+    const bC = dados.reduce((n, d) => n + d.bConc, 0), bT = dados.reduce((n, d) => n + d.blocos.length, 0);
+    const ac = dados.reduce((n, d) => n + d.cards.reduce((x, c) => x + (c.totalAcertos || 0), 0), 0);
+    const er = dados.reduce((n, d) => n + d.cards.reduce((x, c) => x + (c.totalErros || 0), 0), 0);
+    const kpi = (r, v, sub, cor) => '<div class="p-2.5 rounded-lg bg-slate-950/90 border border-slate-800"><span class="text-[10px] font-bold uppercase ' + cor + ' block">' + r + '</span><div class="text-base font-extrabold text-white mt-0.5">' + v + '</div><span class="text-[10px] text-slate-400">' + sub + '</span></div>';
+    if (prod) prod.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mb-2">' +
+      kpi('Tópicos do dia', dados.length, 'na fila de questões', 'text-indigo-400') +
+      kpi('Revisados hoje', feitos + '/' + tot, tot ? Math.round((feitos / tot) * 100) + '% dos cartões' : '0%', 'text-emerald-400') +
+      kpi('Dominados', dom + '/' + tot, tot ? Math.round((dom / tot) * 100) + '% de andamento' : '0%', 'text-teal-400') +
+      kpi('Blocos concluídos', bC + '/' + bT, 'conforme sua divisão', 'text-amber-400') +
+      kpi('Taxa de acerto', (ac + er ? Math.round((ac / (ac + er)) * 100) : 0) + '%', ac + 'C / ' + er + 'E', 'text-rose-400') + '</div>';
+    cont.innerHTML = dados.map(htmlTopicoRevisao).join('');
+  }
+
+  envolver('renderizarAtalhosTopicosHojeFC', (orig, ...args) => {
+    const r = orig(...args);
+    try { if (abaAq === 'revisoes') renderizarRevisoesDoDia(); } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  window.fcxRevDefinirQtd = function (id, v) {
+    const n = Math.max(1, Math.min(50, parseInt(v, 10) || 1));
+    ciclo.rev = ciclo.rev || {};
+    ciclo.rev[id] = { qtd: n };
+    persistirCiclo();
+    renderizarRevisoesDoDia();
+  };
+
+  window.fcxRevResetar = function (id) {
+    const q = Math.max(1, Number(cfgRev(id).qtd) || 1);
+    const chave = 'R__' + id + '__B' + q;
+    delete ciclo.blocos[chave];
+    if (FC_ESTADO_BLOCOS_MAP) delete FC_ESTADO_BLOCOS_MAP[chave];
+    persistirCiclo();
+    renderizarRevisoesDoDia();
+    aviso('Progresso dos blocos deste tópico zerado.');
+  };
+
+  window.fcxRevIniciarBloco = function (id, i) {
+    const q = Math.max(1, Math.min(50, Number(cfgRev(id).qtd) || 1));
+    revCtx = { id }; FC_QTD_BLOCOS = q;
+    iniciarBlocoAquecimentoPorIndice(i);
+    try {
+      const t = ((ESTADO && ESTADO.topicos) || []).find((x) => x.id === id);
+      if (t && FC_SESSAO) {
+        FC_SESSAO.tituloSessao = t.materia + ' — ' + t.topico;
+        if ($('fcTituloTopicoSessao')) $('fcTituloTopicoSessao').textContent = FC_SESSAO.tituloSessao;
+      }
+    } catch (e) { /* ignora */ }
+  };
+
+  window.fcxRevExecutar = function (id) {
+    const q = Math.max(1, Math.min(50, Number(cfgRev(id).qtd) || 1));
+    const bl = blocosDoTopico(id, q);
+    if (!bl.length) { aviso('Este tópico não tem cartões para revisar.', true); return; }
+    let idx = bl.findIndex((b) => !b.concluido);
+    if (idx < 0) idx = 0;
+    window.fcxRevIniciarBloco(id, idx);
+  };
 
   (function cssK() {
     if (typeof document.createElement !== 'function' || !document.head || document.getElementById('fcxCSSK')) return;
@@ -16152,6 +16321,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     st.id = 'fcxCSSK';
     st.textContent =
       '#fcxEstudosDia{display:none}' +
+      '#containerDeckFlashcards.fcx-tab-revisoes .fcx-liv{display:none!important}' +
+      '#containerDeckFlashcards.fcx-tab-livres .fcx-rev{display:none!important}' +
       '#containerDeckFlashcards.fcx-tab-estudos #fcPainelSelecao{display:none!important}' +
       '#containerDeckFlashcards.fcx-tab-estudos #fcxEstudosDia{display:block}' +
       '#containerDeckFlashcards.fcx-tab-estudos .fcx-so-revisoes{display:none!important}' +
