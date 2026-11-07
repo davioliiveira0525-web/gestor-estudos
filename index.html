@@ -2471,10 +2471,16 @@
                     <option value="">Todas as Matérias</option>
                   </select>
                 </div>
-                <div class="md:col-span-4">
+                <div class="md:col-span-3">
                   <label class="block font-bold text-slate-300 mb-1">Filtrar Tópico</label>
                   <select id="fcFiltroTopico" onchange="aoMudarFiltroDeckResetarBlocos()" class="w-full rounded-lg border px-2.5 py-1.5 font-medium">
                     <option value="">Todos os Tópicos</option>
+                  </select>
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block font-bold text-slate-300 mb-1">Assunto</label>
+                  <select id="fcFiltroAssunto" onchange="aoMudarFiltroDeckResetarBlocos()" class="w-full rounded-lg border px-2.5 py-1.5 font-medium" disabled>
+                    <option value="">Todos os Assuntos</option>
                   </select>
                 </div>
                 <div class="md:col-span-2">
@@ -2487,7 +2493,7 @@
                     <option value="DECOREBA">4. Decoreba</option>
                   </select>
                 </div>
-                <div class="md:col-span-3">
+                <div class="md:col-span-2">
                   <label class="block font-bold text-emerald-300 mb-1">Ordem de Apresentação</label>
                   <select id="fcSelectOrdemApresentacao" onchange="atualizarOrdemApresentacaoUI(this.value)" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
                     <option value="SEQUENCIAL_INICIAL_DEPOIS_ERROS">1º Sequencial (Inéditos) -> Depois por Erros</option>
@@ -7426,7 +7432,8 @@
       const t = document.getElementById('fcFiltroTopico')?.value || 'ALL';
       const tp = document.getElementById('fcFiltroTipo')?.value || 'ALL';
       const ord = document.getElementById('fcSelectOrdemApresentacao')?.value || 'SEQ';
-      return `${m}__${t}__${tp}__${ord}__B${FC_QTD_BLOCOS}`;
+      const as = document.getElementById('fcFiltroAssunto')?.value || '';
+      return `${m}__${t}__${tp}__${ord}__B${FC_QTD_BLOCOS}` + (as ? `__AS_${as}` : '');
     }
 
     function atualizarDivisaoBlocosAquecimentoUI(novoVal) {
@@ -7663,6 +7670,40 @@
       return { gabaritoCE, explicacao, endereco, fraseCorrigida, exemplo };
     }
 
+    // Assunto (subdivisão dentro do mesmo tópico), lido da tag "assunto: Nome" ou "assunto-nome".
+    function extrairAssuntoDasTagsFC_(tagsStr) {
+      const partes = String(tagsStr || '').split(/\s*[,|]\s*/);
+      for (const p of partes) {
+        let m = p.match(/^assunto\s*:\s*(.+)$/i);
+        if (m) return m[1].trim();
+        m = p.match(/^assunto-([a-z0-9-]+)$/i);
+        if (m) {
+          const nome = m[1].replace(/-/g, ' ');
+          return nome.length <= 4 ? nome.toUpperCase() : nome.charAt(0).toUpperCase() + nome.slice(1);
+        }
+      }
+      return '';
+    }
+
+    function atualizarOpcoesFiltroAssuntoFC_() {
+      const sel = document.getElementById('fcFiltroAssunto');
+      if (!sel) return;
+      const idMat = document.getElementById('fcFiltroMateria')?.value || '';
+      const idTop = document.getElementById('fcFiltroTopico')?.value || '';
+      const contagem = {};
+      (FC_DECK || []).forEach(c => {
+        if (idMat && c.idMateria !== idMat) return;
+        if (idTop && c.idTopico !== idTop) return;
+        if (c.assunto) contagem[c.assunto] = (contagem[c.assunto] || 0) + 1;
+      });
+      const nomes = Object.keys(contagem).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      const vAnt = sel.value;
+      sel.innerHTML = '<option value="">Todos os Assuntos</option>' +
+        nomes.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n} (${contagem[n]})</option>`).join('');
+      sel.value = nomes.includes(vAnt) ? vAnt : '';
+      sel.disabled = nomes.length === 0;
+    }
+
     function normalizarRegistroFlashcard_(row, idxOrdem, mapaTelemetria) {
       let opcoesArr = [];
       if (Array.isArray(row.opcoes)) {
@@ -7736,6 +7777,7 @@
         frente: frenteOriginal,
         verso: versoOriginal,
         tags: tagsStr.replace(/#SEQ_\d+\s*,?\s*/gi, '').trim(),
+        assunto: extrairAssuntoDasTagsFC_(tagsStr),
         etapa,
         intervaloDias,
         fatorFacilidade,
@@ -7795,12 +7837,14 @@
       const idMat = document.getElementById('fcFiltroMateria')?.value || '';
       const idTop = document.getElementById('fcFiltroTopico')?.value || '';
       const tipo = document.getElementById('fcFiltroTipo')?.value || '';
+      const assunto = document.getElementById('fcFiltroAssunto')?.value || '';
       const metodoOrd = document.getElementById('fcSelectOrdemApresentacao')?.value || ESTADO?.config?.Metodo_Organizacao_Cartoes || 'SEQUENCIAL_INICIAL_DEPOIS_ERROS';
 
       const filtrados = FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
         if (tipo && c.tipo !== tipo) return false;
+        if (assunto && c.assunto !== assunto) return false;
         return true;
       });
 
@@ -8053,10 +8097,13 @@
     function renderizarVisaoDeckFC() {
       const idMat = document.getElementById('fcFiltroMateria')?.value || '';
       const idTop = document.getElementById('fcFiltroTopico')?.value || '';
+      atualizarOpcoesFiltroAssuntoFC_();
+      const assuntoSel = document.getElementById('fcFiltroAssunto')?.value || '';
 
       const baseTopico = FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
+        if (assuntoSel && c.assunto !== assuntoSel) return false;
         return true;
       });
 
