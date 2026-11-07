@@ -340,18 +340,15 @@
       max-width: 62rem;
     }
 
-    .fc-termo {
-      border-bottom: 1px dotted rgba(56, 189, 248, 0.8);
-      cursor: help;
-    }
-    .fc-termo-gloss {
-      color: rgb(125, 211, 252);
-      font-size: 0.85em;
-      font-weight: 500;
-      font-style: italic;
-    }
-    html:not(.dark) .fc-termo { border-bottom-color: rgba(2, 132, 199, 0.8); }
-    html:not(.dark) .fc-termo-gloss { color: rgb(3, 105, 161); }
+    .fc-diff-sai { color: rgb(253, 164, 175); text-decoration: line-through; text-decoration-thickness: 2px; background: rgba(225, 29, 72, 0.18); border-radius: 3px; padding: 0 2px; }
+    .fc-diff-entra { color: rgb(134, 239, 172); font-weight: 700; background: rgba(22, 163, 74, 0.18); border-radius: 3px; padding: 0 2px; }
+    html:not(.dark) .fc-diff-sai { color: rgb(190, 18, 60); background: rgba(225, 29, 72, 0.12); }
+    html:not(.dark) .fc-diff-entra { color: rgb(21, 128, 61); background: rgba(22, 163, 74, 0.12); }
+    /* Painel de Termos Jurídicos legível também no modo claro */
+    html:not(.dark) .fc-palco-termos { background: #ffffff; border-color: rgb(186, 230, 253); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    html:not(.dark) .fc-palco-termos li { color: rgb(30, 41, 59) !important; }
+    html:not(.dark) .fc-palco-termos li > span:first-child { color: rgb(3, 105, 161) !important; }
+    html:not(.dark) .fc-palco-termos summary { color: rgb(2, 132, 199) !important; }
 
     .fc-back-lesson-body {
       max-height: 58vh;
@@ -8549,145 +8546,165 @@
     }
 
     /* ===== VERSO EM DUAS CAMADAS + TERMOS JURÍDICOS DENTRO DO TEXTO =====
-       Camada 1 (Resumo): resposta rápida + afirmação correta (se ERRADO) + Bizu.
-       Camada 2 (Completa, botão ou tecla V): explicação inteira, exemplo, atenção à prova, fundamento e termos.
-       Termos: na 1ª vez que aparecem em cada camada, ganham um "(= sinônimo)" logo depois. */
-    function listarTermosFC_(termosTxt) {
-      return String(termosTxt || '')
-        .split(/\r?\n|\s+•\s+|\s+\/\s+(?=[^:\/]{2,60}:)/)
-        .map(l => l.replace(/^[\-\*•]\s*/, '').trim())
-        .filter(Boolean)
-        .map(l => {
-          const k = l.indexOf(':');
-          if (k <= 0 || k >= 80) return null;
-          const rotulo = l.slice(0, k).trim();
-          const def = l.slice(k + 1).trim();
-          const termo = rotulo.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
-          let gloss = def.replace(/\s*Exemplos?\s*:[\s\S]*$/i, '').trim();
-          const m = gloss.match(/^([\s\S]*?[\.;])(\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]|$)/);
-          if (m) gloss = m[1];
-          gloss = gloss.replace(/[\.;]\s*$/, '').trim();
-          if (gloss.length > 120) gloss = gloss.slice(0, 117).replace(/\s+\S*$/, '') + '…';
-          if (gloss) gloss = gloss.charAt(0).toLowerCase() + gloss.slice(1);
-          return termo.length >= 3 && gloss ? { termo, def, gloss } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => b.termo.length - a.termo.length);
-    }
-
-    // Recebe HTML já escapado; só mexe no texto (nunca dentro de tags). "usados" evita repetir o mesmo termo.
-    function glossarHtmlFC_(html, termos, usados) {
-      if (!html || !termos || termos.length === 0) return html || '';
-      const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const blocos = [];
-      const partes = String(html).split(/(<[^>]+>)/);
-      let dentroDeGloss = 0;
-      const saida = partes.map(seg => {
-        if (seg.startsWith('<')) {
-          if (/class="fc-termo/.test(seg)) dentroDeGloss++;
-          return seg;
-        }
-        if (!seg || dentroDeGloss) return seg;
-        let txt = seg;
-        termos.forEach(t => {
-          const chave = t.termo.toLowerCase();
-          if (usados && usados.has(chave)) return;
-          let re;
-          try {
-            re = new RegExp('(?<![\\p{L}\\p{N}])(' + escRe(esc(t.termo)) + '(?:s|es)?)(?![\\p{L}\\p{N}])', 'iu');
-          } catch (e) { return; }
-          if (!re.test(txt)) return;
-          txt = txt.replace(re, (m0) => {
-            blocos.push(`<span class="fc-termo" title="${esc(t.def)}">${m0}</span><span class="fc-termo-gloss"> (= ${esc(t.gloss)})</span>`);
-            return '\u0000' + (blocos.length - 1) + '\u0000';
-          });
-          if (usados) usados.add(chave);
-        });
-        return txt;
-      }).join('');
-      return saida.replace(/\u0000(\d+)\u0000/g, (_, i) => blocos[Number(i)]);
-    }
-
-    function htmlFrenteComTermosFC_(c, termos, usados) {
-      let h;
-      if (/\{\{c\d+::/i.test(c.frente)) h = formatarTextoCloze_(c.frente, true);
-      else h = (typeof window.fcxAplicarMarkupEscapado === 'function') ? window.fcxAplicarMarkupEscapado(esc(c.frente)) : esc(c.frente);
-      return glossarHtmlFC_(h, termos, usados);
-    }
-
+       Camada 1 (para quem já sabe): "Resumo:" do cartão (ou a 1ª frase da explicação) + afirmação correta (se ERRADO) + Bizu.
+       Camada 2 (botão ou tecla V): tipo de pegadinha (tags peg-), onde está o erro (prova x correta, palavra a palavra),
+       "Análise:" do cartão, explicação, exemplo, atenção à prova e fundamento.
+       Termos Jurídicos: só no verso, no painel lateral já aberto. */
     function primeiraLinhaExplicacaoFC_(txt) {
       const linhas = String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       if (linhas.length === 0) return '';
       return linhas[0].replace(/^(\-|\•|\*|\d+[\.\)])\s+/, '');
     }
 
-    function montarHtmlVersoDuasCamadasFC_(d, gabarito, termos, usadosResumo) {
-      const usadosCompleto = new Set();
-      const G = (html, usados) => glossarHtmlFC_(html, termos, usados);
-      const rapida = primeiraLinhaExplicacaoFC_(d.explicacao);
-      const mostrarCorreta = gabarito === 'ERRADO' && d.fraseCorrigida;
+    // Tipo de pegadinha lido das tags "peg-..." (ex.: peg-troca-modalidade -> Troca de modalidade)
+    function tiposPegadinhaFC_(tagsStr) {
+      const mapa = {
+        'excecao-invertida': 'Exceção invertida', 'inversao': 'Inversão de sentido', 'inversao-sentido': 'Inversão de sentido',
+        'caso-pratico': 'Caso prático (enquadramento)', 'literalidade': 'Literalidade', 'extrapolacao': 'Extrapolação',
+        'generalizacao': 'Generalização indevida', 'restricao': 'Restrição indevida', 'jurisprudencia': 'Jurisprudência'
+      };
+      return String(tagsStr || '').split(/\s*[,|]\s*/)
+        .map(t => t.trim().toLowerCase())
+        .filter(t => /^peg-/.test(t))
+        .map(t => {
+          const k = t.replace(/^peg-/, '');
+          if (mapa[k]) return mapa[k];
+          if (/^troca-/.test(k)) return 'Troca de ' + k.replace(/^troca-/, '').replace(/-/g, ' ');
+          const txt = k.replace(/-/g, ' ');
+          return txt.charAt(0).toUpperCase() + txt.slice(1);
+        });
+    }
 
+    // Compara a afirmação da prova com a frase corrigida, palavra por palavra.
+    function diffPalavrasFC_(a, b) {
+      const limpar = (s) => String(s || '').replace(/\{\{c\d+::(.*?)\}\}/gi, '$1').replace(/\*\*|==|__|~~|[\[\]]/g, '');
+      const ta = limpar(a).split(/\s+/).filter(Boolean);
+      const tb = limpar(b).split(/\s+/).filter(Boolean);
+      const n = (w) => w.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^\p{L}\p{N}§º°]/gu, '');
+      const na = ta.map(n), nb = tb.map(n);
+      const L = Array.from({ length: ta.length + 1 }, () => new Array(tb.length + 1).fill(0));
+      for (let i = ta.length - 1; i >= 0; i--) for (let j = tb.length - 1; j >= 0; j--) {
+        L[i][j] = na[i] && na[i] === nb[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+      }
+      const ops = [];
+      let i = 0, j = 0;
+      while (i < ta.length || j < tb.length) {
+        if (i < ta.length && j < tb.length && na[i] && na[i] === nb[j]) { ops.push({ t: '=', a: ta[i], b: tb[j] }); i++; j++; }
+        else if (j < tb.length && (i >= ta.length || L[i][j + 1] >= L[i + 1][j])) { ops.push({ t: '+', b: tb[j] }); j++; }
+        else { ops.push({ t: '-', a: ta[i] }); i++; }
+      }
+      const juntar = (lista, campo, tipoMarcado, classe) => {
+        const out = [];
+        let buf = [];
+        const flush = () => { if (buf.length) { out.push(`<span class="${classe}">${esc(buf.join(' '))}</span>`); buf = []; } };
+        lista.forEach(o => { if (o.t === tipoMarcado) buf.push(o[campo]); else { flush(); out.push(esc(o[campo])); } });
+        flush();
+        return out.join(' ');
+      };
+      const linhaProva = juntar(ops.filter(o => o.t !== '+'), 'a', '-', 'fc-diff-sai');
+      const linhaCorreta = juntar(ops.filter(o => o.t !== '-'), 'b', '+', 'fc-diff-entra');
+      // Resumo do que mudou: blocos contínuos de removido/acrescentado
+      const trocas = [];
+      let rem = [], add = [];
+      const fechar = () => { if (rem.length || add.length) trocas.push({ sai: rem.join(' '), entra: add.join(' ') }); rem = []; add = []; };
+      ops.forEach(o => { if (o.t === '=') fechar(); else if (o.t === '-') rem.push(o.a); else add.push(o.b); });
+      fechar();
+      return { linhaProva, linhaCorreta, trocas, mudou: trocas.length > 0 };
+    }
+
+    function montarHtmlVersoDuasCamadasFC_(d, gabarito, c) {
+      const F = (t) => formatarTextoDidaticoEmAula_(t);
+      const ehErrado = gabarito === 'ERRADO';
+      const temCorreta = ehErrado && d.fraseCorrigida;
+      const diff = temCorreta ? diffPalavrasFC_(c.frente, d.fraseCorrigida) : null;
+      const pegs = tiposPegadinhaFC_(c.tags);
+
+      // ---------- CAMADA 1: para quem já sabe ----------
+      let rapida = d.resumo || '';
+      let rotuloRapida = 'Explicação rápida:';
+      if (!rapida && !temCorreta) {
+        rapida = primeiraLinhaExplicacaoFC_(d.explicacao);
+        rotuloRapida = ehErrado ? 'Por que está errada:' : 'Por que está certa:';
+      }
       const resumo = `
         <div class="fc-camada-resumo space-y-2.5">
           ${rapida ? `
             <div class="p-3.5 rounded-xl bg-slate-950 border border-indigo-800/70 space-y-1">
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Resposta rápida:</span>
-              <div class="text-sm md:text-base">${G(formatarTextoDidaticoEmAula_(rapida), usadosResumo)}</div>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">${rotuloRapida}</span>
+              <div class="text-sm md:text-base">${F(rapida)}</div>
             </div>` : ''}
-          ${mostrarCorreta ? `
+          ${temCorreta ? `
             <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/80 space-y-1">
               <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Afirmação correta:</span>
-              <div class="text-sm md:text-base font-semibold text-slate-100">${G(formatarTextoDidaticoEmAula_(d.fraseCorrigida), usadosResumo)}</div>
+              <div class="text-sm md:text-base font-semibold text-slate-100">${F(d.fraseCorrigida)}</div>
             </div>` : ''}
           ${d.bizu ? `
             <div class="p-3.5 rounded-xl bg-violet-950/30 border border-violet-800/80 space-y-1">
               <span class="text-[10px] font-extrabold uppercase text-violet-300 block">Bizu:</span>
-              <div class="text-sm md:text-base font-semibold text-slate-100">${G(formatarTextoDidaticoEmAula_(d.bizu), usadosResumo)}</div>
+              <div class="text-sm md:text-base font-semibold text-slate-100">${F(d.bizu)}</div>
             </div>` : ''}
         </div>`;
 
-      const itensExtra = [d.exemplo && 'Exemplo', d.atencao && 'Atenção à prova', d.endereco && 'Fundamento', termos.length && 'Termos'].filter(Boolean);
-      const listaTermos = termos.length ? `
-        <div class="p-3 rounded-xl bg-sky-950/20 border border-sky-900/70 space-y-1">
-          <span class="text-[10px] font-extrabold uppercase text-sky-400 block">Termos Jurídicos (leia assim):</span>
-          <ul class="space-y-1 text-xs md:text-sm text-slate-200">
-            ${termos.slice().sort((a, b) => a.termo.localeCompare(b.termo, 'pt-BR')).map(t => `<li><span class="font-bold text-sky-300">${esc(t.termo)}</span> = ${esc(t.def)}</li>`).join('')}
+      // ---------- CAMADA 2: destrinchando a afirmação ----------
+      const blocoErro = (diff && diff.mudou) ? `
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-rose-800/70 space-y-2">
+          <span class="text-[10px] font-extrabold uppercase tracking-wider text-rose-300 block">Onde está o erro:</span>
+          <div class="text-xs md:text-sm space-y-1.5">
+            <div><span class="text-[10px] font-extrabold uppercase text-rose-300 mr-1">Prova disse:</span> <span class="text-slate-200">${diff.linhaProva}</span></div>
+            <div><span class="text-[10px] font-extrabold uppercase text-emerald-400 mr-1">O certo é:</span> <span class="text-slate-100">${diff.linhaCorreta}</span></div>
+          </div>
+          <ul class="list-disc pl-5 text-xs md:text-sm text-slate-200 space-y-0.5 pt-1 border-t border-slate-800">
+            ${diff.trocas.slice(0, 4).map(t => {
+              if (t.sai && t.entra) return `<li>Trocou <span class="fc-diff-sai">${esc(t.sai)}</span> por <span class="fc-diff-entra">${esc(t.entra)}</span></li>`;
+              if (t.sai) return `<li>Acrescentou indevidamente <span class="fc-diff-sai">${esc(t.sai)}</span></li>`;
+              return `<li>Omitiu <span class="fc-diff-entra">${esc(t.entra)}</span></li>`;
+            }).join('')}
           </ul>
         </div>` : '';
 
       const completo = `
+        ${pegs.length ? `
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[10px] font-extrabold uppercase text-slate-400">Tipo de pegadinha:</span>
+            ${pegs.map(p => `<span class="px-2 py-0.5 rounded-md bg-rose-900/60 border border-rose-700/70 text-rose-100 text-[11px] font-bold">${esc(p)}</span>`).join('')}
+          </div>` : ''}
+        ${blocoErro}
+        ${d.analise ? `
+          <div class="p-3.5 rounded-xl bg-slate-950 border border-indigo-800/70 space-y-2">
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Destrinchando a afirmação:</span>
+            <div class="space-y-1.5 text-sm md:text-base">${F(d.analise)}</div>
+          </div>` : ''}
         <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-          <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Explicação completa:</span>
-          <div class="space-y-1.5 text-sm md:text-base">${G(formatarTextoDidaticoEmAula_(d.explicacao), usadosCompleto)}</div>
+          <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Explicação:</span>
+          <div class="space-y-1.5 text-sm md:text-base">${F(d.explicacao)}</div>
         </div>
         ${d.exemplo ? `
           <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/80 space-y-1">
             <span class="text-[10px] font-extrabold uppercase text-amber-400 block">Exemplo:</span>
-            <div class="text-xs md:text-sm text-slate-200 space-y-1">${G(formatarTextoDidaticoEmAula_(d.exemplo), usadosCompleto)}</div>
+            <div class="text-xs md:text-sm text-slate-200 space-y-1">${F(d.exemplo)}</div>
           </div>` : ''}
         ${d.atencao ? `
           <div class="p-3.5 rounded-xl bg-rose-950/30 border border-rose-800/80 space-y-1">
             <span class="text-[10px] font-extrabold uppercase text-rose-300 block">Atenção à Prova:</span>
-            <div class="text-xs md:text-sm text-slate-200">${G(formatarTextoDidaticoEmAula_(d.atencao), usadosCompleto)}</div>
+            <div class="text-xs md:text-sm text-slate-200">${F(d.atencao)}</div>
           </div>` : ''}
-        ${d.fraseCorrigida && !mostrarCorreta ? `
+        ${d.fraseCorrigida && !temCorreta ? `
           <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/80 space-y-1">
             <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Frase Corrigida:</span>
-            <div class="text-xs md:text-sm font-semibold text-slate-100">${G(formatarTextoDidaticoEmAula_(d.fraseCorrigida), usadosCompleto)}</div>
+            <div class="text-xs md:text-sm font-semibold text-slate-100">${F(d.fraseCorrigida)}</div>
           </div>` : ''}
         ${d.endereco ? `
           <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <span class="text-[10px] font-extrabold uppercase text-indigo-400">Fundamento:</span>
             <span class="text-xs md:text-sm font-bold text-white">${esc(d.endereco)}</span>
-          </div>` : ''}
-        ${listaTermos}`;
+          </div>` : ''}`;
 
       return `
         ${resumo}
         <button type="button" id="fcBtnVersoCompleto" onclick="alternarVersoCompletoFC()"
           class="w-full py-2 px-3 rounded-xl border border-indigo-700/70 bg-indigo-950/40 hover:bg-indigo-900/50 text-xs font-extrabold text-indigo-200 transition flex items-center justify-center gap-2">
-          <span id="fcBtnVersoCompletoTxt">Não entendi? Ver explicação completa ▾</span>
-          <span class="text-[10px] font-normal opacity-80 hidden sm:inline">${itensExtra.length ? '(' + itensExtra.join(' · ') + ')' : ''} [V]</span>
+          <span id="fcBtnVersoCompletoTxt">Não entendi? Ver explicação detalhada ▾</span>
+          <span class="text-[10px] font-normal opacity-80 hidden sm:inline">[V]</span>
         </button>
         <div id="fcCamadaCompleta" class="hidden space-y-2.5">${completo}</div>`;
     }
@@ -8698,7 +8715,7 @@
       const abrir = typeof forcar === 'boolean' ? forcar : box.classList.contains('hidden');
       box.classList.toggle('hidden', !abrir);
       const t = document.getElementById('fcBtnVersoCompletoTxt');
-      if (t) t.textContent = abrir ? 'Fechar explicação completa ▴' : 'Não entendi? Ver explicação completa ▾';
+      if (t) t.textContent = abrir ? 'Fechar explicação detalhada ▴' : 'Não entendi? Ver explicação detalhada ▾';
       if (abrir) {
         try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
       }
@@ -8728,7 +8745,7 @@
       painel.innerHTML = `
         <details class="fc-termos-box" ${aberto ? 'open' : ''}>
           <summary class="cursor-pointer select-none text-[10px] font-extrabold uppercase tracking-wider text-sky-400">Termos Jurídicos (${itens.length})</summary>
-          <ul class="mt-2 space-y-1.5 text-[11px] leading-snug text-slate-300">${lista}</ul>
+          <ul class="mt-2 space-y-2 text-xs leading-snug text-slate-200">${lista}</ul>
         </details>`;
     }
 
@@ -8736,9 +8753,9 @@
       const c = FC_SESSAO.cardAtual;
       if (!c) return;
       try {
-        const dadosTermos = extrairDadosEstruturadosCertoErrado_(c.frente, c.verso, c.tags);
-        renderizarPainelTermosFC_(dadosTermos.termos, false);
-      } catch (e) { renderizarPainelTermosFC_('', false); }
+        // Termos Jurídicos só aparecem no verso (depois de responder).
+        renderizarPainelTermosFC_('', false);
+      } catch (e) { /* sem painel */ }
 
       const shell = document.getElementById('fcCardShell');
       if (shell) {
@@ -8855,14 +8872,6 @@
         ` : ''}
         ${montarHtmlBizuAtencaoFC_(dados)}
       `;
-      try {
-        const termosLS = listarTermosFC_(dados.termos);
-        if (termosLS.length) {
-          const usadosLS = new Set();
-          elFrente.innerHTML = htmlFrenteComTermosFC_(c, termosLS, usadosLS);
-          versoTextoEl.innerHTML = glossarHtmlFC_(versoTextoEl.innerHTML, termosLS, usadosLS);
-        }
-      } catch (e) { /* mantém o verso sem os sinônimos */ }
       renderizarPainelTermosFC_(dados.termos, true);
 
       document.getElementById('fcBackLessonContainer').classList.remove('hidden');
@@ -8920,10 +8929,7 @@
 
       const versoTextoEl = document.getElementById('fcCardVersoTexto');
       try {
-        const termosCE = listarTermosFC_(dadosCE.termos);
-        const usadosResumo = new Set();
-        elFrente.innerHTML = htmlFrenteComTermosFC_(c, termosCE, usadosResumo);
-        versoTextoEl.innerHTML = montarHtmlVersoDuasCamadasFC_(dadosCE, gabaritoReal, termosCE, usadosResumo);
+        versoTextoEl.innerHTML = montarHtmlVersoDuasCamadasFC_(dadosCE, gabaritoReal, c);
       } catch (e) {
         console.warn('Verso em camadas indisponível, usando o verso completo.', e);
         versoTextoEl.innerHTML = montarHtmlVersoDidaticoFC_(dadosCE);
@@ -14721,7 +14727,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     gabarito: 'gabarito', explicacao: 'explicacao', endereco: 'fundamento', fundamento: 'fundamento',
     artigo: 'fundamento', dispositivo: 'fundamento', 'frase corrigida': 'frase', correcao: 'frase',
     conceito: 'frase', exemplo: 'exemplo', bizu: 'bizu', 'atencao a prova': 'atencao', atencao: 'atencao',
-    termos: 'termos', 'termos juridicos': 'termos'
+    termos: 'termos', 'termos juridicos': 'termos',
+    resumo: 'resumo', 'explicacao rapida': 'resumo', 'resposta rapida': 'resumo',
+    analise: 'analise', 'explicacao detalhada': 'analise', 'analise da afirmacao': 'analise'
   };
 
   function normGab(v) {
@@ -14733,13 +14741,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
   }
 
   function parseVersoCampos(verso) {
-    const campos = { gabarito: '', explicacao: '', fundamento: '', frase: '', exemplo: '', bizu: '', atencao: '', termos: '' };
+    const campos = { gabarito: '', resumo: '', explicacao: '', analise: '', fundamento: '', frase: '', exemplo: '', bizu: '', atencao: '', termos: '' };
     const s = String(verso || '').trim();
     const partes = s.split('|').map((p) => p.trim()).filter((p) => p !== '');
     let ultimo = null;
     let rotulado = false;
     partes.forEach((p) => {
-      const m = p.match(/^(gabarito|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo|bizu|aten[cç][aã]o\s*[àa]\s*prova|aten[cç][aã]o|termos\s*jur[ií]dicos|termos)\s*:\s*([\s\S]*)$/i);
+      const m = p.match(/^(gabarito|resumo|explica[cç][aã]o\s*r[aá]pida|resposta\s*r[aá]pida|an[aá]lise\s*da\s*afirma[cç][aã]o|an[aá]lise|explica[cç][aã]o\s*detalhada|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo|bizu|aten[cç][aã]o\s*[àa]\s*prova|aten[cç][aã]o|termos\s*jur[ií]dicos|termos)\s*:\s*([\s\S]*)$/i);
       if (m) {
         rotulado = true;
         const chave = CAMPO_POR_ROTULO[nn(m[1])];
@@ -14764,7 +14772,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     const L = (s) => String(s || '').replace(/\s*\|\s*/g, ' / ').trim();
     const p = [];
     if (ehCE(tipo)) p.push('Gabarito: ' + (c.gabarito === 'ERRADO' ? 'ERRADO' : 'CERTO'));
+    if (L(c.resumo)) p.push('Resumo: ' + L(c.resumo));
     p.push('Explicação: ' + L(c.explicacao));
+    if (L(c.analise)) p.push('Análise: ' + L(c.analise));
     if (L(c.fundamento)) p.push('Fundamento: ' + L(c.fundamento));
     if (L(c.frase)) p.push('Frase Corrigida: ' + L(c.frase));
     if (L(c.exemplo)) p.push('Exemplo: ' + L(c.exemplo));
@@ -14898,7 +14908,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       endereco = matchArt ? matchArt[1].trim() : '';
     }
     return { gabaritoCE, explicacao, endereco, fraseCorrigida: campos.frase, exemplo: campos.exemplo,
-      bizu: campos.bizu, atencao: campos.atencao, termos: campos.termos };
+      bizu: campos.bizu, atencao: campos.atencao, termos: campos.termos,
+      resumo: campos.resumo, analise: campos.analise };
   };
 
   /* ========================================================================
@@ -15086,6 +15097,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         tipo: c.tipo, frente: c.frente, gabarito: campos.gabarito || (ehCE(c.tipo) ? c.gabaritoCE : ''),
         explicacao: campos.explicacao, fundamento: campos.fundamento, frase: campos.frase, exemplo: campos.exemplo,
         bizu: campos.bizu, atencao: campos.atencao, termos: campos.termos,
+        resumo: campos.resumo, analise: campos.analise,
         tags: tagsUsuario
       };
       it.orig = JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags });
