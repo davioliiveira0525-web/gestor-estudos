@@ -8616,7 +8616,10 @@
       const mapa = {
         'excecao-invertida': 'Exceção invertida', 'inversao': 'Inversão de sentido', 'inversao-sentido': 'Inversão de sentido',
         'caso-pratico': 'Caso prático (enquadramento)', 'literalidade': 'Literalidade', 'extrapolacao': 'Extrapolação',
-        'generalizacao': 'Generalização indevida', 'restricao': 'Restrição indevida', 'jurisprudencia': 'Jurisprudência'
+        'generalizacao': 'Generalização indevida', 'restricao': 'Restrição indevida', 'jurisprudencia': 'Jurisprudência',
+        'inversao-regra': 'Inversão da regra', 'excecao-inventada': 'Exceção inventada', 'excecao-omitida': 'Exceção omitida',
+        'palavra-absoluta': 'Palavra absoluta', 'requisito-a-mais': 'Requisito a mais', 'requisito-a-menos': 'Requisito a menos',
+        'troca-modalidade-licitatoria': 'Troca de modalidade de licitação'
       };
       return String(tagsStr || '').split(/\s*[,|]\s*/)
         .map(t => t.trim().toLowerCase())
@@ -8624,8 +8627,11 @@
         .map(t => {
           const k = t.replace(/^peg-/, '');
           if (mapa[k]) return mapa[k];
-          if (/^troca-/.test(k)) return 'Troca de ' + k.replace(/^troca-/, '').replace(/-/g, ' ');
-          const txt = k.replace(/-/g, ' ');
+          const acentos = { remuneracao: 'remuneração', numero: 'número', excecao: 'exceção', inversao: 'inversão',
+            licitatoria: 'licitatória', regra: 'regra', omitida: 'omitida', inventada: 'inventada', a: 'a' };
+          const acentuar = (t) => t.split('-').map(w => acentos[w] || w).join(' ');
+          if (/^troca-/.test(k)) return 'Troca de ' + acentuar(k.replace(/^troca-/, ''));
+          const txt = acentuar(k);
           return txt.charAt(0).toUpperCase() + txt.slice(1);
         });
     }
