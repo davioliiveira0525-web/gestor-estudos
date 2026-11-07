@@ -297,7 +297,7 @@
 
     .fc-palco-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 62rem) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 62rem) minmax(15rem, 1fr);
       column-gap: 1rem;
       align-items: start;
       width: 100%;
@@ -307,7 +307,7 @@
       grid-column: 3;
       justify-self: start;
       width: 100%;
-      max-width: 17rem;
+      max-width: 19rem;
       background: rgba(2, 6, 23, 0.7);
       border: 1px solid rgb(30, 41, 59);
       border-radius: 0.75rem;
@@ -350,8 +350,63 @@
     html:not(.dark) .fc-palco-termos li > span:first-child { color: rgb(3, 105, 161) !important; }
     html:not(.dark) .fc-palco-termos summary { color: rgb(2, 132, 199) !important; }
 
+
+    /* ===== Verso em faces (① Rápido / ② Detalhado) ===== */
+    .fc-back-lesson-body:has(.fc-face) { max-height: none; overflow: visible; }
+    .fc-box .fc-destaque-conceito { background: none !important; border: 0 !important; padding: 0 !important; color: inherit !important; font-weight: 800; box-shadow: none !important; }
+    .fc-box .border-l-2 { border-left: 0; padding-left: 0; }
+    .fc-faces-barra { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .fc-face-btn { padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(129,140,248,.6); color: rgb(165,180,252); font-weight: 700; font-size: 12px; background: transparent; }
+    .fc-face-btn-on { background: rgb(79,70,229); border-color: rgb(79,70,229); color: #fff; }
+    .fc-faces-dica { font-size: 11px; color: rgb(148,163,184); margin-left: 4px; }
+    .fc-face { display: flex; flex-direction: column; gap: 12px; }
+    .fc-face.hidden { display: none; }
+    .fc-face-grid-rapida { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: min(46vh, 460px); }
+    .fc-face-grid-detalhe { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; min-height: min(38vh, 380px); }
+    .fc-face-col { display: flex; flex-direction: column; gap: 12px; }
+    .fc-face-col > .fc-box { flex: 1; }
+    @media (max-width: 767px) { .fc-face-grid-rapida, .fc-face-grid-detalhe { grid-template-columns: 1fr; min-height: 0; } }
+    .fc-box { border-radius: 12px; padding: 12px 14px; border: 1px solid; display: flex; flex-direction: column; gap: 6px; }
+    .fc-box-lbl { font-size: 10.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .fc-box-txt { font-size: 14.5px; line-height: 1.6; }
+    .fc-txt-grande { font-size: 16px; }
+    .fc-box-ind { background: rgba(30,27,75,.45); border-color: rgba(99,102,241,.55); } .fc-box-ind .fc-box-lbl { color: rgb(129,140,248); }
+    .fc-box-ok { background: rgba(5,46,22,.45); border-color: rgba(22,163,74,.6); } .fc-box-ok .fc-box-lbl { color: rgb(74,222,128); }
+    .fc-box-viol { background: rgba(46,16,101,.45); border-color: rgba(139,92,246,.6); } .fc-box-viol .fc-box-lbl { color: rgb(196,181,253); }
+    .fc-box-amb { background: rgba(69,26,3,.45); border-color: rgba(217,119,6,.6); } .fc-box-amb .fc-box-lbl { color: rgb(251,191,36); }
+    .fc-box-ros { background: rgba(76,5,25,.45); border-color: rgba(225,29,72,.6); } .fc-box-ros .fc-box-lbl { color: rgb(253,164,175); }
+    .fc-box-neu { background: rgb(2,6,23); border-color: rgb(30,41,59); } .fc-box-neu .fc-box-lbl { color: rgb(129,140,248); }
+    .fc-cor-ros { color: rgb(253,164,175) !important; } .fc-cor-ok { color: rgb(74,222,128) !important; }
+    .fc-chip-peg { background: rgb(159,18,57); color: #fff; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px; letter-spacing: 0; }
+    .fc-fundamento { margin-top: auto; border-top: 1px solid rgb(51,65,85); padding-top: 7px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px; }
+    .fc-fundamento b { color: rgb(129,140,248); }
+    .fc-analise-linha { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px dashed rgba(99,102,241,.4); }
+    .fc-analise-tag { flex-shrink: 0; min-width: 76px; text-align: center; font-weight: 900; font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid; margin-top: 2px; }
+    .fc-analise-c { background: rgba(22,163,74,.18); color: rgb(134,239,172); border-color: rgba(34,197,94,.6); }
+    .fc-analise-e { background: rgba(225,29,72,.18); color: rgb(253,164,175); border-color: rgba(244,63,94,.6); }
+    .fc-analise-expl { opacity: .9; }
+    .fc-analise-frase { margin-top: 10px; padding: 9px 11px; border-radius: 8px; border: 1px solid rgba(99,102,241,.55); background: rgba(2,6,23,.6); }
+    .fc-analise-frase b { color: rgb(129,140,248); }
+    html:not(.dark) .fc-face-btn { color: rgb(67,56,202); border-color: rgb(199,210,254); background: #fff; }
+    html:not(.dark) .fc-face-btn-on { background: rgb(79,70,229); color: #fff; border-color: rgb(79,70,229); }
+    html:not(.dark) .fc-faces-dica { color: rgb(107,114,128); }
+    html:not(.dark) .fc-box-txt { color: rgb(28,30,33); }
+    html:not(.dark) .fc-box-ind { background: #eef2ff; border-color: #c7d2fe; } html:not(.dark) .fc-box-ind .fc-box-lbl { color: #4338ca; }
+    html:not(.dark) .fc-box-ok { background: #ecfdf3; border-color: #a7e3bf; } html:not(.dark) .fc-box-ok .fc-box-lbl { color: #15803d; }
+    html:not(.dark) .fc-box-viol { background: #f5f0ff; border-color: #d6c6fb; } html:not(.dark) .fc-box-viol .fc-box-lbl { color: #6d28d9; }
+    html:not(.dark) .fc-box-amb { background: #fff8e6; border-color: #f3d48a; } html:not(.dark) .fc-box-amb .fc-box-lbl { color: #b45309; }
+    html:not(.dark) .fc-box-ros { background: #fff1f3; border-color: #f6b8c5; } html:not(.dark) .fc-box-ros .fc-box-lbl { color: #be123c; }
+    html:not(.dark) .fc-box-neu { background: #f7f6f2; border-color: #e2e0da; } html:not(.dark) .fc-box-neu .fc-box-lbl { color: #4338ca; }
+    html:not(.dark) .fc-cor-ros { color: #be123c !important; } html:not(.dark) .fc-cor-ok { color: #15803d !important; }
+    html:not(.dark) .fc-fundamento { border-top-color: #e2e0da; color: rgb(28,30,33); } html:not(.dark) .fc-fundamento b { color: #4338ca; }
+    html:not(.dark) .fc-analise-linha { border-bottom-color: #c7d2fe; }
+    html:not(.dark) .fc-analise-c { background: #dcfce7; color: #15803d; border-color: #86efac; }
+    html:not(.dark) .fc-analise-e { background: #ffe4e6; color: #be123c; border-color: #fda4af; }
+    html:not(.dark) .fc-analise-frase { background: #fff; border-color: #c7d2fe; } html:not(.dark) .fc-analise-frase b { color: #4338ca; }
+    html:not(.dark) .fc-box-txt p, html:not(.dark) .fc-box-txt div { color: inherit; }
+
     .fc-back-lesson-body {
-      max-height: 58vh;
+      max-height: 74vh;
       overflow-y: auto;
       padding-right: 0.35rem;
       font-size: 0.95rem;
@@ -8612,113 +8667,126 @@
       return { linhaProva, linhaCorreta, trocas, mudou: trocas.length > 0 };
     }
 
+    // "Análise:" — uma linha por pedaço da frase:  ✔ "trecho" → explicação  |  ✘ "trecho" → explicação  |  Em uma frase: ...
+    function montarHtmlAnaliseFC_(txt) {
+      const linhas = String(txt || '').split(/\r?\n|\s+\/\s+(?=[✔✓✘✗]|Em uma frase)/).map(l => l.trim()).filter(Boolean);
+      const md = (s) => (typeof window.fcxAplicarMarkupEscapado === 'function') ? window.fcxAplicarMarkupEscapado(esc(s)) : esc(s);
+      return linhas.map(l => {
+        const mC = l.match(/^(✔|✓|\[C\])\s*(.*)$/);
+        const mE = l.match(/^(✘|✗|✖|\[E\])\s*(.*)$/);
+        const mF = l.match(/^em\s+uma\s+frase\s*:\s*(.*)$/i);
+        if (mF) {
+          return `<div class="fc-analise-frase"><b>Em uma frase:</b> ${md(mF[1])}</div>`;
+        }
+        if (mC || mE) {
+          const corpo = (mC || mE)[2];
+          const k = corpo.search(/\s*(→|->)\s*/);
+          const trecho = k >= 0 ? corpo.slice(0, k) : corpo;
+          const expl = k >= 0 ? corpo.slice(k).replace(/^\s*(→|->)\s*/, '') : '';
+          return `<div class="fc-analise-linha">
+            <span class="fc-analise-tag ${mC ? 'fc-analise-c' : 'fc-analise-e'}">${mC ? '✔ CERTO' : '✘ ERRADO'}</span>
+            <div><div class="font-extrabold">${md(trecho)}</div>${expl ? `<div class="fc-analise-expl">${md(expl)}</div>` : ''}</div>
+          </div>`;
+        }
+        return `<p class="leading-relaxed">${md(l)}</p>`;
+      }).join('');
+    }
+
+    /* Verso em duas FACES (a tecla V troca uma pela outra, no mesmo lugar):
+       ① Rápido: Explicação rápida ("Resumo:") | Afirmação correta + Bizu
+       ② Detalhado (opção B): Onde está o erro (faixa) | Destrinchando ("Análise:") + [Exemplo / Atenção + Lei + PDF] */
     function montarHtmlVersoDuasCamadasFC_(d, gabarito, c) {
-      const F = (t) => formatarTextoDidaticoEmAula_(t);
+      const F = (t) => formatarTextoDidaticoEmAula_(String(t || '').replace(/^\s*\*\s+/gm, '• '));
       const ehErrado = gabarito === 'ERRADO';
       const temCorreta = ehErrado && d.fraseCorrigida;
       const diff = temCorreta ? diffPalavrasFC_(c.frente, d.fraseCorrigida) : null;
       const pegs = tiposPegadinhaFC_(c.tags);
+      const chips = pegs.map(p => `<span class="fc-chip-peg">${esc(p)}</span>`).join(' ');
 
-      // ---------- CAMADA 1: para quem já sabe ----------
-      let rapida = d.resumo || '';
-      let rotuloRapida = 'Explicação rápida:';
-      if (!rapida && !temCorreta) {
-        rapida = primeiraLinhaExplicacaoFC_(d.explicacao);
-        rotuloRapida = ehErrado ? 'Por que está errada:' : 'Por que está certa:';
-      }
-      const resumo = `
-        <div class="fc-camada-resumo space-y-2.5">
-          ${rapida ? `
-            <div class="p-3.5 rounded-xl bg-slate-950 border border-indigo-800/70 space-y-1">
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">${rotuloRapida}</span>
-              <div class="text-sm md:text-base">${F(rapida)}</div>
-            </div>` : ''}
-          ${temCorreta ? `
-            <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/80 space-y-1">
-              <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Afirmação correta:</span>
-              <div class="text-sm md:text-base font-semibold text-slate-100">${F(d.fraseCorrigida)}</div>
-            </div>` : ''}
-          ${d.bizu ? `
-            <div class="p-3.5 rounded-xl bg-violet-950/30 border border-violet-800/80 space-y-1">
-              <span class="text-[10px] font-extrabold uppercase text-violet-300 block">Bizu:</span>
-              <div class="text-sm md:text-base font-semibold text-slate-100">${F(d.bizu)}</div>
-            </div>` : ''}
+      // ---------- FACE ① RÁPIDO ----------
+      const rapida = d.resumo || primeiraLinhaExplicacaoFC_(d.explicacao);
+      const ladoDireito = `
+        ${temCorreta ? `
+          <div class="fc-box fc-box-ok">
+            <span class="fc-box-lbl">Afirmação correta</span>
+            <div class="fc-box-txt font-semibold">${F(d.fraseCorrigida)}</div>
+          </div>` : ''}
+        ${d.bizu ? `
+          <div class="fc-box fc-box-viol">
+            <span class="fc-box-lbl">Bizu</span>
+            <div class="fc-box-txt fc-txt-grande font-extrabold">${F(d.bizu)}</div>
+          </div>` : ''}`;
+      const faceRapida = `
+        <div id="fcFaceRapida" class="fc-face fc-face-grid-rapida">
+          <div class="fc-box fc-box-ind">
+            <span class="fc-box-lbl">${ehErrado ? 'Explicação rápida — por que está errada' : 'Explicação rápida — por que está certa'}</span>
+            <div class="fc-box-txt fc-txt-grande">${F(rapida)}</div>
+          </div>
+          <div class="fc-face-col">${ladoDireito || `<div class="fc-box fc-box-neu"><span class="fc-box-lbl">Fundamento</span><div class="fc-box-txt">${esc(d.endereco || '')}</div></div>`}</div>
         </div>`;
 
-      // ---------- CAMADA 2: destrinchando a afirmação ----------
-      const blocoErro = (diff && diff.mudou) ? `
-        <div class="p-3.5 rounded-xl bg-slate-950 border border-rose-800/70 space-y-2">
-          <span class="text-[10px] font-extrabold uppercase tracking-wider text-rose-300 block">Onde está o erro:</span>
-          <div class="text-xs md:text-sm space-y-1.5">
-            <div><span class="text-[10px] font-extrabold uppercase text-rose-300 mr-1">Prova disse:</span> <span class="text-slate-200">${diff.linhaProva}</span></div>
-            <div><span class="text-[10px] font-extrabold uppercase text-emerald-400 mr-1">O certo é:</span> <span class="text-slate-100">${diff.linhaCorreta}</span></div>
+      // ---------- FACE ② DETALHADO ----------
+      const faixaErro = (diff && diff.mudou) ? `
+        <div class="fc-box fc-box-ros fc-face-faixa">
+          <span class="fc-box-lbl">Onde está o erro ${chips}</span>
+          <div class="fc-box-txt text-[13.5px] space-y-1">
+            <div><b class="fc-cor-ros">Prova disse:</b> ${diff.linhaProva}</div>
+            <div><b class="fc-cor-ok">O certo é:</b> ${diff.linhaCorreta}</div>
           </div>
-          <ul class="list-disc pl-5 text-xs md:text-sm text-slate-200 space-y-0.5 pt-1 border-t border-slate-800">
-            ${diff.trocas.slice(0, 4).map(t => {
-              if (t.sai && t.entra) return `<li>Trocou <span class="fc-diff-sai">${esc(t.sai)}</span> por <span class="fc-diff-entra">${esc(t.entra)}</span></li>`;
-              if (t.sai) return `<li>Acrescentou indevidamente <span class="fc-diff-sai">${esc(t.sai)}</span></li>`;
-              return `<li>Omitiu <span class="fc-diff-entra">${esc(t.entra)}</span></li>`;
-            }).join('')}
-          </ul>
         </div>` : '';
-
-      const completo = `
-        ${pegs.length ? `
-          <div class="flex flex-wrap items-center gap-1.5">
-            <span class="text-[10px] font-extrabold uppercase text-slate-400">Tipo de pegadinha:</span>
-            ${pegs.map(p => `<span class="px-2 py-0.5 rounded-md bg-rose-900/60 border border-rose-700/70 text-rose-100 text-[11px] font-bold">${esc(p)}</span>`).join('')}
-          </div>` : ''}
-        ${blocoErro}
-        ${d.analise ? `
-          <div class="p-3.5 rounded-xl bg-slate-950 border border-indigo-800/70 space-y-2">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Destrinchando a afirmação:</span>
-            <div class="space-y-1.5 text-sm md:text-base">${F(d.analise)}</div>
-          </div>` : ''}
-        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-          <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Explicação:</span>
-          <div class="space-y-1.5 text-sm md:text-base">${F(d.explicacao)}</div>
-        </div>
+      const destrinchando = `
+        <div class="fc-box fc-box-ind">
+          <span class="fc-box-lbl">${d.analise ? 'Destrinchando a afirmação — lendo por partes' : 'Explicação'} ${faixaErro ? '' : chips}</span>
+          <div class="fc-box-txt">${d.analise ? montarHtmlAnaliseFC_(d.analise) : F(d.explicacao)}</div>
+        </div>`;
+      const fundamento = (d.endereco || d.pdf) ? `
+        <div class="fc-fundamento">
+          ${d.endereco ? `<div><b>LEI:</b> ${esc(d.endereco)}</div>` : ''}
+          ${d.pdf ? `<div><b>PDF:</b> ${esc(d.pdf)}</div>` : ''}
+        </div>` : '';
+      const colunaDireita = `
         ${d.exemplo ? `
-          <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/80 space-y-1">
-            <span class="text-[10px] font-extrabold uppercase text-amber-400 block">Exemplo:</span>
-            <div class="text-xs md:text-sm text-slate-200 space-y-1">${F(d.exemplo)}</div>
+          <div class="fc-box fc-box-amb">
+            <span class="fc-box-lbl">Exemplo</span>
+            <div class="fc-box-txt text-[13.5px]">${F(d.exemplo)}</div>
           </div>` : ''}
-        ${d.atencao ? `
-          <div class="p-3.5 rounded-xl bg-rose-950/30 border border-rose-800/80 space-y-1">
-            <span class="text-[10px] font-extrabold uppercase text-rose-300 block">Atenção à Prova:</span>
-            <div class="text-xs md:text-sm text-slate-200">${F(d.atencao)}</div>
-          </div>` : ''}
-        ${d.fraseCorrigida && !temCorreta ? `
-          <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/80 space-y-1">
-            <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Frase Corrigida:</span>
-            <div class="text-xs md:text-sm font-semibold text-slate-100">${F(d.fraseCorrigida)}</div>
-          </div>` : ''}
-        ${d.endereco ? `
-          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
-            <span class="text-[10px] font-extrabold uppercase text-indigo-400">Fundamento:</span>
-            <span class="text-xs md:text-sm font-bold text-white">${esc(d.endereco)}</span>
-          </div>` : ''}`;
+        <div class="fc-box fc-box-neu">
+          ${d.atencao ? `<span class="fc-box-lbl fc-cor-ros">Atenção à prova</span>
+          <div class="fc-box-txt text-[13.5px]">${F(d.atencao)}</div>` : ''}
+          ${d.fraseCorrigida && !temCorreta ? `<span class="fc-box-lbl fc-cor-ok">Frase corrigida</span><div class="fc-box-txt text-[13.5px]">${F(d.fraseCorrigida)}</div>` : ''}
+          ${fundamento}
+        </div>`;
+      const faceDetalhada = `
+        <div id="fcFaceDetalhada" class="fc-face hidden">
+          ${faixaErro}
+          <div class="fc-face-grid-detalhe">
+            ${destrinchando}
+            <div class="fc-face-col">${colunaDireita}</div>
+          </div>
+        </div>`;
 
       return `
-        ${resumo}
-        <button type="button" id="fcBtnVersoCompleto" onclick="alternarVersoCompletoFC()"
-          class="w-full py-2 px-3 rounded-xl border border-indigo-700/70 bg-indigo-950/40 hover:bg-indigo-900/50 text-xs font-extrabold text-indigo-200 transition flex items-center justify-center gap-2">
-          <span id="fcBtnVersoCompletoTxt">Não entendi? Ver explicação detalhada ▾</span>
-          <span class="text-[10px] font-normal opacity-80 hidden sm:inline">[V]</span>
-        </button>
-        <div id="fcCamadaCompleta" class="hidden space-y-2.5">${completo}</div>`;
+        <div class="fc-faces-barra">
+          <button type="button" id="fcFaceBtn1" onclick="alternarVersoCompletoFC(false)" class="fc-face-btn fc-face-btn-on">① Rápido</button>
+          <button type="button" id="fcFaceBtn2" onclick="alternarVersoCompletoFC(true)" class="fc-face-btn">② Detalhado</button>
+          <span class="fc-faces-dica">Tecla <b>V</b> troca o verso</span>
+        </div>
+        ${faceRapida}
+        ${faceDetalhada}`;
     }
 
+    // Troca a face do verso: false = ① Rápido, true = ② Detalhado; sem argumento alterna.
     function alternarVersoCompletoFC(forcar) {
-      const box = document.getElementById('fcCamadaCompleta');
-      if (!box) return;
-      const abrir = typeof forcar === 'boolean' ? forcar : box.classList.contains('hidden');
-      box.classList.toggle('hidden', !abrir);
-      const t = document.getElementById('fcBtnVersoCompletoTxt');
-      if (t) t.textContent = abrir ? 'Fechar explicação detalhada ▴' : 'Não entendi? Ver explicação detalhada ▾';
-      if (abrir) {
-        try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
-      }
+      const f1 = document.getElementById('fcFaceRapida');
+      const f2 = document.getElementById('fcFaceDetalhada');
+      if (!f1 || !f2) return;
+      const detalhado = typeof forcar === 'boolean' ? forcar : f2.classList.contains('hidden');
+      f1.classList.toggle('hidden', detalhado);
+      f2.classList.toggle('hidden', !detalhado);
+      document.getElementById('fcFaceBtn1')?.classList.toggle('fc-face-btn-on', !detalhado);
+      document.getElementById('fcFaceBtn2')?.classList.toggle('fc-face-btn-on', detalhado);
+      const corpo = document.getElementById('fcBackLessonContainer');
+      if (corpo) corpo.scrollTop = 0;
     }
 
     // Painel lateral "Termos Jurídicos": cada termo numa linha ("Termo: definição"), ou separados por " • ".
@@ -8737,7 +8805,7 @@
       const lista = itens.map(l => {
         const k = l.indexOf(':');
         if (k > 0 && k < 80) {
-          return `<li><span class="font-bold text-sky-300">${esc(l.slice(0, k))}:</span> ${esc(l.slice(k + 1).trim())}</li>`;
+          return `<li><span class="font-bold text-sky-300">${esc(l.slice(0, k))}</span> = ${esc(l.slice(k + 1).trim())}</li>`;
         }
         return `<li>${esc(l)}</li>`;
       }).join('');
@@ -14729,7 +14797,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     conceito: 'frase', exemplo: 'exemplo', bizu: 'bizu', 'atencao a prova': 'atencao', atencao: 'atencao',
     termos: 'termos', 'termos juridicos': 'termos',
     resumo: 'resumo', 'explicacao rapida': 'resumo', 'resposta rapida': 'resumo',
-    analise: 'analise', 'explicacao detalhada': 'analise', 'analise da afirmacao': 'analise'
+    analise: 'analise', 'explicacao detalhada': 'analise', 'analise da afirmacao': 'analise',
+    pdf: 'pdf', 'fonte pdf': 'pdf', 'fonte': 'pdf'
   };
 
   function normGab(v) {
@@ -14741,13 +14810,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
   }
 
   function parseVersoCampos(verso) {
-    const campos = { gabarito: '', resumo: '', explicacao: '', analise: '', fundamento: '', frase: '', exemplo: '', bizu: '', atencao: '', termos: '' };
+    const campos = { gabarito: '', resumo: '', explicacao: '', analise: '', pdf: '', fundamento: '', frase: '', exemplo: '', bizu: '', atencao: '', termos: '' };
     const s = String(verso || '').trim();
     const partes = s.split('|').map((p) => p.trim()).filter((p) => p !== '');
     let ultimo = null;
     let rotulado = false;
     partes.forEach((p) => {
-      const m = p.match(/^(gabarito|resumo|explica[cç][aã]o\s*r[aá]pida|resposta\s*r[aá]pida|an[aá]lise\s*da\s*afirma[cç][aã]o|an[aá]lise|explica[cç][aã]o\s*detalhada|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo|bizu|aten[cç][aã]o\s*[àa]\s*prova|aten[cç][aã]o|termos\s*jur[ií]dicos|termos)\s*:\s*([\s\S]*)$/i);
+      const m = p.match(/^(gabarito|fonte\s*pdf|pdf|fonte|resumo|explica[cç][aã]o\s*r[aá]pida|resposta\s*r[aá]pida|an[aá]lise\s*da\s*afirma[cç][aã]o|an[aá]lise|explica[cç][aã]o\s*detalhada|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo|bizu|aten[cç][aã]o\s*[àa]\s*prova|aten[cç][aã]o|termos\s*jur[ií]dicos|termos)\s*:\s*([\s\S]*)$/i);
       if (m) {
         rotulado = true;
         const chave = CAMPO_POR_ROTULO[nn(m[1])];
@@ -14776,6 +14845,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     p.push('Explicação: ' + L(c.explicacao));
     if (L(c.analise)) p.push('Análise: ' + L(c.analise));
     if (L(c.fundamento)) p.push('Fundamento: ' + L(c.fundamento));
+    if (L(c.pdf)) p.push('PDF: ' + L(c.pdf));
     if (L(c.frase)) p.push('Frase Corrigida: ' + L(c.frase));
     if (L(c.exemplo)) p.push('Exemplo: ' + L(c.exemplo));
     if (L(c.bizu)) p.push('Bizu: ' + L(c.bizu));
@@ -14909,7 +14979,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     }
     return { gabaritoCE, explicacao, endereco, fraseCorrigida: campos.frase, exemplo: campos.exemplo,
       bizu: campos.bizu, atencao: campos.atencao, termos: campos.termos,
-      resumo: campos.resumo, analise: campos.analise };
+      resumo: campos.resumo, analise: campos.analise, pdf: campos.pdf };
   };
 
   /* ========================================================================
@@ -15097,7 +15167,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         tipo: c.tipo, frente: c.frente, gabarito: campos.gabarito || (ehCE(c.tipo) ? c.gabaritoCE : ''),
         explicacao: campos.explicacao, fundamento: campos.fundamento, frase: campos.frase, exemplo: campos.exemplo,
         bizu: campos.bizu, atencao: campos.atencao, termos: campos.termos,
-        resumo: campos.resumo, analise: campos.analise,
+        resumo: campos.resumo, analise: campos.analise, pdf: campos.pdf,
         tags: tagsUsuario
       };
       it.orig = JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags });
