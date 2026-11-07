@@ -340,6 +340,19 @@
       max-width: 62rem;
     }
 
+    .fc-termo {
+      border-bottom: 1px dotted rgba(56, 189, 248, 0.8);
+      cursor: help;
+    }
+    .fc-termo-gloss {
+      color: rgb(125, 211, 252);
+      font-size: 0.85em;
+      font-weight: 500;
+      font-style: italic;
+    }
+    html:not(.dark) .fc-termo { border-bottom-color: rgba(2, 132, 199, 0.8); }
+    html:not(.dark) .fc-termo-gloss { color: rgb(3, 105, 161); }
+
     .fc-back-lesson-body {
       max-height: 58vh;
       overflow-y: auto;
@@ -8535,6 +8548,162 @@
           </div>` : ''}`;
     }
 
+    /* ===== VERSO EM DUAS CAMADAS + TERMOS JURÍDICOS DENTRO DO TEXTO =====
+       Camada 1 (Resumo): resposta rápida + afirmação correta (se ERRADO) + Bizu.
+       Camada 2 (Completa, botão ou tecla V): explicação inteira, exemplo, atenção à prova, fundamento e termos.
+       Termos: na 1ª vez que aparecem em cada camada, ganham um "(= sinônimo)" logo depois. */
+    function listarTermosFC_(termosTxt) {
+      return String(termosTxt || '')
+        .split(/\r?\n|\s+•\s+|\s+\/\s+(?=[^:\/]{2,60}:)/)
+        .map(l => l.replace(/^[\-\*•]\s*/, '').trim())
+        .filter(Boolean)
+        .map(l => {
+          const k = l.indexOf(':');
+          if (k <= 0 || k >= 80) return null;
+          const rotulo = l.slice(0, k).trim();
+          const def = l.slice(k + 1).trim();
+          const termo = rotulo.replace(/\s*\([^)]*\)\s*/g, ' ').replace(/\s+/g, ' ').trim();
+          let gloss = def.replace(/\s*Exemplos?\s*:[\s\S]*$/i, '').trim();
+          const m = gloss.match(/^([\s\S]*?[\.;])(\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ]|$)/);
+          if (m) gloss = m[1];
+          gloss = gloss.replace(/[\.;]\s*$/, '').trim();
+          if (gloss.length > 120) gloss = gloss.slice(0, 117).replace(/\s+\S*$/, '') + '…';
+          if (gloss) gloss = gloss.charAt(0).toLowerCase() + gloss.slice(1);
+          return termo.length >= 3 && gloss ? { termo, def, gloss } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => b.termo.length - a.termo.length);
+    }
+
+    // Recebe HTML já escapado; só mexe no texto (nunca dentro de tags). "usados" evita repetir o mesmo termo.
+    function glossarHtmlFC_(html, termos, usados) {
+      if (!html || !termos || termos.length === 0) return html || '';
+      const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const blocos = [];
+      const partes = String(html).split(/(<[^>]+>)/);
+      let dentroDeGloss = 0;
+      const saida = partes.map(seg => {
+        if (seg.startsWith('<')) {
+          if (/class="fc-termo/.test(seg)) dentroDeGloss++;
+          return seg;
+        }
+        if (!seg || dentroDeGloss) return seg;
+        let txt = seg;
+        termos.forEach(t => {
+          const chave = t.termo.toLowerCase();
+          if (usados && usados.has(chave)) return;
+          let re;
+          try {
+            re = new RegExp('(?<![\\p{L}\\p{N}])(' + escRe(esc(t.termo)) + '(?:s|es)?)(?![\\p{L}\\p{N}])', 'iu');
+          } catch (e) { return; }
+          if (!re.test(txt)) return;
+          txt = txt.replace(re, (m0) => {
+            blocos.push(`<span class="fc-termo" title="${esc(t.def)}">${m0}</span><span class="fc-termo-gloss"> (= ${esc(t.gloss)})</span>`);
+            return '\u0000' + (blocos.length - 1) + '\u0000';
+          });
+          if (usados) usados.add(chave);
+        });
+        return txt;
+      }).join('');
+      return saida.replace(/\u0000(\d+)\u0000/g, (_, i) => blocos[Number(i)]);
+    }
+
+    function htmlFrenteComTermosFC_(c, termos, usados) {
+      let h;
+      if (/\{\{c\d+::/i.test(c.frente)) h = formatarTextoCloze_(c.frente, true);
+      else h = (typeof window.fcxAplicarMarkupEscapado === 'function') ? window.fcxAplicarMarkupEscapado(esc(c.frente)) : esc(c.frente);
+      return glossarHtmlFC_(h, termos, usados);
+    }
+
+    function primeiraLinhaExplicacaoFC_(txt) {
+      const linhas = String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (linhas.length === 0) return '';
+      return linhas[0].replace(/^(\-|\•|\*|\d+[\.\)])\s+/, '');
+    }
+
+    function montarHtmlVersoDuasCamadasFC_(d, gabarito, termos, usadosResumo) {
+      const usadosCompleto = new Set();
+      const G = (html, usados) => glossarHtmlFC_(html, termos, usados);
+      const rapida = primeiraLinhaExplicacaoFC_(d.explicacao);
+      const mostrarCorreta = gabarito === 'ERRADO' && d.fraseCorrigida;
+
+      const resumo = `
+        <div class="fc-camada-resumo space-y-2.5">
+          ${rapida ? `
+            <div class="p-3.5 rounded-xl bg-slate-950 border border-indigo-800/70 space-y-1">
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Resposta rápida:</span>
+              <div class="text-sm md:text-base">${G(formatarTextoDidaticoEmAula_(rapida), usadosResumo)}</div>
+            </div>` : ''}
+          ${mostrarCorreta ? `
+            <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/80 space-y-1">
+              <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Afirmação correta:</span>
+              <div class="text-sm md:text-base font-semibold text-slate-100">${G(formatarTextoDidaticoEmAula_(d.fraseCorrigida), usadosResumo)}</div>
+            </div>` : ''}
+          ${d.bizu ? `
+            <div class="p-3.5 rounded-xl bg-violet-950/30 border border-violet-800/80 space-y-1">
+              <span class="text-[10px] font-extrabold uppercase text-violet-300 block">Bizu:</span>
+              <div class="text-sm md:text-base font-semibold text-slate-100">${G(formatarTextoDidaticoEmAula_(d.bizu), usadosResumo)}</div>
+            </div>` : ''}
+        </div>`;
+
+      const itensExtra = [d.exemplo && 'Exemplo', d.atencao && 'Atenção à prova', d.endereco && 'Fundamento', termos.length && 'Termos'].filter(Boolean);
+      const listaTermos = termos.length ? `
+        <div class="p-3 rounded-xl bg-sky-950/20 border border-sky-900/70 space-y-1">
+          <span class="text-[10px] font-extrabold uppercase text-sky-400 block">Termos Jurídicos (leia assim):</span>
+          <ul class="space-y-1 text-xs md:text-sm text-slate-200">
+            ${termos.slice().sort((a, b) => a.termo.localeCompare(b.termo, 'pt-BR')).map(t => `<li><span class="font-bold text-sky-300">${esc(t.termo)}</span> = ${esc(t.def)}</li>`).join('')}
+          </ul>
+        </div>` : '';
+
+      const completo = `
+        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-400 block">Explicação completa:</span>
+          <div class="space-y-1.5 text-sm md:text-base">${G(formatarTextoDidaticoEmAula_(d.explicacao), usadosCompleto)}</div>
+        </div>
+        ${d.exemplo ? `
+          <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/80 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-amber-400 block">Exemplo:</span>
+            <div class="text-xs md:text-sm text-slate-200 space-y-1">${G(formatarTextoDidaticoEmAula_(d.exemplo), usadosCompleto)}</div>
+          </div>` : ''}
+        ${d.atencao ? `
+          <div class="p-3.5 rounded-xl bg-rose-950/30 border border-rose-800/80 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-rose-300 block">Atenção à Prova:</span>
+            <div class="text-xs md:text-sm text-slate-200">${G(formatarTextoDidaticoEmAula_(d.atencao), usadosCompleto)}</div>
+          </div>` : ''}
+        ${d.fraseCorrigida && !mostrarCorreta ? `
+          <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-800/80 space-y-1">
+            <span class="text-[10px] font-extrabold uppercase text-emerald-400 block">Frase Corrigida:</span>
+            <div class="text-xs md:text-sm font-semibold text-slate-100">${G(formatarTextoDidaticoEmAula_(d.fraseCorrigida), usadosCompleto)}</div>
+          </div>` : ''}
+        ${d.endereco ? `
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <span class="text-[10px] font-extrabold uppercase text-indigo-400">Fundamento:</span>
+            <span class="text-xs md:text-sm font-bold text-white">${esc(d.endereco)}</span>
+          </div>` : ''}
+        ${listaTermos}`;
+
+      return `
+        ${resumo}
+        <button type="button" id="fcBtnVersoCompleto" onclick="alternarVersoCompletoFC()"
+          class="w-full py-2 px-3 rounded-xl border border-indigo-700/70 bg-indigo-950/40 hover:bg-indigo-900/50 text-xs font-extrabold text-indigo-200 transition flex items-center justify-center gap-2">
+          <span id="fcBtnVersoCompletoTxt">Não entendi? Ver explicação completa ▾</span>
+          <span class="text-[10px] font-normal opacity-80 hidden sm:inline">${itensExtra.length ? '(' + itensExtra.join(' · ') + ')' : ''} [V]</span>
+        </button>
+        <div id="fcCamadaCompleta" class="hidden space-y-2.5">${completo}</div>`;
+    }
+
+    function alternarVersoCompletoFC(forcar) {
+      const box = document.getElementById('fcCamadaCompleta');
+      if (!box) return;
+      const abrir = typeof forcar === 'boolean' ? forcar : box.classList.contains('hidden');
+      box.classList.toggle('hidden', !abrir);
+      const t = document.getElementById('fcBtnVersoCompletoTxt');
+      if (t) t.textContent = abrir ? 'Fechar explicação completa ▴' : 'Não entendi? Ver explicação completa ▾';
+      if (abrir) {
+        try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e) {}
+      }
+    }
+
     // Painel lateral "Termos Jurídicos": cada termo numa linha ("Termo: definição"), ou separados por " • ".
     function renderizarPainelTermosFC_(termosTxt, aberto) {
       const painel = document.getElementById('fcPainelTermos');
@@ -8686,6 +8855,14 @@
         ` : ''}
         ${montarHtmlBizuAtencaoFC_(dados)}
       `;
+      try {
+        const termosLS = listarTermosFC_(dados.termos);
+        if (termosLS.length) {
+          const usadosLS = new Set();
+          elFrente.innerHTML = htmlFrenteComTermosFC_(c, termosLS, usadosLS);
+          versoTextoEl.innerHTML = glossarHtmlFC_(versoTextoEl.innerHTML, termosLS, usadosLS);
+        }
+      } catch (e) { /* mantém o verso sem os sinônimos */ }
       renderizarPainelTermosFC_(dados.termos, true);
 
       document.getElementById('fcBackLessonContainer').classList.remove('hidden');
@@ -8742,7 +8919,15 @@
       `;
 
       const versoTextoEl = document.getElementById('fcCardVersoTexto');
-      versoTextoEl.innerHTML = montarHtmlVersoDidaticoFC_(dadosCE);
+      try {
+        const termosCE = listarTermosFC_(dadosCE.termos);
+        const usadosResumo = new Set();
+        elFrente.innerHTML = htmlFrenteComTermosFC_(c, termosCE, usadosResumo);
+        versoTextoEl.innerHTML = montarHtmlVersoDuasCamadasFC_(dadosCE, gabaritoReal, termosCE, usadosResumo);
+      } catch (e) {
+        console.warn('Verso em camadas indisponível, usando o verso completo.', e);
+        versoTextoEl.innerHTML = montarHtmlVersoDidaticoFC_(dadosCE);
+      }
       renderizarPainelTermosFC_(dadosCE.termos, true);
 
       document.getElementById('fcBackLessonContainer').classList.remove('hidden');
@@ -8902,6 +9087,9 @@
       } else if ((keyUpper === 'C' || keyUpper === 'E') && !FC_SESSAO.versoRevelado && isCE) {
         ev.preventDefault();
         julgarCardCertoErradoFC(keyUpper === 'C' ? 'CERTO' : 'ERRADO');
+      } else if (keyUpper === 'V' && FC_SESSAO.versoRevelado) {
+        ev.preventDefault();
+        alternarVersoCompletoFC();
       } else if (['1', '2', '3', '4'].includes(ev.key) && FC_SESSAO.versoRevelado) {
         ev.preventDefault();
         const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'BOM', 4: 'FACIL' };
