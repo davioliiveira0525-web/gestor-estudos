@@ -3938,14 +3938,15 @@
       if (reorganizar) {
         const filaUnificada = pendentes.slice();
 
+        /* REGRA: reorganizar por atraso SÓ MUDA AS DATAS. A sequência já programada é mantida
+           (o que estava atrasado/de hoje continua na frente, na mesma ordem) e nenhuma matéria
+           nova é puxada para o lugar das que você já estava fazendo. */
         filaUnificada.sort((a, b) => {
-          const aAtrasado = a.resolvidasTotal > 0 && a.dataPrevistaAtual < hojeYMD;
-          const bAtrasado = b.resolvidasTotal > 0 && b.dataPrevistaAtual < hojeYMD;
-          if (aAtrasado !== bAtrasado) return aAtrasado ? -1 : 1;
+          if (Boolean(a.antecipadaHoje) !== Boolean(b.antecipadaHoje)) return a.antecipadaHoje ? -1 : 1;
 
-          const aHoje = a.dataPrevistaAtual === hojeYMD;
-          const bHoje = b.dataPrevistaAtual === hojeYMD;
-          if (aHoje !== bHoje) return aHoje ? -1 : 1;
+          const dA = a.dataPrevistaAtual || a.dataPrevistaOriginal || '';
+          const dB = b.dataPrevistaAtual || b.dataPrevistaOriginal || '';
+          if (dA !== dB) return dA.localeCompare(dB);
 
           if ((a.prioridadeOrdem || 0) !== (b.prioridadeOrdem || 0)) {
             return (a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0);
@@ -3962,19 +3963,22 @@
           return String(a.idTopico).localeCompare(String(b.idTopico));
         });
 
+        let ultimaDataFila = dataBaseReorganizacao;
         filaUnificada.forEach(rev => {
+          const eraAntecipada = Boolean(rev.antecipadaHoje);
           rev.antecipadaHoje = false;
-          const eraAtrasado = rev.resolvidasTotal > 0 && rev.dataPrevistaAtual < hojeYMD;
+          const eraAtrasado = Boolean(rev.dataPrevistaAtual) && rev.dataPrevistaAtual < hojeYMD;
           const eraHoje = rev.dataPrevistaAtual === hojeYMD;
 
-          let dataMinima = rev.dataPrevistaOriginal;
-          if (eraAtrasado || eraHoje || corrigirDeficit || dataMinima < dataBaseReorganizacao) {
+          let dataMinima = rev.dataPrevistaAtual || rev.dataPrevistaOriginal || dataBaseReorganizacao;
+          if (eraAntecipada || eraAtrasado || eraHoje || corrigirDeficit || dataMinima < dataBaseReorganizacao) {
             dataMinima = dataBaseReorganizacao;
-          } else if (rev.resolvidasTotal === 0 && dataMinima < amanhaYMD && !corrigirDeficit) {
-            dataMinima = amanhaYMD;
           }
+          /* mantém a ordem: ninguém passa à frente de quem já estava antes na fila */
+          if (dataMinima < ultimaDataFila) dataMinima = ultimaDataFila;
 
           const dataAlocada = encontrarProximoDiaComVaga(dataMinima, true);
+          ultimaDataFila = dataAlocada;
           alocacaoPorData[dataAlocada] = (alocacaoPorData[dataAlocada] || 0) + 1;
           rev.dataPrevistaAtual = dataAlocada;
           rev.status = dataAlocada === hojeYMD ? 'Para Hoje' : 'Programada';
@@ -4390,9 +4394,6 @@
       const hojeYMD = formatarDataYMD_(new Date());
       const amanhaYMD = somarDiasYMD_(hojeYMD, 1);
 
-      if (opts.reorganizarFila) {
-        await salvarValorConfigDB_('Antecipados_Hoje', '[]');
-      }
 
       const [resCfg, resMat, resTop, resQue, resSes, resRev] = await Promise.all([
         supabaseClient.from('configuracoes').select('*'),
@@ -4431,7 +4432,7 @@
       if (diasEstudoArr.length === 0) diasEstudoArr = [1, 2, 3, 4, 5, 0];
 
       let antecipadosHojeList = [];
-      if (!opts.reorganizarFila) {
+      {
         try {
           antecipadosHojeList = JSON.parse(config.Antecipados_Hoje || '[]');
           if (!Array.isArray(antecipadosHojeList)) antecipadosHojeList = [];
@@ -4906,7 +4907,7 @@
         });
       });
 
-      if (antecipadosHojeList.length > 0 && !opts.reorganizarFila) {
+      if (antecipadosHojeList.length > 0) {
         antecipadosHojeList.forEach(ant => {
           const revPend = revisoesPendentes.find(r => r.idTopico === ant.idTopico);
           if (revPend) {
@@ -17592,9 +17593,19 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   /* tópico ainda em estudo e sem histórico de questões fica fora da bateria (quem já resolveu questões continua nela) */
   /* ---- bateria FIXADA para um dia (referência definida pelo usuário): exatamente estes tópicos, nada além ---- */
   const FIXOS_REFERENCIA = { '2026-11-06': [['teoria do crime', '^teoria do crime'], ['organizacao do estado', 'organizacao do estado'], ['lei dos crimes hediondos', 'hediondos|8\\.?072|8\\.?702']] };
-  function fixosDoDia(dia) {
+  /* REGRA DE CONTINUIDADE: a bateria fixada de um dia que não foi feita CONTINUA nos dias seguintes
+     (atraso só muda a data; não entra matéria nova no lugar). Cada tópico sai da bateria fixada
+     somente quando a bateria dele é registrada (revisão concluída a partir da data fixada). */
+  function fixosDoDia(dia, concluidasRef) {
     if (!ciclo.fixos) { ciclo.fixos = JSON.parse(JSON.stringify(FIXOS_REFERENCIA)); persistirCiclo(); }
-    return (ciclo.fixos[dia] || []).map((x) => ({ nome: x[0], re: new RegExp(x[1]) }));
+    const mapear = (lista) => (lista || []).map((x) => ({ nome: x[0], re: new RegExp(x[1]) }));
+    if (ciclo.fixos[dia]) return mapear(ciclo.fixos[dia]);
+    const anteriores = Object.keys(ciclo.fixos).filter((d) => d < dia).sort();
+    const ult = anteriores[anteriores.length - 1];
+    if (!ult) return [];
+    let concl = concluidasRef;
+    if (!Array.isArray(concl)) concl = ((ESTADO && ESTADO.revisoes) || []).filter((r) => r.status === 'Concluída' || r.status === 'Concluida');
+    return mapear(ciclo.fixos[ult]).filter((f) => !concl.some((c) => c && String(c.dataConclusao || '') >= ult && f.re.test(nn(c.topico))));
   }
   const casaFixo = (fx, nome) => { const n = nn(nome); return fx.some((f) => f.re.test(n)); };
   window.__FCX_FORA_BATERIA__ = (id, nome, resolvidas) => {
@@ -18565,8 +18576,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     aviso('Padronização concluída: ' + n.ren + ' renomeado(s), ' + n.mescl + ' duplicado(s) mesclado(s), ' + n.imp + ' histórico(s) de questões recuperado(s), ' + n.seca + ' de Lei Seca fora da bateria, ' + n.criados + ' criado(s).');
   };
   /* realoca a bateria do dia: os tópicos fixados ficam hoje; o restante vai para os próximos dias de estudo (limite diário respeitado) */
-  function aplicarBateriaFixada(pend, limite, dias, hoje) {
-    const fx = fixosDoDia(hoje);
+  function aplicarBateriaFixada(pend, limite, dias, hoje, concluidas) {
+    const fx = fixosDoDia(hoje, concluidas);
     if (!fx.length || !Array.isArray(pend)) return;
     const fixados = pend.filter((r) => casaFixo(fx, r.topico));
     fixados.forEach((r) => { r.dataPrevistaAtual = hoje; r.status = 'Para Hoje'; r.antecipadaHoje = true; r.motivoAgendamentoData = 'Bateria de hoje definida por você (referência de organização).'; });
@@ -18585,7 +18596,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
   envolver('redistribuirRevisoesPorCapacidade_', (orig, ...args) => {
     const r = orig(...args);
-    try { aplicarBateriaFixada(args[0], args[3], args[4], args[5]); } catch (e) { /* ignora */ }
+    try { aplicarBateriaFixada(args[0], args[3], args[4], args[5], args[1]); } catch (e) { /* ignora */ }
     return r;
   });
 
