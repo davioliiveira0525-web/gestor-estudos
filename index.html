@@ -17177,6 +17177,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const t = (ciclo.trilha && ciclo.trilha.texto) ? parseTrilha(ciclo.trilha.texto) : TRILHA_PADRAO;
     const vistos = new Set();
     return t.dd.map(([sem, raw], ordem) => {
+      /* erro de digitação da trilha do curso: Crimes Hediondos é a Lei 8.072/90 (evita criar tópico duplicado "8.702") */
+      raw = String(raw || '').replace(/(HEDIONDOS\s*[-–]\s*LEI\s*)8\.?702/i, '$18.072');
       const { materiaRaw, topicoRaw } = dividirLinhaDD('DD - ' + raw);
       return { sem, ordem, materiaRaw, topicoRaw, nome: nomeBonito(topicoRaw) };
     }).filter((e) => { const k = e.sem + '|' + nn(e.materiaRaw) + '|' + nn(e.topicoRaw); if (vistos.has(k)) return false; vistos.add(k); return true; });
