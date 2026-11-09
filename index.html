@@ -24,6 +24,840 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Supabase JS v2 CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- ==========================================================================
+       SINCRONIZAÇÃO ENTRE DISPOSITIVOS + LOGIN (RLS)
+       - fila offline persistente (nada se perde sem internet)
+       - confirmação de gravação e indicador de status
+       - documentos de progresso (ciclo, telemetria, registros) mesclados por item, com controle de versão
+       - outros aparelhos se atualizam sozinhos (verificação de alterações)
+       ========================================================================== -->
+  <style>
+    #grLoginOverlay{position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,.96);display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit}
+    #grLoginOverlay .grl-box{width:100%;max-width:380px;background:#0f172a;border:1px solid #334155;border-radius:16px;padding:22px;color:#e2e8f0;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+    #grLoginOverlay h2{font-size:16px;font-weight:800;margin:0 0 4px}
+    #grLoginOverlay p{font-size:12px;color:#94a3b8;margin:0 0 14px;line-height:1.45}
+    #grLoginOverlay label{display:block;font-size:11px;font-weight:700;color:#cbd5e1;margin:10px 0 4px}
+    #grLoginOverlay input{width:100%;box-sizing:border-box;background:#020617;border:1px solid #334155;border-radius:10px;padding:9px 11px;color:#f1f5f9;font-size:14px}
+    #grLoginOverlay .grl-btn{width:100%;margin-top:14px;padding:10px;border-radius:10px;font-weight:800;font-size:13px;border:0;cursor:pointer;background:#4f46e5;color:#fff}
+    #grLoginOverlay .grl-btn:disabled{opacity:.6;cursor:wait}
+    #grLoginOverlay .grl-links{display:flex;justify-content:space-between;margin-top:12px;font-size:11px}
+    #grLoginOverlay .grl-links a{color:#a5b4fc;cursor:pointer;text-decoration:underline}
+    #grLoginOverlay .grl-msg{margin-top:12px;font-size:12px;line-height:1.4;padding:8px 10px;border-radius:8px;display:none}
+    #grLoginOverlay .grl-msg.err{display:block;background:#4c0519;color:#fecdd3;border:1px solid #9f1239}
+    #grLoginOverlay .grl-msg.ok{display:block;background:#052e16;color:#bbf7d0;border:1px solid #166534}
+    #grSyncPainel{position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+    #grSyncPainel .grs-box{width:100%;max-width:440px;background:#0f172a;border:1px solid #334155;border-radius:14px;padding:18px;color:#e2e8f0;font-size:12px}
+    #grSyncPainel h3{font-size:14px;font-weight:800;margin:0 0 10px}
+    #grSyncPainel .grs-lin{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #1e293b}
+    #grSyncPainel .grs-lin span:last-child{font-weight:700;text-align:right}
+    #grSyncPainel .grs-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+    #grSyncPainel button{padding:7px 10px;border-radius:8px;font-weight:700;border:1px solid #334155;background:#1e293b;color:#e2e8f0;cursor:pointer}
+    #grSyncPainel button.pri{background:#4f46e5;border-color:#4f46e5;color:#fff}
+    #grSyncPainel button.dan{background:#4c0519;border-color:#9f1239;color:#fecdd3}
+    #grSyncPainel pre{max-height:140px;overflow:auto;background:#020617;border-radius:8px;padding:8px;font-size:10px;white-space:pre-wrap;word-break:break-all}
+  </style>
+  <script>
+  (function () {
+    'use strict';
+
+    /* ---------------- utilidades ---------------- */
+    const LS = {
+      get(k, pad) { try { const v = localStorage.getItem(k); return v == null ? pad : JSON.parse(v); } catch (e) { return pad; } },
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { console.warn('[SYNC] sem espaço local:', e); return false; } },
+      raw(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      setRaw(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+      del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignora */ } }
+    };
+    const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); }));
+    const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+    const json = (v) => { try { return JSON.stringify(v); } catch (e) { return ''; } };
+    const OWNER_EMAIL = 'davioliiveira0525@gmail.com';
+
+    const K_DISP = 'GR_SYNC_DISPOSITIVO_ID';
+    const K_FILA = 'GR_SYNC_FILA_V1';
+    const K_FALHAS = 'GR_SYNC_FALHAS_V1';
+    const K_UID = 'GR_SYNC_UID';
+    const K_ULT_OK = 'GR_SYNC_ULTIMA_CONFIRMACAO';
+    let dispositivoId = LS.raw(K_DISP);
+    if (!dispositivoId) { dispositivoId = uuid(); LS.setRaw(K_DISP, dispositivoId); }
+
+    const fetchNativo = window.fetch.bind(window);
+    let cliente = null;
+    let uidAtual = null;
+    let emailAtual = '';
+    let pronto = false;           /* login concluído e documentos puxados */
+    let redeOk = navigator.onLine;
+    let emEnvio = false;
+    let ultimoErro = '';
+    let desvioRelogio = 0;        /* servidor - local (ms) */
+
+    /* ---------------- status / indicador ---------------- */
+    const ouvintes = [];
+    function estado() {
+      const fila = LS.get(K_FILA, []);
+      const falhas = LS.get(K_FALHAS, []);
+      const docsSujos = DOCS.sujos().length;
+      return { online: redeOk && navigator.onLine, pendentes: fila.length + docsSujos, falhas: falhas.length, emEnvio, ultimoOk: LS.raw(K_ULT_OK), ultimoErro, email: emailAtual, dispositivo: dispositivoId };
+    }
+    function atualizarIndicador() {
+      const b = document.getElementById('statusConexaoBadge');
+      if (!b) return;
+      const s = estado();
+      let txt, cls;
+      if (!uidAtual) { txt = 'Entrar'; cls = 'bg-amber-950 text-amber-300 border-amber-700'; }
+      else if (s.falhas > 0) { txt = '✕ ' + s.falhas + ' falha(s) — ver'; cls = 'bg-rose-950 text-rose-300 border-rose-700'; }
+      else if (!s.online) { txt = '⚠ Offline' + (s.pendentes ? ' · ' + s.pendentes + ' pendente(s) salvo(s) no aparelho' : ''); cls = 'bg-amber-950 text-amber-300 border-amber-700'; }
+      else if (s.pendentes > 0 || s.emEnvio) { txt = '↻ Salvando' + (s.pendentes ? ' (' + s.pendentes + ')' : '') + '…'; cls = 'bg-sky-950 text-sky-300 border-sky-700'; }
+      else { const h = s.ultimoOk ? new Date(Number(s.ultimoOk)).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''; txt = '✓ Sincronizado' + (h ? ' ' + h : ''); cls = 'bg-emerald-950 text-emerald-400 border-emerald-700/60'; }
+      b.textContent = txt;
+      b.className = 'cursor-pointer px-2 py-0.5 rounded text-[10px] font-bold border ' + cls;
+      b.title = 'Status da sincronização (clique para detalhes)';
+      b.onclick = abrirPainel;
+      ouvintes.forEach((f) => { try { f(s); } catch (e) { /* ignora */ } });
+    }
+    function confirmarGravacao() { LS.setRaw(K_ULT_OK, String(Date.now())); ultimoErro = ''; }
+
+    /* ---------------- cache de leitura (IndexedDB) para uso offline ---------------- */
+    let dbP = null;
+    function db() {
+      if (dbP) return dbP;
+      dbP = new Promise((res) => {
+        try {
+          const r = indexedDB.open('gr-sync', 1);
+          r.onupgradeneeded = () => r.result.createObjectStore('get');
+          r.onsuccess = () => res(r.result);
+          r.onerror = () => res(null);
+        } catch (e) { res(null); }
+      });
+      return dbP;
+    }
+    async function cacheSet(k, v) { const d = await db(); if (!d) return; try { d.transaction('get', 'readwrite').objectStore('get').put(v, k); } catch (e) { /* ignora */ } }
+    async function cacheGet(k) { const d = await db(); if (!d) return null; return new Promise((res) => { try { const q = d.transaction('get').objectStore('get').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); }
+    async function cacheLimpar() { const d = await db(); if (!d) return; try { d.transaction('get', 'readwrite').objectStore('get').clear(); } catch (e) { /* ignora */ } }
+
+    /* ---------------- interpretação de URLs do PostgREST ---------------- */
+    function partesUrl(url) {
+      const u = new URL(url, location.href);
+      const m = u.pathname.match(/\/rest\/v1\/(rpc\/)?([^/?]+)/);
+      return { u, rpc: Boolean(m && m[1]), tabela: m ? m[2] : '', caminho: u.pathname + u.search };
+    }
+    /* chaves passaram a ser por usuário: (user_id, id) / (user_id, chave) */
+    function reescrever(url) {
+      const p = partesUrl(url);
+      const oc = p.u.searchParams.get('on_conflict');
+      if (oc && !/user_id/.test(oc)) { p.u.searchParams.set('on_conflict', 'user_id,' + oc); }
+      return p.u.toString();
+    }
+    function filtrosDe(url) {
+      const p = partesUrl(url);
+      const f = [];
+      let suportado = true;
+      p.u.searchParams.forEach((v, k) => {
+        if (['select', 'order', 'on_conflict', 'limit', 'offset', 'columns'].includes(k)) return;
+        let mm;
+        if ((mm = v.match(/^eq\.(.*)$/))) f.push({ c: k, op: 'eq', v: mm[1] });
+        else if ((mm = v.match(/^neq\.(.*)$/))) f.push({ c: k, op: 'neq', v: mm[1] });
+        else if ((mm = v.match(/^in\.\((.*)\)$/))) f.push({ c: k, op: 'in', v: mm[1].split(',').map((x) => x.replace(/^"|"$/g, '')) });
+        else suportado = false;
+      });
+      return { filtros: f, suportado };
+    }
+    const casa = (row, f) => f.every((x) => { const val = row[x.c] == null ? 'null' : String(row[x.c]); return x.op === 'eq' ? val === x.v : x.op === 'neq' ? val !== x.v : x.v.includes(val); });
+    const chavePk = (tabela) => (tabela === 'configuracoes' ? 'chave' : 'id');
+
+    /* aplica operações ainda não enviadas sobre uma leitura em cache (mostra o que foi feito offline) */
+    function aplicarFilaNaLeitura(tabela, linhas, urlLeitura) {
+      if (!Array.isArray(linhas)) return linhas;
+      const fila = LS.get(K_FILA, []).filter((o) => o.tabela === tabela && o.uid === uidAtual);
+      if (!fila.length) return linhas;
+      const pk = chavePk(tabela);
+      let res = linhas.slice();
+      fila.forEach((o) => {
+        const { filtros, suportado } = filtrosDe(o.url);
+        if (!suportado) return;
+        if (o.metodo === 'POST') {
+          let corpo; try { corpo = JSON.parse(o.corpo || 'null'); } catch (e) { corpo = null; }
+          (Array.isArray(corpo) ? corpo : corpo ? [corpo] : []).forEach((nova) => {
+            const i = res.findIndex((r) => r[pk] === nova[pk]);
+            if (i >= 0) res[i] = Object.assign({}, res[i], nova); else res.push(nova);
+          });
+        } else if (o.metodo === 'PATCH') {
+          let corpo; try { corpo = JSON.parse(o.corpo || '{}'); } catch (e) { corpo = {}; }
+          res = res.map((r) => (casa(r, filtros) ? Object.assign({}, r, corpo) : r));
+        } else if (o.metodo === 'DELETE') {
+          res = res.filter((r) => !casa(r, filtros));
+        }
+      });
+      const { filtros: fl, suportado: sl } = filtrosDe(urlLeitura);
+      return sl ? res.filter((r) => casa(r, fl)) : res;
+    }
+
+    /* ---------------- envio com tempo limite ---------------- */
+    async function fetchComLimite(url, init, ms) {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), ms);
+      const sinalOrig = init && init.signal;
+      if (sinalOrig) { if (sinalOrig.aborted) ctl.abort(); else sinalOrig.addEventListener('abort', () => ctl.abort()); }
+      try {
+        const r = await fetchNativo(url, Object.assign({}, init, { signal: ctl.signal }));
+        const dh = r.headers.get('date');
+        if (dh) { const ds = Date.parse(dh); if (!isNaN(ds)) desvioRelogio = ds - Date.now(); }
+        redeOk = true;
+        return r;
+      } catch (e) {
+        if (!(sinalOrig && sinalOrig.aborted)) redeOk = false;
+        throw e;
+      } finally { clearTimeout(t); }
+    }
+    const transitorio = (st) => st === 0 || st === 408 || st === 425 || st === 429 || st >= 500;
+
+    function respostaSintetica(op) {
+      const rep = /return=representation/.test(op.prefer || '');
+      if (rep) {
+        let corpo; try { corpo = JSON.parse(op.corpo || '[]'); } catch (e) { corpo = []; }
+        return new Response(JSON.stringify(Array.isArray(corpo) ? corpo : [corpo]), { status: op.metodo === 'POST' ? 201 : 200, headers: { 'Content-Type': 'application/json', 'x-gr-sync': 'na-fila' } });
+      }
+      return new Response(null, { status: op.metodo === 'POST' ? 201 : 204, headers: { 'x-gr-sync': 'na-fila' } });
+    }
+
+    async function cabecalhosAtuais(base) {
+      const h = new Headers(base || {});
+      try {
+        const { data } = await cliente.auth.getSession();
+        const tk = data && data.session && data.session.access_token;
+        if (tk) h.set('Authorization', 'Bearer ' + tk);
+      } catch (e) { /* mantém */ }
+      h.set('x-dispositivo', dispositivoId);
+      return h;
+    }
+
+    /* ---------------- fila persistente de gravações ---------------- */
+    function enfileirar(op) {
+      const fila = LS.get(K_FILA, []);
+      fila.push(op);
+      if (!LS.set(K_FILA, fila)) { ultimoErro = 'Sem espaço no aparelho para a fila offline.'; }
+      atualizarIndicador();
+      agendarEnvio(300);
+    }
+    let timerEnvio = null;
+    let atrasoEnvio = 2000;
+    function agendarEnvio(ms) {
+      if (timerEnvio) clearTimeout(timerEnvio);
+      timerEnvio = setTimeout(() => { timerEnvio = null; enviarFila(); }, ms == null ? atrasoEnvio : ms);
+    }
+    let promessaEnvio = null;
+    function enviarFila() {
+      if (promessaEnvio) return promessaEnvio;
+      if (!cliente || !uidAtual) return Promise.resolve();
+      promessaEnvio = (async () => {
+        emEnvio = true; atualizarIndicador();
+        try {
+          for (;;) {
+            const fila = LS.get(K_FILA, []);
+            if (!fila.length) { atrasoEnvio = 2000; break; }
+            const op = fila[0];
+            const remover = () => { const f = LS.get(K_FILA, []); if (f.length && f[0].id === op.id) { f.shift(); LS.set(K_FILA, f); } };
+            if (op.uid !== uidAtual) { moverParaFalhas(op, 'Gravação de outra conta neste aparelho'); remover(); continue; }
+            let r;
+            try {
+              const h = await cabecalhosAtuais(op.cabecalhos);
+              r = await fetchComLimite(op.url, { method: op.metodo, headers: h, body: op.corpo == null ? undefined : op.corpo }, 20000);
+            } catch (e) {
+              ultimoErro = 'Sem conexão — tentando de novo automaticamente.';
+              atrasoEnvio = Math.min(60000, Math.round(atrasoEnvio * 1.8));
+              agendarEnvio(); break;
+            }
+            if (r.ok) { remover(); confirmarGravacao(); continue; }
+            const txt = await r.text().catch(() => '');
+            if (r.status === 409 && op.metodo === 'POST') { remover(); confirmarGravacao(); continue; } /* já gravado antes (evita duplicidade) */
+            if (r.status === 401) {
+              try { await cliente.auth.refreshSession(); } catch (e) { /* ignora */ }
+              atrasoEnvio = Math.min(60000, Math.round(atrasoEnvio * 1.8)); agendarEnvio(); break;
+            }
+            if (transitorio(r.status)) { ultimoErro = 'Servidor indisponível (' + r.status + '), nova tentativa em instantes.'; atrasoEnvio = Math.min(60000, Math.round(atrasoEnvio * 1.8)); agendarEnvio(); break; }
+            moverParaFalhas(op, 'HTTP ' + r.status + ' ' + txt.slice(0, 300)); remover();
+          }
+        } finally {
+          emEnvio = false; atualizarIndicador();
+        }
+      })();
+      const estaPromessa = promessaEnvio;
+      estaPromessa.finally(() => { if (promessaEnvio === estaPromessa) promessaEnvio = null; }).catch(() => {});
+      return estaPromessa;
+    }
+    function moverParaFalhas(op, motivo) {
+      const f = LS.get(K_FALHAS, []);
+      f.push(Object.assign({}, op, { motivo, em: Date.now() }));
+      LS.set(K_FALHAS, f.slice(-200));
+      ultimoErro = motivo;
+      console.error('[SYNC] gravação recusada pelo servidor:', motivo, op);
+    }
+
+    /* ---------------- fetch usado pelo cliente Supabase ---------------- */
+    async function fetchSync(input, init) {
+      init = init || {};
+      const urlOrig = typeof input === 'string' ? input : (input && input.url) || String(input);
+      if (!/\/rest\/v1\//.test(urlOrig)) return fetchNativo(input, init);
+      const metodo = String(init.method || (input && input.method) || 'GET').toUpperCase();
+      const url = reescrever(urlOrig);
+      const p = partesUrl(url);
+      const hdr = new Headers(init.headers || {});
+      hdr.set('x-dispositivo', dispositivoId);
+
+      if (metodo === 'GET' || metodo === 'HEAD' || p.rpc) {
+        if (metodo === 'GET' && !p.rpc) {
+          /* garante a ordem: gravações pendentes vão antes da leitura */
+          if (LS.get(K_FILA, []).length && navigator.onLine) { try { await Promise.race([enviarFila(), esperar(8000)]); } catch (e) { /* ignora */ } }
+          const ck = (uidAtual || '-') + '|' + p.caminho;
+          try {
+            const r = await fetchComLimite(url, Object.assign({}, init, { headers: hdr }), 25000);
+            if (r.ok) { const c = r.clone(); c.text().then((t) => cacheSet(ck, { t, ct: r.headers.get('content-type') || 'application/json', cr: r.headers.get('content-range') || '' })).catch(() => {}); }
+            atualizarIndicador();
+            if (r.ok && LS.get(K_FILA, []).some((o) => o.tabela === p.tabela && o.uid === uidAtual)) {
+              const t = await r.text();
+              let linhas; try { linhas = JSON.parse(t); } catch (e) { return new Response(t, { status: r.status, headers: r.headers }); }
+              return new Response(JSON.stringify(aplicarFilaNaLeitura(p.tabela, linhas, url)), { status: r.status, headers: r.headers });
+            }
+            return r;
+          } catch (e) {
+            atualizarIndicador();
+            const c = await cacheGet(ck);
+            if (c) {
+              let corpo = c.t;
+              try { corpo = JSON.stringify(aplicarFilaNaLeitura(p.tabela, JSON.parse(c.t), url)); } catch (er) { /* usa como está */ }
+              const h = { 'Content-Type': c.ct, 'x-gr-sync': 'cache-offline' }; if (c.cr) h['Content-Range'] = c.cr;
+              return new Response(corpo, { status: 200, headers: h });
+            }
+            throw e;
+          }
+        }
+        const r = await fetchComLimite(url, Object.assign({}, init, { headers: hdr }), 25000);
+        atualizarIndicador();
+        return r;
+      }
+
+      /* gravação (POST/PATCH/DELETE): envia agora ou guarda na fila */
+      const cab = {};
+      hdr.forEach((v, k) => { if (k.toLowerCase() !== 'authorization') cab[k] = v; });
+      const op = { id: uuid(), uid: uidAtual, tabela: p.tabela, url, metodo, corpo: typeof init.body === 'string' ? init.body : (init.body == null ? null : String(init.body)), prefer: hdr.get('prefer') || '', cabecalhos: cab, criadoEm: Date.now() };
+      if (!uidAtual) return fetchComLimite(url, Object.assign({}, init, { headers: hdr }), 20000);
+      if (LS.get(K_FILA, []).length || !navigator.onLine) { enfileirar(op); return respostaSintetica(op); }
+      try {
+        emEnvio = true; atualizarIndicador();
+        const r = await fetchComLimite(url, Object.assign({}, init, { headers: hdr }), 20000);
+        if (r.ok) { confirmarGravacao(); return r; }
+        if (transitorio(r.status) || r.status === 401) { if (r.status === 401) { try { await cliente.auth.refreshSession(); } catch (e) { /* ignora */ } } enfileirar(op); return respostaSintetica(op); }
+        const txt = await r.clone().text().catch(() => '');
+        ultimoErro = 'Gravação recusada: HTTP ' + r.status + ' ' + txt.slice(0, 200);
+        console.error('[SYNC]', ultimoErro, op);
+        return r;
+      } catch (e) {
+        enfileirar(op);
+        return respostaSintetica(op);
+      } finally { emEnvio = false; atualizarIndicador(); }
+    }
+
+    /* =====================================================================
+     * DOCUMENTOS DE PROGRESSO (guardados no aparelho e na nuvem)
+     * Mescla por item: cada parte alterada leva carimbo de hora; vence a mais recente.
+     * Gravação com controle de versão: se outro aparelho gravou antes, mescla e tenta de novo.
+     * ===================================================================== */
+    const PREFIXO_BASE = 'GR_SYNC_BASE_';
+    const PREFIXO_VER = 'GR_SYNC_VER_';
+    const K_SUJOS = 'GR_SYNC_DOCS_SUJOS';
+    const agora = () => Date.now() + desvioRelogio;
+
+    function carimbar(atual, base, t) {
+      const doc = Object.assign({}, atual);
+      const ts = JSON.parse(json(doc._ts || {})) || {};
+      const secs = new Set(Object.keys(doc).concat(Object.keys(base || {})));
+      secs.forEach((s) => {
+        if (s === '_ts') return;
+        const a = doc[s], b = base ? base[s] : undefined;
+        const ehObj = (a && typeof a === 'object' && !Array.isArray(a)) || (b && typeof b === 'object' && !Array.isArray(b));
+        if (!ehObj) return;
+        const ka = a && typeof a === 'object' ? a : {}, kb = b && typeof b === 'object' ? b : {};
+        new Set(Object.keys(ka).concat(Object.keys(kb))).forEach((k) => {
+          if (json(ka[k]) !== json(kb[k])) { ts[s] = ts[s] || {}; ts[s][k] = t; }
+        });
+      });
+      doc._ts = ts;
+      return doc;
+    }
+    /* empate (dados antigos sem carimbo): fica a nuvem; o que só existe de um lado é somado */
+    function mesclarSecoes(local, nuvem) {
+      local = local || {}; nuvem = nuvem || {};
+      const res = { _ts: {} };
+      const tl = local._ts || {}, tn = nuvem._ts || {};
+      new Set(Object.keys(local).concat(Object.keys(nuvem))).forEach((s) => {
+        if (s === '_ts') return;
+        const a = local[s], b = nuvem[s];
+        const ehObj = (a && typeof a === 'object' && !Array.isArray(a)) || (b && typeof b === 'object' && !Array.isArray(b)) || tl[s] || tn[s];
+        if (!ehObj) {
+          if (s === 't') res.t = Math.max(Number(a || 0), Number(b || 0));
+          else res[s] = b !== undefined ? b : a;
+          return;
+        }
+        const ka = a && typeof a === 'object' ? a : {}, kb = b && typeof b === 'object' ? b : {};
+        const ta = tl[s] || {}, tb = tn[s] || {};
+        const out = {}, tout = {};
+        new Set(Object.keys(ka).concat(Object.keys(kb), Object.keys(ta), Object.keys(tb))).forEach((k) => {
+          const x = Number(ta[k] || 0), y = Number(tb[k] || 0);
+          let v;
+          if (x > y) v = ka[k]; else if (y > x) v = kb[k]; else v = kb[k] !== undefined ? kb[k] : ka[k];
+          if (v !== undefined) out[k] = v;
+          const m = Math.max(x, y); if (m > 0) tout[k] = m;
+        });
+        res[s] = out;
+        if (Object.keys(tout).length) res._ts[s] = tout;
+      });
+      return res;
+    }
+    /* telemetria por cartão: vence o registro com mais respostas (nunca perde progresso) */
+    function mesclarTelemetria(local, nuvem) {
+      local = local || {}; nuvem = nuvem || {};
+      const res = {};
+      new Set(Object.keys(local).concat(Object.keys(nuvem))).forEach((k) => {
+        const a = local[k], b = nuvem[k];
+        if (!a) { res[k] = b; return; }
+        if (!b) { res[k] = a; return; }
+        const va = Number(a.vezesRealizado || 0), vb = Number(b.vezesRealizado || 0);
+        if (va !== vb) { res[k] = va > vb ? a : b; return; }
+        res[k] = String(a.ultimaDataEstudo || '') > String(b.ultimaDataEstudo || '') ? a : b;
+      });
+      return res;
+    }
+    /* registro de cartões pendentes: por item, vence o alterado por último */
+    function mesclarItens(local, nuvem) {
+      local = local || {}; nuvem = nuvem || {};
+      const res = Object.assign({}, nuvem, local, { itens: {} });
+      const il = local.itens || {}, inu = nuvem.itens || {};
+      new Set(Object.keys(il).concat(Object.keys(inu))).forEach((k) => {
+        const a = il[k], b = inu[k];
+        res.itens[k] = !a ? b : !b ? a : (Number(a.atualizadoEm || 0) > Number(b.atualizadoEm || 0) ? a : b);
+      });
+      res.atualizadoEm = Math.max(Number(local.atualizadoEm || 0), Number(nuvem.atualizadoEm || 0));
+      return res;
+    }
+    /* estatísticas do decoreba por dia: cada aparelho tem a sua contagem; o total é a soma */
+    function mesclarDecStats(local, nuvem) {
+      local = local || {}; nuvem = nuvem || {};
+      const res = {};
+      new Set(Object.keys(local).concat(Object.keys(nuvem))).forEach((d) => {
+        const a = local[d] || {}, b = nuvem[d] || {};
+        res[d] = {};
+        new Set(Object.keys(a).concat(Object.keys(b))).forEach((dev) => {
+          const x = a[dev], y = b[dev];
+          res[d][dev] = !x ? y : !y ? x : (Number(x.resolvidos || 0) >= Number(y.resolvidos || 0) ? x : y);
+        });
+      });
+      return res;
+    }
+
+    const PREFS_CHAVES = ['GR_CRON_CADENCIA_DIAS', 'GR_FC_LIMITE_PALAVRAS', 'GR_DEC_LIMITE_DIARIO', 'GR_FC_QTD_BLOCOS', 'GR_FC_INTERVALO_RETORNO', 'GR_FC_CRITERIO_DOMINIO', 'GR_FC_SPEED_GLOBAL'];
+    function lerPrefsLocais() {
+      const v = {};
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (PREFS_CHAVES.includes(k) || /^GR_FC_SPEED_/.test(k)) v[k] = localStorage.getItem(k);
+        }
+      } catch (e) { /* ignora */ }
+      return v;
+    }
+    function aplicarPrefsLocais(v) {
+      Object.keys(v || {}).forEach((k) => { if (PREFS_CHAVES.includes(k) || /^GR_FC_SPEED_/.test(k)) { if (localStorage.getItem(k) !== v[k]) LS.setRaw(k, v[k]); } });
+      const num = (k, pad) => { const n = Number(localStorage.getItem(k)); return n || pad; };
+      try { if (typeof CRON_CADENCIA_DIAS !== 'undefined') CRON_CADENCIA_DIAS = num('GR_CRON_CADENCIA_DIAS', CRON_CADENCIA_DIAS); } catch (e) { /* ignora */ }
+      try { if (typeof DEC_LIMITE_DIARIO !== 'undefined') DEC_LIMITE_DIARIO = num('GR_DEC_LIMITE_DIARIO', DEC_LIMITE_DIARIO); } catch (e) { /* ignora */ }
+      try { if (typeof FC_QTD_BLOCOS !== 'undefined') FC_QTD_BLOCOS = num('GR_FC_QTD_BLOCOS', FC_QTD_BLOCOS); } catch (e) { /* ignora */ }
+      try { if (typeof FC_INTERVALO_RETORNO !== 'undefined') FC_INTERVALO_RETORNO = num('GR_FC_INTERVALO_RETORNO', FC_INTERVALO_RETORNO); } catch (e) { /* ignora */ }
+      try { if (typeof FC_CRITERIO_DOMINIO !== 'undefined') FC_CRITERIO_DOMINIO = num('GR_FC_CRITERIO_DOMINIO', FC_CRITERIO_DOMINIO); } catch (e) { /* ignora */ }
+    }
+    function lerDecLocal() {
+      const d = {};
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          const m = k && k.match(/^GR_DEC_STATS_(\d{4}-\d{2}-\d{2})$/);
+          if (m) { const v = LS.get(k, null); if (v) d[m[1]] = { [dispositivoId]: v }; }
+        }
+      } catch (e) { /* ignora */ }
+      const outros = LS.get('GR_SYNC_DEC_OUTROS', {});
+      Object.keys(outros).forEach((dt) => { d[dt] = Object.assign({}, outros[dt], d[dt] || {}); });
+      return d;
+    }
+    function gravarDecLocal(doc) {
+      const outros = {};
+      Object.keys(doc || {}).forEach((dt) => {
+        Object.keys(doc[dt] || {}).forEach((dev) => {
+          if (dev === dispositivoId) { const k = 'GR_DEC_STATS_' + dt; if (json(LS.get(k, null)) !== json(doc[dt][dev])) LS.set(k, doc[dt][dev]); }
+          else { outros[dt] = outros[dt] || {}; outros[dt][dev] = doc[dt][dev]; }
+        });
+      });
+      LS.set('GR_SYNC_DEC_OUTROS', outros);
+    }
+
+    const DEF_DOCS = {
+      GR_FCX_CICLO_JSON: { ler: () => LS.get('GR_FCX_CICLO_V2', null), gravar: (v) => LS.set('GR_FCX_CICLO_V2', v), mesclar: mesclarSecoes, carimba: true },
+      GR_FC_TELEMETRIA_JSON: { ler: () => LS.get('GR_FC_TELEMETRIA_V2', null), gravar: (v) => LS.set('GR_FC_TELEMETRIA_V2', v), mesclar: mesclarTelemetria },
+      Cartoes_Pendentes_Registro: { ler: () => LS.get('GR_CARTOES_PENDENTES_REGISTRO', null), gravar: (v) => { LS.set('GR_CARTOES_PENDENTES_REGISTRO', v); try { if (typeof carregarRegistroCartoesPendentesLocal_ === 'function') carregarRegistroCartoesPendentesLocal_(); } catch (e) { /* ignora */ } }, mesclar: mesclarItens },
+      GR_PREFS_JSON: { ler: () => ({ v: lerPrefsLocais() }), gravar: (d) => aplicarPrefsLocais((d && d.v) || {}), mesclar: mesclarSecoes, carimba: true },
+      GR_DEC_STATS_JSON: { ler: () => lerDecLocal(), gravar: (d) => gravarDecLocal(d), mesclar: mesclarDecStats }
+    };
+
+    const DOCS = {
+      chaves: () => Object.keys(DEF_DOCS),
+      ehDoc: (c) => Object.prototype.hasOwnProperty.call(DEF_DOCS, c),
+      sujos: () => LS.get(K_SUJOS, []),
+      marcar(c) { const s = new Set(LS.get(K_SUJOS, [])); s.add(c); LS.set(K_SUJOS, Array.from(s)); },
+      limpar(c) { const s = new Set(LS.get(K_SUJOS, [])); s.delete(c); LS.set(K_SUJOS, Array.from(s)); },
+      base: (c) => LS.get(PREFIXO_BASE + c, null),
+      /* versão local com carimbos das partes alteradas desde a última sincronização */
+      atualCarimbado(c) {
+        const d = DEF_DOCS[c];
+        const atual = d.ler();
+        if (!d.carimba || !atual) return atual;
+        const base = DOCS.base(c);
+        if (!base) return atual; /* primeira vez neste aparelho: dados antigos sem carimbo */
+        return carimbar(atual, base, agora());
+      },
+      mudouLocalmente(c) {
+        const d = DEF_DOCS[c];
+        const atual = d.ler();
+        if (atual == null) return false;
+        const base = DOCS.base(c);
+        if (!base) return true;
+        const semTs = (o) => { if (!o || typeof o !== 'object') return json(o); const x = Object.assign({}, o); delete x._ts; delete x.t; return json(x); };
+        return semTs(atual) !== semTs(base);
+      },
+      aplicarLocal(c, mesclado) {
+        const d = DEF_DOCS[c];
+        d.gravar(mesclado);
+        LS.set(PREFIXO_BASE + c, d.ler());
+        window.dispatchEvent(new CustomEvent('gr-doc-sincronizado', { detail: { chave: c } }));
+      }
+    };
+
+    async function lerDocNuvem(c) {
+      const r = await cliente.from('configuracoes').select('valor,versao').eq('chave', c).limit(1);
+      if (r.error) throw r.error;
+      const row = (r.data || [])[0];
+      if (!row) return { existe: false, versao: 0, valor: null, bruto: null };
+      let valor = null; try { valor = JSON.parse(row.valor); } catch (e) { valor = null; }
+      return { existe: true, versao: Number(row.versao || 0), valor, bruto: row.valor };
+    }
+
+    /* puxa da nuvem, mescla com o aparelho e, se o aparelho tinha novidades, envia */
+    async function sincronizarDoc(c, opts) {
+      const d = DEF_DOCS[c];
+      for (let tentativa = 0; tentativa < 6; tentativa++) {
+        const nuvem = await lerDocNuvem(c);
+        /* passo síncrono: lê o aparelho, carimba, mescla e grava tudo de uma vez */
+        const local = DOCS.atualCarimbado(c);
+        const mesclado = local == null ? nuvem.valor : (nuvem.valor == null ? local : d.mesclar(local, nuvem.valor));
+        if (mesclado == null) { DOCS.limpar(c); return { mudouLocal: false }; }
+        const antesLocal = json(d.ler());
+        DOCS.aplicarLocal(c, mesclado);
+        const mudouLocal = json(d.ler()) !== antesLocal;
+        const texto = json(mesclado);
+        if (nuvem.existe && texto === nuvem.bruto) { DOCS.limpar(c); LS.setRaw(PREFIXO_VER + c, String(nuvem.versao)); return { mudouLocal }; }
+        if (nuvem.existe && nuvem.valor != null && json(nuvem.valor) === texto) { DOCS.limpar(c); return { mudouLocal }; }
+        if (opts && opts.somenteLeitura) return { mudouLocal };
+        const r = await cliente.rpc('salvar_documento', { p_chave: c, p_valor: texto, p_versao_esperada: nuvem.versao });
+        if (r.error) throw r.error;
+        if (r.data && r.data.ok) { DOCS.limpar(c); LS.setRaw(PREFIXO_VER + c, String(r.data.versao)); confirmarGravacao(); return { mudouLocal }; }
+        await esperar(150 + Math.random() * 400); /* outro aparelho gravou antes: mescla de novo */
+      }
+      throw new Error('Conflito persistente ao salvar ' + c);
+    }
+
+    let docsEmCurso = null;
+    async function sincronizarDocs(lista, opts) {
+      if (docsEmCurso) { try { await docsEmCurso; } catch (e) { /* ignora */ } }
+      docsEmCurso = (async () => {
+        let mudou = false;
+        for (const c of lista) {
+          try { const r = await sincronizarDoc(c, opts); if (r && r.mudouLocal) mudou = true; }
+          catch (e) { DOCS.marcar(c); ultimoErro = 'Falha ao sincronizar progresso (' + c + '): ' + (e.message || e); console.warn('[SYNC]', ultimoErro); }
+        }
+        return mudou;
+      })();
+      try { return await docsEmCurso; } finally { docsEmCurso = null; atualizarIndicador(); }
+    }
+
+    /* verifica mudanças locais nos documentos (rápido; roda a cada poucos segundos) */
+    function verificarDocsLocais() {
+      if (!pronto) return;
+      DOCS.chaves().forEach((c) => { if (DOCS.mudouLocalmente(c)) DOCS.marcar(c); });
+      const sujos = DOCS.sujos();
+      if (sujos.length && navigator.onLine) sincronizarDocs(sujos);
+      atualizarIndicador();
+    }
+    let timerDoc = null;
+    function marcarDoc(c) {
+      if (!DOCS.ehDoc(c)) return;
+      DOCS.marcar(c); atualizarIndicador();
+      if (timerDoc) clearTimeout(timerDoc);
+      timerDoc = setTimeout(() => { timerDoc = null; if (pronto && navigator.onLine) sincronizarDocs(DOCS.sujos()); }, 1200);
+    }
+
+    /* =====================================================================
+     * ATUALIZAÇÃO AUTOMÁTICA QUANDO OUTRO APARELHO ALTERA ALGO
+     * ===================================================================== */
+    let vistos = null;
+    let atualizacaoPendente = false;
+    let historicoAtualizacoes = [];
+    function ocupado() {
+      try {
+        const pl = document.getElementById('fcSessaoPlayer');
+        if (pl && !pl.classList.contains('hidden')) return true;
+        const ae = document.activeElement;
+        if (ae && (ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable || (ae.tagName === 'INPUT' && !['button', 'checkbox', 'radio', 'submit'].includes(ae.type)))) return true;
+        const modais = Array.from(document.querySelectorAll('.fixed.inset-0')).filter((m) => !m.classList.contains('hidden') && m.id !== 'grSyncPainel' && getComputedStyle(m).display !== 'none' && getComputedStyle(m).visibility !== 'hidden');
+        if (modais.length) return true;
+      } catch (e) { /* ignora */ }
+      return false;
+    }
+    async function verificarRemoto(forcar) {
+      if (!pronto || !navigator.onLine || document.hidden) return;
+      let r;
+      try { r = await cliente.from('sync_estado').select('dispositivo,versao,atualizado_em'); } catch (e) { return; }
+      if (r.error || !r.data) return;
+      const mapa = {};
+      r.data.forEach((x) => { mapa[x.dispositivo] = x.versao + '|' + x.atualizado_em; });
+      if (vistos === null) { vistos = mapa; return; }
+      const mudouOutro = Object.keys(mapa).some((dv) => dv !== dispositivoId && mapa[dv] !== vistos[dv]);
+      vistos = mapa;
+      if (mudouOutro || forcar) { atualizacaoPendente = true; }
+      if (atualizacaoPendente) await aplicarAtualizacaoRemota();
+    }
+    async function aplicarAtualizacaoRemota() {
+      if (!atualizacaoPendente) return;
+      if (ocupado()) { setTimeout(aplicarAtualizacaoRemota, 4000); return; }
+      atualizacaoPendente = false;
+      const t = Date.now();
+      historicoAtualizacoes = historicoAtualizacoes.filter((x) => t - x < 120000).concat(t);
+      try {
+        const docsMudaram = await sincronizarDocs(DOCS.chaves());
+        if (docsMudaram) { try { FC_ESTADO_BLOCOS_MAP = {}; } catch (e) { /* ignora */ } }
+        if (typeof carregarSistema === 'function') await carregarSistema();
+        if (typeof carregarFlashcardsSupabase === 'function') await carregarFlashcardsSupabase();
+        console.info('[SYNC] dados atualizados com as alterações de outro aparelho');
+      } catch (e) { console.warn('[SYNC] falha ao atualizar do remoto', e); }
+    }
+    function intervaloVerificacao() { return historicoAtualizacoes.length > 5 ? 45000 : 10000; }
+    function lacoVerificacao() {
+      setTimeout(async () => { try { await verificarRemoto(false); } catch (e) { /* ignora */ } lacoVerificacao(); }, intervaloVerificacao());
+    }
+
+    /* =====================================================================
+     * LOGIN
+     * ===================================================================== */
+    function telaLogin(modo, msg, tipoMsg) {
+      let ov = document.getElementById('grLoginOverlay');
+      if (!ov) { ov = document.createElement('div'); ov.id = 'grLoginOverlay'; document.body.appendChild(ov); }
+      const titulos = { entrar: 'Entrar', criar: 'Criar conta', recuperar: 'Recuperar senha', nova: 'Definir nova senha' };
+      const textos = {
+        entrar: 'Entre com sua conta para carregar e sincronizar seu progresso em todos os aparelhos.',
+        criar: 'Crie sua conta (uma única vez). Use o mesmo e-mail em todos os aparelhos.',
+        recuperar: 'Enviaremos um link para redefinir a senha.',
+        nova: 'Digite a nova senha.'
+      };
+      ov.innerHTML = '<div class="grl-box"><h2>' + titulos[modo] + ' — Gestor de Estudos</h2><p>' + textos[modo] + '</p>' +
+        '<form id="grLoginForm">' +
+        (modo !== 'nova' ? '<label>E-mail</label><input id="grLoginEmail" type="email" autocomplete="email" required>' : '') +
+        (modo !== 'recuperar' ? '<label>Senha</label><input id="grLoginSenha" type="password" minlength="6" autocomplete="' + (modo === 'entrar' ? 'current-password' : 'new-password') + '" required>' : '') +
+        '<button class="grl-btn" type="submit">' + titulos[modo] + '</button></form>' +
+        '<div class="grl-links">' +
+        (modo === 'entrar' ? '<a data-m="criar">Criar conta</a><a data-m="recuperar">Esqueci a senha</a>' : (modo === 'nova' ? '' : '<a data-m="entrar">Já tenho conta — entrar</a>')) +
+        '</div><div class="grl-msg ' + (msg ? (tipoMsg || 'err') : '') + '" id="grLoginMsg">' + (msg || '') + '</div></div>';
+      ov.querySelectorAll('a[data-m]').forEach((a) => { a.onclick = () => telaLogin(a.getAttribute('data-m')); });
+      const em = document.getElementById('grLoginEmail');
+      if (em) em.value = LS.raw('GR_SYNC_ULTIMO_EMAIL') || '';
+      ov.querySelector('form').onsubmit = async (ev) => {
+        ev.preventDefault();
+        const btn = ov.querySelector('.grl-btn');
+        const email = em ? em.value.trim().toLowerCase() : '';
+        const senhaEl = document.getElementById('grLoginSenha');
+        const senha = senhaEl ? senhaEl.value : '';
+        const box = document.getElementById('grLoginMsg');
+        const mostrar = (m, t) => { box.className = 'grl-msg ' + (t || 'err'); box.textContent = m; };
+        btn.disabled = true;
+        try {
+          if (email) LS.setRaw('GR_SYNC_ULTIMO_EMAIL', email);
+          if (modo === 'entrar') {
+            const { error } = await cliente.auth.signInWithPassword({ email, password: senha });
+            if (error) throw error;
+          } else if (modo === 'criar') {
+            const { data, error } = await cliente.auth.signUp({ email, password: senha, options: { emailRedirectTo: location.origin + location.pathname } });
+            if (error) throw error;
+            if (!data.session) { telaLogin('entrar', 'Conta criada. Abra o e-mail de confirmação enviado para ' + email + ', clique no link e depois entre aqui com a senha.', 'ok'); return; }
+          } else if (modo === 'recuperar') {
+            const { error } = await cliente.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+            if (error) throw error;
+            mostrar('Se o e-mail estiver cadastrado, o link de redefinição foi enviado.', 'ok');
+          } else if (modo === 'nova') {
+            const { error } = await cliente.auth.updateUser({ password: senha });
+            if (error) throw error;
+            fecharLogin();
+            if (resolverLogin) resolverLogin();
+          }
+        } catch (e) {
+          const m = String((e && e.message) || e);
+          mostrar(/Invalid login/i.test(m) ? 'E-mail ou senha incorretos.' : /not confirmed/i.test(m) ? 'Confirme o e-mail antes (veja sua caixa de entrada e o spam).' : /already registered/i.test(m) ? 'Este e-mail já tem conta. Use "Já tenho conta — entrar".' : /fetch|network/i.test(m) ? 'Sem conexão com a internet. Para o primeiro acesso neste aparelho é preciso estar online.' : m);
+        } finally { btn.disabled = false; }
+      };
+    }
+    function fecharLogin() { const ov = document.getElementById('grLoginOverlay'); if (ov) ov.remove(); }
+    let resolverLogin = null;
+
+    async function aoEntrar(sessao) {
+      const user = sessao.user;
+      const uidAnterior = LS.raw(K_UID);
+      if (uidAnterior && uidAnterior !== user.id) {
+        /* outra conta neste aparelho: guarda o progresso local da conta anterior e começa limpo */
+        const copia = {};
+        ['GR_FCX_CICLO_V2', 'GR_FC_TELEMETRIA_V2', 'GR_CARTOES_PENDENTES_REGISTRO'].forEach((k) => { copia[k] = LS.raw(k); LS.del(k); });
+        LS.setRaw('GR_SYNC_COPIA_CONTA_' + uidAnterior, JSON.stringify(copia));
+        DOCS.chaves().forEach((c) => { LS.del(PREFIXO_BASE + c); LS.del(PREFIXO_VER + c); });
+        LS.del(K_SUJOS);
+        await cacheLimpar();
+      }
+      uidAtual = user.id; emailAtual = user.email || '';
+      LS.setRaw(K_UID, user.id);
+      /* dados criados antes do login (sem dono) passam para a conta do proprietário — uma única vez */
+      try {
+        const r = await cliente.rpc('reivindicar_dados_legados');
+        if (r.data && r.data.ok) console.info('[SYNC] dados antigos vinculados à conta:', r.data.transferidos);
+      } catch (e) { /* offline: tenta no próximo acesso */ }
+      if (navigator.onLine) await sincronizarDocs(DOCS.chaves());
+      pronto = true;
+      atualizarIndicador();
+      agendarEnvio(500);
+    }
+
+    /* chamado pelo carregamento do sistema; só libera depois do login */
+    async function garantirLogin(cli) {
+      cliente = cli;
+      const url = new URL(location.href);
+      const recuperacao = /type=recovery/.test(location.hash) || url.searchParams.get('type') === 'recovery';
+      let { data } = await cliente.auth.getSession();
+      if (recuperacao && data.session) {
+        await new Promise((res) => { resolverLogin = res; telaLogin('nova'); });
+        resolverLogin = null;
+        history.replaceState(null, '', location.pathname);
+        ({ data } = await cliente.auth.getSession());
+      }
+      if (!data.session) {
+        atualizarIndicador();
+        data = await new Promise((res) => {
+          const { data: sub } = cliente.auth.onAuthStateChange((ev, sessao) => {
+            if (sessao && (ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION' || ev === 'TOKEN_REFRESHED')) { try { sub.subscription.unsubscribe(); } catch (e) { /* ignora */ } fecharLogin(); res({ session: sessao }); }
+          });
+          telaLogin('entrar');
+        });
+      }
+      if (/access_token|type=signup/.test(location.hash)) history.replaceState(null, '', location.pathname);
+      await aoEntrar(data.session);
+      cliente.auth.onAuthStateChange((ev) => {
+        if (ev === 'SIGNED_OUT') { uidAtual = null; pronto = false; atualizarIndicador(); telaLogin('entrar', 'Sua sessão terminou. Entre novamente.'); }
+      });
+      if (!iniciado) { iniciado = true; iniciarLacos(); }
+      return true;
+    }
+    let iniciado = false;
+
+    function iniciarLacos() {
+      window.addEventListener('online', () => { redeOk = true; atualizarIndicador(); agendarEnvio(200); verificarDocsLocais(); verificarRemoto(true); });
+      window.addEventListener('offline', () => { redeOk = false; atualizarIndicador(); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { verificarDocsLocais(); agendarEnvio(0); }
+        else { agendarEnvio(200); verificarDocsLocais(); verificarRemoto(false); }
+      });
+      window.addEventListener('focus', () => verificarRemoto(false));
+      window.addEventListener('pagehide', () => { verificarDocsLocais(); });
+      window.addEventListener('beforeunload', (e) => {
+        verificarDocsLocais();
+        /* a fila fica guardada no aparelho; apenas avisa se ainda não foi enviada */
+        if (LS.get(K_FILA, []).length && navigator.onLine) { e.preventDefault(); e.returnValue = ''; }
+      });
+      setInterval(verificarDocsLocais, 4000);
+      setInterval(() => { if (LS.get(K_FILA, []).length && navigator.onLine && !promessaEnvio && !timerEnvio) agendarEnvio(0); atualizarIndicador(); }, 15000);
+      lacoVerificacao();
+      verificarRemoto(false);
+    }
+
+    /* =====================================================================
+     * PAINEL DE STATUS
+     * ===================================================================== */
+    function abrirPainel() {
+      if (!uidAtual) { telaLogin('entrar'); return; }
+      fecharPainel();
+      const s = estado();
+      const falhas = LS.get(K_FALHAS, []);
+      const el = document.createElement('div'); el.id = 'grSyncPainel';
+      const h = s.ultimoOk ? new Date(Number(s.ultimoOk)).toLocaleString('pt-BR') : '—';
+      el.innerHTML = '<div class="grs-box"><h3>Sincronização</h3>' +
+        '<div class="grs-lin"><span>Conta</span><span>' + (s.email || '—') + '</span></div>' +
+        '<div class="grs-lin"><span>Conexão</span><span>' + (s.online ? 'Online' : 'Offline') + '</span></div>' +
+        '<div class="grs-lin"><span>Alterações aguardando envio</span><span>' + s.pendentes + '</span></div>' +
+        '<div class="grs-lin"><span>Última gravação confirmada</span><span>' + h + '</span></div>' +
+        '<div class="grs-lin"><span>Falhas</span><span>' + s.falhas + '</span></div>' +
+        (s.ultimoErro ? '<p style="margin-top:8px;color:#fda4af">' + String(s.ultimoErro).replace(/</g, '&lt;') + '</p>' : '') +
+        (falhas.length ? '<pre>' + falhas.slice(-10).map((f) => new Date(f.em).toLocaleString('pt-BR') + ' · ' + f.metodo + ' ' + f.tabela + ' · ' + f.motivo).join('\n').replace(/</g, '&lt;') + '</pre>' : '') +
+        '<div class="grs-acoes"><button class="pri" data-a="sync">Sincronizar agora</button>' +
+        (falhas.length ? '<button data-a="retentar">Tentar falhas de novo</button><button class="dan" data-a="descartar">Descartar falhas</button>' : '') +
+        '<button data-a="cred">Credenciais Supabase</button><button data-a="sair">Sair da conta</button><button data-a="fechar">Fechar</button></div>' +
+        '<p style="margin-top:10px;color:#64748b;font-size:10px">Aparelho: ' + s.dispositivo.slice(0, 8) + '</p></div>';
+      document.body.appendChild(el);
+      el.addEventListener('click', async (ev) => {
+        if (ev.target === el) { fecharPainel(); return; }
+        const a = ev.target.getAttribute && ev.target.getAttribute('data-a');
+        if (!a) return;
+        if (a === 'fechar') fecharPainel();
+        if (a === 'cred') { fecharPainel(); if (typeof abrirModalConexaoSupabase === 'function') abrirModalConexaoSupabase(); }
+        if (a === 'sync') { ev.target.disabled = true; await SYNC.sincronizarAgora(); fecharPainel(); abrirPainel(); }
+        if (a === 'retentar') { const f = LS.get(K_FALHAS, []); LS.set(K_FALHAS, []); const fila = LS.get(K_FILA, []); LS.set(K_FILA, f.map((x) => { const y = Object.assign({}, x); delete y.motivo; delete y.em; y.uid = uidAtual; return y; }).concat(fila)); agendarEnvio(0); fecharPainel(); }
+        if (a === 'descartar') { if (window.confirm('Descartar as gravações que o servidor recusou? Elas ficam salvas só neste aparelho até você confirmar.')) { LS.set('GR_SYNC_FALHAS_DESCARTADAS_' + Date.now(), falhas); LS.set(K_FALHAS, []); fecharPainel(); atualizarIndicador(); } }
+        if (a === 'sair') {
+          if (LS.get(K_FILA, []).length || DOCS.sujos().length) { if (!window.confirm('Ainda há alterações não enviadas. Elas continuam guardadas neste aparelho e serão enviadas quando você entrar de novo. Sair mesmo assim?')) return; }
+          await cliente.auth.signOut(); fecharPainel(); location.reload();
+        }
+      });
+    }
+    function fecharPainel() { const p = document.getElementById('grSyncPainel'); if (p) p.remove(); }
+
+    /* =====================================================================
+     * API PÚBLICA
+     * ===================================================================== */
+    window.SYNC = {
+      fetch: fetchSync,
+      dispositivoId,
+      garantirLogin,
+      marcarDoc,
+      ehDoc: (c) => DOCS.ehDoc(c),
+      estado,
+      atualizarIndicador,
+      aoMudarStatus: (f) => ouvintes.push(f),
+      async sincronizarAgora() {
+        await enviarFila();
+        await sincronizarDocs(DOCS.chaves());
+        atualizacaoPendente = true;
+        await aplicarAtualizacaoRemota();
+        atualizarIndicador();
+      },
+      /* contagem do decoreba de hoje somando os outros aparelhos */
+      decOutros(dataYMD) {
+        const o = LS.get('GR_SYNC_DEC_OUTROS', {})[dataYMD] || {};
+        const t = { resolvidos: 0, acertos: 0, erros: 0, segundosTotais: 0 };
+        Object.keys(o).forEach((dev) => { if (dev === dispositivoId) return; const s = o[dev] || {}; Object.keys(t).forEach((k) => { t[k] += Number(s[k] || 0); }); });
+        return t;
+      },
+      _teste: { interno: () => ({ promessa: Boolean(promessaEnvio), timer: Boolean(timerEnvio), uid: uidAtual, cliente: Boolean(cliente), pronto, docsEmCurso: Boolean(docsEmCurso) }), mesclarSecoes, carimbar, mesclarTelemetria, mesclarItens, mesclarDecStats, aplicarFilaNaLeitura, reescrever, filtrosDe }
+    };
+  })();
+  </script>
   <!-- SheetJS (xlsx) CDN -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -3600,8 +4434,9 @@
     /* ==========================================================================
      * 1. CONFIGURAÇÃO SUPABASE (SA-EAST-1) E GERENCIADOR DE TEMA SUAVIZADO
      * ========================================================================== */
-    const DEFAULT_SUPABASE_URL = 'https://SUA-URL-DO-PROJETO.supabase.co';
-    const DEFAULT_SUPABASE_ANON_KEY = 'SUA-CHAVE-ANON-PUBLIC-AQUI';
+    const DEFAULT_SUPABASE_URL = 'https://kbzcigrmdkyxjhyefgii.supabase.co';
+    /* chave PÚBLICA (publishable). Nunca colocar aqui a service_role/secret. A proteção dos dados é feita pelo login + RLS. */
+    const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_KPsufsYhx4fflnmQjok-8g_ksWZdUS-';
 
     let supabaseClient = null;
     let ESTADO = null;
@@ -3663,12 +4498,14 @@
       }
       try {
         supabaseClient = window.supabase.createClient(url, key, {
-          auth: { persistSession: false }
+          auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'GR_SB_AUTH' },
+          global: window.SYNC ? { fetch: window.SYNC.fetch, headers: { 'x-dispositivo': window.SYNC.dispositivoId } } : {}
         });
         if (badge) {
           badge.textContent = 'Supabase Conectado';
           badge.className = 'cursor-pointer px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-700/60';
         }
+        if (window.SYNC) window.SYNC.atualizarIndicador();
         return supabaseClient;
       } catch (err) {
         console.error('Erro ao inicializar Supabase:', err);
@@ -3698,7 +4535,8 @@
       localStorage.setItem('GR_SUPABASE_URL', url);
       localStorage.setItem('GR_SUPABASE_KEY', key);
       fecharModalConexaoSupabase();
-      inicializarClienteSupabase();
+      const cliNovo = inicializarClienteSupabase();
+      if (cliNovo && window.SYNC) await window.SYNC.garantirLogin(cliNovo);
       await carregarSistema();
     }
 
@@ -3715,6 +4553,10 @@
         abrirModalConexaoSupabase();
         notificar('Configure a URL e a Anon Key do seu projeto Supabase para sincronizar seus dados.', true);
         return;
+      }
+      if (window.SYNC) {
+        try { await window.SYNC.garantirLogin(cli); }
+        catch (e) { console.error('[SYNC] falha no login/sincronização inicial', e); notificar('Falha ao iniciar a sincronização: ' + (e.message || e), true); }
       }
       await carregarSistema();
     });
@@ -4378,6 +5220,7 @@
 
     async function salvarValorConfigDB_(chave, valor) {
       if (!supabaseClient) return;
+      if (window.SYNC && window.SYNC.ehDoc(chave)) { window.SYNC.marcarDoc(chave); return; }
       await supabaseClient.from('configuracoes').upsert(
         { chave, valor: String(valor), descricao: 'Configuracao do sistema' },
         { onConflict: 'chave' }
@@ -7417,6 +8260,7 @@
       try {
         localStorage.setItem('GR_FC_TELEMETRIA_V2', JSON.stringify(mapa));
       } catch (e) {}
+      if (window.SYNC) window.SYNC.marcarDoc('GR_FC_TELEMETRIA_JSON');
     }
 
     function registrarTelemetriaIndividualCartao_(card, acertou, segsGastos, avaliacao) {
@@ -7589,22 +8433,26 @@
     function obterEstatisticasDiariasDecoreba_() {
       const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
       const chave = `GR_DEC_STATS_${hojeYMD}`;
+      let st = { resolvidos: 0, acertos: 0, erros: 0, segundosTotais: 0 };
       try {
         const raw = localStorage.getItem(chave);
-        if (raw) return JSON.parse(raw);
+        if (raw) st = JSON.parse(raw);
       } catch (e) {}
-      return { resolvidos: 0, acertos: 0, erros: 0, segundosTotais: 0 };
+      if (arguments[0] === 'SOMENTE_ESTE_APARELHO' || !window.SYNC) return st;
+      const o = window.SYNC.decOutros(hojeYMD);
+      return { resolvidos: st.resolvidos + o.resolvidos, acertos: st.acertos + o.acertos, erros: st.erros + o.erros, segundosTotais: st.segundosTotais + o.segundosTotais };
     }
 
     function registrarResultadoDiarioDecoreba_(acertou, segundosGastos) {
       const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
       const chave = `GR_DEC_STATS_${hojeYMD}`;
-      const st = obterEstatisticasDiariasDecoreba_();
+      const st = obterEstatisticasDiariasDecoreba_('SOMENTE_ESTE_APARELHO');
       st.resolvidos += 1;
       if (acertou) st.acertos += 1;
       else st.erros += 1;
       st.segundosTotais += Math.max(1, Math.round(segundosGastos || 5));
       localStorage.setItem(chave, JSON.stringify(st));
+      if (window.SYNC) window.SYNC.marcarDoc('GR_DEC_STATS_JSON');
     }
 
     function atualizarLimiteDiarioDecoreba(novoLimite) {
@@ -16129,8 +16977,14 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     } catch (e) { /* ignora */ }
   }
 
-  /* usa a cópia da nuvem quando ela for mais recente (outro aparelho) */
+  /* a mescla com a nuvem (por item, com carimbo de hora) é feita pelo módulo SYNC;
+     quando ele grava a versão mesclada no aparelho, a memória é atualizada aqui */
+  window.addEventListener('gr-doc-sincronizado', (ev) => {
+    if (!ev.detail || ev.detail.chave !== K_CICLO_NUVEM) return;
+    try { ciclo = Object.assign(cicloVazio(), lerJSON(K_CICLO, {})); } catch (e) { /* ignora */ }
+  });
   function lerCicloDaNuvem() {
+    if (window.SYNC) return;
     try {
       const cfg = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.config) || null;
       if (!cfg || cfg === ultimaConfigLida) return;
