@@ -4813,8 +4813,13 @@
           const eraHoje = rev.dataPrevistaAtual === hojeYMD;
 
           let dataMinima = rev.dataPrevistaAtual || rev.dataPrevistaOriginal || dataBaseReorganizacao;
+          let puxadoParaVaga = false;
           if (eraAntecipada || eraAtrasado || eraHoje || corrigirDeficit || dataMinima < dataBaseReorganizacao) {
             dataMinima = dataBaseReorganizacao;
+          } else if (ultimaDataFila === dataBaseReorganizacao && (alocacaoPorData[dataBaseReorganizacao] || 0) < limiteDiario) {
+            /* sobrou vaga no dia: o próximo da fila (na mesma ordem) é puxado para hoje; os outros dias não mudam */
+            dataMinima = dataBaseReorganizacao;
+            puxadoParaVaga = true;
           }
           /* mantém a ordem: ninguém passa à frente de quem já estava antes na fila */
           if (dataMinima < ultimaDataFila) dataMinima = ultimaDataFila;
@@ -4825,7 +4830,9 @@
           rev.dataPrevistaAtual = dataAlocada;
           rev.status = dataAlocada === hojeYMD ? 'Para Hoje' : 'Programada';
 
-          if (eraAtrasado) {
+          if (puxadoParaVaga && dataAlocada === dataBaseReorganizacao) {
+            rev.motivoAgendamentoData = `Próximo da fila puxado para ${formatarDataBR_(dataAlocada)} para preencher a vaga do dia (limite de ${limiteDiario} tópicos/dia).`;
+          } else if (eraAtrasado) {
             rev.motivoAgendamentoData = `Tópico atrasado priorizado na reorganização para ${formatarDataBR_(dataAlocada)} (limite de ${limiteDiario} tópicos/dia).`;
           } else if (rev.resolvidasTotal === 0) {
             rev.motivoAgendamentoData = `Prioridade 1 (0 questões respondidas). Alocado em ${formatarDataBR_(dataAlocada)} respeitando o limite de ${limiteDiario} tópicos/dia.`;
@@ -9207,28 +9214,44 @@
       iniciarBlocoAquecimentoPorIndice(idxAlvo);
     }
 
-    function iniciarBlocoAquecimentoPorIndice(idxBloco) {
+    function iniciarBlocoAquecimentoPorIndice(idxBloco, modoEscolhido) {
       const filtrados = obterCardsFiltradosFC();
       const blocos = construirEstruturaBlocosFiltroAtual_(filtrados);
       const blocoObj = blocos[idxBloco];
       if (!blocoObj || blocoObj.cardsOriginais.length === 0) return;
 
+      const tituloForcado = window.__FCX_TITULO_BLOCO__ || '';
+      window.__FCX_TITULO_BLOCO__ = '';
+      const idTop = document.getElementById('fcFiltroTopico')?.value || blocoObj.cardsOriginais[0].idTopico;
+      const topObj = (ESTADO?.topicos || []).find(t => t.id === idTop);
+      const titulo = tituloForcado || (topObj
+        ? `${topObj.materia} — ${topObj.topico}`
+        : 'Sessão de Aquecimento por Bloco');
+
+      /* Bloco CONCLUÍDO continua concluído (verde): nunca é zerado nem recontado ao ser aberto de novo.
+         Você escolhe: refazer o bloco inteiro (revisão, sem mexer no progresso) ou fazer só os cartões ainda não dominados. */
       if (blocoObj.concluido) {
-        blocoObj.respondidosSet = {};
-        blocoObj.acertosPorCard = {};
-        blocoObj.emReforcoSet = {};
-        blocoObj.dominadosSet = {};
-        blocoObj.concluido = false;
+        const naoDominados = blocoObj.cardsOriginais.filter(c => !blocoObj.dominadosSet[c.id]);
+        const iniciarBlocoInteiro = () => {
+          const copiaRevisao = {
+            numeroBloco: blocoObj.numeroBloco, totalBloco: blocoObj.totalBloco, cardsOriginais: blocoObj.cardsOriginais,
+            respondidosSet: {}, acertosPorCard: {}, emReforcoSet: {}, dominadosSet: {}, concluido: false, ehRevisaoDeBlocoConcluido: true
+          };
+          iniciarPlayerBlocoEspecifico_(blocoObj.cardsOriginais, titulo + ' (revisão do bloco inteiro)', blocoObj.numeroBloco, blocos.length, copiaRevisao, false);
+        };
+        const iniciarSoNaoDominados = () => {
+          if (!naoDominados.length) { notificar('Todos os cartões deste bloco já estão dominados.'); return; }
+          iniciarPlayerBlocoEspecifico_(naoDominados, titulo + ' (só não dominados)', blocoObj.numeroBloco, blocos.length, blocoObj, false);
+          blocoObj.concluido = true;
+        };
+        if (modoEscolhido === 'inteiro') return iniciarBlocoInteiro();
+        if (modoEscolhido === 'pendentes') return iniciarSoNaoDominados();
+        abrirEscolhaBlocoConcluido_(blocoObj.numeroBloco, blocoObj.totalBloco, naoDominados.length, iniciarBlocoInteiro, iniciarSoNaoDominados);
+        return;
       }
 
       const pendentesDoBloco = blocoObj.cardsOriginais.filter(c => !blocoObj.dominadosSet[c.id]);
       const listaParaFila = pendentesDoBloco.length > 0 ? pendentesDoBloco : blocoObj.cardsOriginais;
-
-      const idTop = document.getElementById('fcFiltroTopico')?.value || listaParaFila[0].idTopico;
-      const topObj = (ESTADO?.topicos || []).find(t => t.id === idTop);
-      const titulo = topObj
-        ? `${topObj.materia} — ${topObj.topico}`
-        : 'Sessão de Aquecimento por Bloco';
 
       iniciarPlayerBlocoEspecifico_(
         listaParaFila,
@@ -9238,6 +9261,30 @@
         blocoObj,
         false
       );
+    }
+
+    /* janela de escolha ao abrir um bloco já concluído */
+    function abrirEscolhaBlocoConcluido_(numBloco, total, qtdNaoDominados, fnInteiro, fnPendentes) {
+      const antigo = document.getElementById('fcxEscolhaBloco');
+      if (antigo) antigo.remove();
+      const fundo = document.createElement('div');
+      fundo.id = 'fcxEscolhaBloco';
+      fundo.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(2,6,23,.75);display:flex;align-items:center;justify-content:center;padding:16px';
+      fundo.innerHTML = `
+        <div class="bg-slate-900 border border-emerald-700 rounded-2xl p-4 w-full max-w-sm space-y-3 shadow-2xl">
+          <div class="text-sm font-extrabold text-white">Bloco ${numBloco} já está concluído ✓</div>
+          <div class="text-[11px] text-slate-300">Ele continua marcado como concluído (verde). O que você quer fazer?</div>
+          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">Só os não dominados (${qtdNaoDominados} de ${total})</button>
+          <button type="button" data-op="inteiro" class="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Revisar o bloco inteiro (${total} cartões)</button>
+          <button type="button" data-op="cancelar" class="w-full py-1.5 px-3 rounded-lg border border-slate-700 text-slate-300 font-semibold text-[11px]">Cancelar</button>
+        </div>`;
+      fundo.addEventListener('click', (ev) => {
+        const op = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-op');
+        if (ev.target === fundo || op === 'cancelar') { fundo.remove(); return; }
+        if (op === 'inteiro') { fundo.remove(); fnInteiro(); }
+        else if (op === 'pendentes') { fundo.remove(); fnPendentes(); }
+      });
+      document.body.appendChild(fundo);
     }
 
     function iniciarPlayerBlocoEspecifico_(listaCards, tituloSessao, numeroBloco, totalBlocos, refBlocoEstado, isModoDecoreba) {
@@ -17648,7 +17695,13 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   window.fcxRevIniciarBloco = function (id, i) {
     const q = Math.max(1, Math.min(50, Number(cfgRev(id).qtd) || 1));
     revCtx = { id }; FC_QTD_BLOCOS = q;
+    try {
+      const tt = ((ESTADO && ESTADO.topicos) || []).find((x) => x.id === id);
+      if (tt) window.__FCX_TITULO_BLOCO__ = tt.materia + ' — ' + tt.topico;
+    } catch (e) { /* ignora */ }
+    if ($('fcxEscolhaBloco')) $('fcxEscolhaBloco').remove();
     iniciarBlocoAquecimentoPorIndice(i);
+    if ($('fcxEscolhaBloco')) return;
     try {
       const t = ((ESTADO && ESTADO.topicos) || []).find((x) => x.id === id);
       if (t && FC_SESSAO) {
@@ -19432,11 +19485,28 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     aviso('Padronização concluída: ' + n.ren + ' renomeado(s), ' + n.mescl + ' duplicado(s) mesclado(s), ' + n.imp + ' histórico(s) de questões recuperado(s), ' + n.seca + ' de Lei Seca fora da bateria, ' + n.criados + ' criado(s).');
   };
   /* realoca a bateria do dia: os tópicos fixados ficam hoje; o restante vai para os próximos dias de estudo (limite diário respeitado) */
-  function aplicarBateriaFixada(pend, limite, dias, hoje, concluidas) {
+  function aplicarBateriaFixada(pend, limite, dias, hoje, concluidas, opcoes) {
     const fx = fixosDoDia(hoje, concluidas);
     if (!fx.length || !Array.isArray(pend)) return;
-    const fixados = pend.filter((r) => casaFixo(fx, r.topico));
-    fixados.forEach((r) => { r.dataPrevistaAtual = hoje; r.status = 'Para Hoje'; r.antecipadaHoje = true; r.motivoAgendamentoData = 'Bateria de hoje definida por você (referência de organização).'; });
+    const reorganizando = Boolean(opcoes && opcoes.reorganizarFila);
+    /* puxados para hoje (vagas preenchidas ao reorganizar): valem só para o dia em que foram puxados */
+    if (!ciclo.puxadosHoje || ciclo.puxadosHoje.dia !== hoje) ciclo.puxadosHoje = { dia: hoje, ids: [] };
+    const ehFixado = (r) => casaFixo(fx, r.topico) || ciclo.puxadosHoje.ids.indexOf(String(r.idTopico)) >= 0;
+    if (reorganizando) {
+      const jaHoje = pend.filter(ehFixado).length;
+      const concluidasHoje = (Array.isArray(concluidas) ? concluidas : []).filter((c) => c && String(c.dataConclusao || '') === hoje).length;
+      let vagas = Math.max(0, Number(limite || 3) - jaHoje - concluidasHoje);
+      if (vagas > 0) {
+        const candidatos = pend.filter((r) => !ehFixado(r)).sort((a, b) =>
+          String(a.dataPrevistaAtual || '9999').localeCompare(String(b.dataPrevistaAtual || '9999')) ||
+          ((a.prioridadeOrdem || 0) - (b.prioridadeOrdem || 0)) ||
+          String(a.dataPrevistaOriginal || '').localeCompare(String(b.dataPrevistaOriginal || '')));
+        candidatos.slice(0, vagas).forEach((r) => ciclo.puxadosHoje.ids.push(String(r.idTopico)));
+        try { persistirCiclo(); } catch (e) { /* ignora */ }
+      }
+    }
+    const fixados = pend.filter(ehFixado);
+    fixados.forEach((r) => { r.dataPrevistaAtual = hoje; r.status = 'Para Hoje'; r.antecipadaHoje = true; r.motivoAgendamentoData = casaFixo(fx, r.topico) ? 'Bateria de hoje definida por você (referência de organização).' : 'Próximo da fila puxado para hoje ao reorganizar (vaga do dia preenchida).'; });
     const deslocar = pend.filter((r) => fixados.indexOf(r) < 0 && r.dataPrevistaAtual && r.dataPrevistaAtual <= hoje);
     const cont = {};
     pend.forEach((r) => { if (deslocar.indexOf(r) < 0) cont[r.dataPrevistaAtual] = (cont[r.dataPrevistaAtual] || 0) + 1; });
@@ -19452,7 +19522,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   }
   envolver('redistribuirRevisoesPorCapacidade_', (orig, ...args) => {
     const r = orig(...args);
-    try { aplicarBateriaFixada(args[0], args[3], args[4], args[5], args[1]); } catch (e) { /* ignora */ }
+    try { aplicarBateriaFixada(args[0], args[3], args[4], args[5], args[1], args[7]); } catch (e) { /* ignora */ }
     return r;
   });
 
