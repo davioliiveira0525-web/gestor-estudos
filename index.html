@@ -1174,6 +1174,40 @@
       max-width: 62rem;
     }
 
+    /* ===== Cartões interativos: Omissão com alternativas e Seleção de alternativas ===== */
+    .fcx-int-frase { font-size: 1.05rem; font-weight: 700; line-height: 2.2; text-align: center; color: #f8fafc; }
+    .fcx-int-pergunta { font-size: 1.05rem; font-weight: 800; text-align: center; color: #f8fafc; }
+    .fcx-lac { display: inline-block; min-width: 7rem; margin: 0 .2rem; padding: 0 .6rem; border: 0; border-bottom: 2px dashed #64748b; border-radius: .4rem; color: #94a3b8; font-weight: 800; background: rgba(30, 41, 59, .6); line-height: 1.7; cursor: pointer; }
+    .fcx-lac.ativa { border-bottom-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, .35); }
+    .fcx-lac.cheia { border-bottom-style: solid; border-bottom-color: #818cf8; color: #fff; }
+    .fcx-lac.ok { border-bottom-color: #10b981; background: rgba(6, 78, 59, .55); color: #d1fae5; cursor: default; }
+    .fcx-lac.erro { border-bottom-color: #f43f5e; background: rgba(76, 5, 25, .55); color: #ffe4e6; cursor: default; }
+    .fcx-lac .fcx-certa { color: #34d399; margin-left: .4rem; }
+    .fcx-alts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .5rem; margin-top: 1rem; }
+    .fcx-alt { display: flex; align-items: center; gap: .5rem; text-align: left; padding: .55rem .7rem; border-radius: .75rem; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-weight: 700; font-size: .82rem; transition: border-color .15s, background .15s; }
+    .fcx-alt:hover:not(:disabled) { border-color: #6366f1; }
+    .fcx-alt.marcada { border-color: #22d3ee; background: rgba(8, 51, 68, .75); color: #fff; }
+    .fcx-alt.usada { opacity: .55; }
+    .fcx-alt.ok { border-color: #10b981; background: rgba(6, 78, 59, .6); color: #fff; opacity: 1; }
+    .fcx-alt.erro { border-color: #f43f5e; background: rgba(76, 5, 25, .6); color: #fff; opacity: 1; }
+    .fcx-alt.faltou { border-color: #f59e0b; background: rgba(69, 26, 3, .6); color: #fff; opacity: 1; }
+    .fcx-alt:disabled { cursor: default; }
+    .fcx-num { flex: none; width: 1.35rem; height: 1.35rem; border-radius: .4rem; display: inline-flex; align-items: center; justify-content: center; background: #1e293b; color: #a5b4fc; font-size: .7rem; font-family: ui-monospace, monospace; }
+    .fcx-res { margin-left: auto; font-size: .62rem; font-weight: 800; text-transform: uppercase; white-space: nowrap; }
+    .fcx-int-dica { text-align: center; font-size: .7rem; color: #94a3b8; margin-top: .6rem; }
+    .fcx-conferir { display: block; margin: 1rem auto 0; min-width: 240px; padding: .6rem 1.2rem; border-radius: .75rem; background: #4f46e5; color: #fff; font-weight: 800; font-size: .8rem; }
+    .fcx-conferir:hover:not(:disabled) { background: #6366f1; }
+    .fcx-conferir:disabled { opacity: .4; cursor: not-allowed; }
+    html:not(.dark) .fcx-int-frase, html:not(.dark) .fcx-int-pergunta { color: #0f172a; }
+    html:not(.dark) .fcx-lac { background: #f1f5f9; color: #475569; }
+    html:not(.dark) .fcx-lac.cheia { color: #1e1b4b; }
+    html:not(.dark) .fcx-alt { background: #fff; color: #0f172a; border-color: #cbd5e1; }
+    html:not(.dark) .fcx-alt.marcada { background: #cffafe; color: #0f172a; }
+    html:not(.dark) .fcx-alt.ok { background: #d1fae5; color: #064e3b; }
+    html:not(.dark) .fcx-alt.erro { background: #ffe4e6; color: #881337; }
+    html:not(.dark) .fcx-alt.faltou { background: #fef3c7; color: #78350f; }
+    html:not(.dark) .fcx-num { background: #e2e8f0; color: #4338ca; }
+
     .fc-diff-sai { color: rgb(253, 164, 175); text-decoration: line-through; text-decoration-thickness: 2px; background: rgba(225, 29, 72, 0.18); border-radius: 3px; padding: 0 2px; }
     .fc-diff-entra { color: rgb(134, 239, 172); font-weight: 700; background: rgba(22, 163, 74, 0.18); border-radius: 3px; padding: 0 2px; }
     html:not(.dark) .fc-diff-sai { color: rgb(190, 18, 60); background: rgba(225, 29, 72, 0.12); }
@@ -3411,11 +3445,13 @@
                 <div class="md:col-span-2">
                   <label class="block font-bold text-slate-300 mb-1">Modalidade do Cartão</label>
                   <select id="fcFiltroTipo" onchange="aoMudarFiltroDeckResetarBlocos()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                    <option value="">[ Todas as 4 ]</option>
+                    <option value="">[ Todas as modalidades ]</option>
                     <option value="PDF_BASE">1. PDF-Base (C/E)</option>
                     <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
                     <option value="LEI_SECA">3. Lei Seca</option>
                     <option value="DECOREBA">4. Decoreba</option>
+                    <option value="OMISSAO">5. Omissão com alternativas</option>
+                    <option value="SELECAO">6. Seleção de alternativas</option>
                   </select>
                 </div>
                 <div class="md:col-span-2">
@@ -4237,6 +4273,8 @@
                       <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
                       <option value="LEI_SECA">3. Lei Seca</option>
                       <option value="DECOREBA">4. Decoreba (Exclusão)</option>
+                      <option value="OMISSAO">5. Omissão com alternativas</option>
+                      <option value="SELECAO">6. Seleção de alternativas</option>
                     </select>
                   </div>
                 </div>
@@ -4250,6 +4288,8 @@
                 <div class="font-bold text-white">Reconhecimento Inteligente de Tipos e Formatos (Separador <code>;</code>):</div>
                 <div>• Formato Recomendado (4 colunas): <code>TIPO;FRENTE;VERSO;TAGS</code> (Ex: <code>PDF_BASE;Afirmação...;Gabarito: ERRADO | Explicação: ...;Tag1</code>)</div>
                 <div>• Formato Completo (6 colunas): <code>MATERIA;TOPICO;TIPO;FRENTE;VERSO;TAGS</code></div>
+                <div>• Omissão: <code>OMISSAO;Frase com _____ e _____;Alternativas: A / B / C / D | Gabarito: A / C | Resumo: ...;Tag</code></div>
+                <div>• Seleção: <code>SELECAO;Quais são ...?;Opções: A / B / C / D / E | Gabarito: A / B / E | Bizu: ...;Tag</code></div>
                 <div>• Formato Curto (3 colunas): <code>FRENTE;VERSO;TAGS</code> (O sistema identifica o tipo automaticamente pelas tags, lacunas <code>{{c1::...}}</code> ou gabarito C/E).</div>
               </div>
 
@@ -4371,6 +4411,8 @@
                   <option value="CADERNO_ERROS">2. Caderno de Erros (Certo / Errado)</option>
                   <option value="LEI_SECA">3. Lei Seca (Legislação)</option>
                   <option value="DECOREBA">4. Decoreba (Exclusão Diária)</option>
+                  <option value="OMISSAO">5. Omissão com alternativas</option>
+                  <option value="SELECAO">6. Seleção de alternativas</option>
                 </select>
               </div>
             </div>
@@ -8314,6 +8356,64 @@
     }
 
     /* ==========================================================================
+     * 8.1b MODALIDADES INTERATIVAS: OMISSÃO COM ALTERNATIVAS e SELEÇÃO DE ALTERNATIVAS
+     *   OMISSAO: frente = afirmação com lacunas "_____" (máx. 25 palavras);
+     *            verso  = Alternativas: A / B / C / D | Gabarito: resposta da lacuna 1 / resposta da lacuna 2 | Resumo: ... | ...
+     *   SELECAO: frente = pergunta curta ("Quais são os fundamentos da RFB?");
+     *            verso  = Opções: A / B / C / D / E | Gabarito: A / C / E | Resumo: ... | Bizu: ... | ...
+     *   Itens separados por " / " (barra com espaço dos dois lados).
+     * ========================================================================== */
+    const FC_RE_LACUNA_ = /_{3,}/g;
+    function fcEhInterativo_(tipo) { return tipo === 'OMISSAO' || tipo === 'SELECAO'; }
+    function fcEhTipoEstudo_(tipo) { return tipo === 'PDF_BASE' || tipo === 'CADERNO_ERROS' || fcEhInterativo_(tipo); }
+    function fcNormItem_(s) {
+      return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+        .replace(/\*\*|==|~~/g, '').replace(/\s+/g, ' ').replace(/^[\s\-•\d.)]+/, '').replace(/[\s.;:,]+$/, '').trim();
+    }
+    function fcDividirLista_(s) {
+      return String(s || '').split(/\s+\/\s+|\r?\n/).map(x => x.replace(/^\s*[\-•]\s*/, '').replace(/[.\s]+$/, '').trim()).filter(Boolean);
+    }
+    function fcContarPalavras_(s) {
+      return String(s || '').replace(FC_RE_LACUNA_, ' ').replace(/\{\{(?:vm|vd|az|lj|rx|cz)::([\s\S]*?)\}\}/g, '$1')
+        .replace(/\*\*|==|~~/g, '').trim().split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
+    }
+    function fcLimitePalavras_() {
+      const v = Number(localStorage.getItem('GR_FC_LIMITE_PALAVRAS'));
+      return v >= 8 && v <= 120 ? v : 25;
+    }
+    /* Lê alternativas, gabarito e lacunas de um cartão interativo e aponta os problemas de formatação. */
+    function fcAnalisarInterativo_(tipo, frente, verso) {
+      const partes = String(verso || '').split('|').map(p => p.trim()).filter(Boolean);
+      let altTxt = '', gabTxt = '';
+      partes.forEach(p => {
+        const mA = p.match(/^(alternativas|op[cç][oõ]es)\s*:\s*([\s\S]*)$/i);
+        const mG = p.match(/^(gabarito|resposta|respostas|corretas)\s*:\s*([\s\S]*)$/i);
+        if (mA) altTxt = mA[2];
+        else if (mG) gabTxt = mG[2];
+      });
+      const alternativas = fcDividirLista_(altTxt);
+      const gabarito = fcDividirLista_(gabTxt);
+      const lacunas = (String(frente || '').match(FC_RE_LACUNA_) || []).length;
+      const problemas = [];
+      const lim = fcLimitePalavras_();
+      const palavras = fcContarPalavras_(frente);
+      if (!alternativas.length) problemas.push({ nivel: 'erro', codigo: 'SEM_ALTERNATIVAS', msg: tipo === 'SELECAO' ? 'Faltou o campo "Opções:".' : 'Faltou o campo "Alternativas:".' });
+      if (!gabarito.length) problemas.push({ nivel: 'erro', codigo: 'SEM_GABARITO', msg: 'Faltou o campo "Gabarito:".' });
+      const normAlt = alternativas.map(fcNormItem_);
+      const foraDaLista = gabarito.filter(g => normAlt.indexOf(fcNormItem_(g)) < 0);
+      if (alternativas.length && foraDaLista.length) problemas.push({ nivel: 'erro', codigo: 'GABARITO_FORA', msg: 'Gabarito fora das alternativas: ' + foraDaLista.join(', ') + '.' });
+      if (tipo === 'OMISSAO') {
+        if (!lacunas) problemas.push({ nivel: 'erro', codigo: 'SEM_LACUNA', msg: 'A frente não tem lacunas (use _____).' });
+        else if (gabarito.length && gabarito.length !== lacunas) problemas.push({ nivel: 'erro', codigo: 'LACUNA_X_GABARITO', msg: lacunas + ' lacuna(s) e ' + gabarito.length + ' resposta(s) no gabarito.' });
+        if (alternativas.length && alternativas.length <= new Set(gabarito.map(fcNormItem_)).size) problemas.push({ nivel: 'aviso', codigo: 'SEM_DISTRATOR', msg: 'Sem alternativas erradas para confundir.' });
+      } else if (alternativas.length && gabarito.length >= alternativas.length) {
+        problemas.push({ nivel: 'aviso', codigo: 'SEM_DISTRATOR', msg: 'Todas as opções estão no gabarito (sem distratores).' });
+      }
+      if (palavras > lim) problemas.push({ nivel: 'aviso', codigo: 'LONGA', msg: palavras + ' palavras na frente (limite ' + lim + ').' });
+      return { alternativas, gabarito, lacunas, palavras, problemas };
+    }
+
+    /* ==========================================================================
      * 8.2 IDENTIFICADOR UNIVERSAL E INFALÍVEL DE TIPOS DE CARTÃO
      * ========================================================================== */
     function identificarTipoCartaoUniversal_(rawTipoStr, frenteStr, versoStr, tagsStr, fallbackTipo) {
@@ -8330,6 +8430,13 @@
 
       const frente = String(frenteStr || '');
       const verso = String(versoStr || '');
+
+      if (tNorm === '5' || tNorm.includes('OMISSAO') || tNorm.includes('OMISSOES')) return 'OMISSAO';
+      if (tNorm === '6' || tNorm.includes('SELECAO') || tNorm.includes('SELECOES')) return 'SELECAO';
+      if (!tNorm) {
+        if (/(^|\|)\s*op[cç][oõ]es\s*:/i.test(verso)) return 'SELECAO';
+        if (/(^|\|)\s*alternativas\s*:/i.test(verso) && /_{3,}/.test(frente)) return 'OMISSAO';
+      }
 
       if (
         tNorm === '4' ||
@@ -8386,7 +8493,7 @@
         return (fallbackTipo && fallbackTipo === 'CADERNO_ERROS') ? 'CADERNO_ERROS' : 'PDF_BASE';
       }
 
-      if (fallbackTipo && ['PDF_BASE', 'CADERNO_ERROS', 'LEI_SECA', 'DECOREBA'].includes(fallbackTipo)) {
+      if (fallbackTipo && ['PDF_BASE', 'CADERNO_ERROS', 'LEI_SECA', 'DECOREBA', 'OMISSAO', 'SELECAO'].includes(fallbackTipo)) {
         return fallbackTipo;
       }
       return 'PDF_BASE';
@@ -8770,6 +8877,8 @@
       if (tipo === 'CADERNO_ERROS') return '2. CADERNO DE ERROS (CERTO / ERRADO)';
       if (tipo === 'LEI_SECA') return '3. LEI SECA (LEGISLAÇÃO)';
       if (tipo === 'DECOREBA') return '4. DECOREBA (EXCLUSÃO DIÁRIA)';
+      if (tipo === 'OMISSAO') return '5. OMISSÃO COM ALTERNATIVAS';
+      if (tipo === 'SELECAO') return '6. SELEÇÃO DE ALTERNATIVAS';
       return '1. PDF-BASE (CERTO / ERRADO)';
     }
 
@@ -8778,6 +8887,8 @@
       if (tipo === 'CADERNO_ERROS') return 'Caderno de Erros';
       if (tipo === 'LEI_SECA') return 'Lei Seca';
       if (tipo === 'DECOREBA') return 'Decoreba';
+      if (tipo === 'OMISSAO') return 'Omissão';
+      if (tipo === 'SELECAO') return 'Seleção';
       return 'PDF-Base';
     }
 
@@ -8785,6 +8896,8 @@
       if (tipo === 'PDF_BASE') return 'bg-emerald-950 text-emerald-300 border border-emerald-800';
       if (tipo === 'CADERNO_ERROS') return 'bg-rose-950 text-rose-300 border border-rose-800';
       if (tipo === 'LEI_SECA') return 'bg-indigo-950 text-indigo-300 border border-indigo-800';
+      if (tipo === 'OMISSAO') return 'bg-amber-950 text-amber-300 border border-amber-700';
+      if (tipo === 'SELECAO') return 'bg-cyan-950 text-cyan-300 border border-cyan-700';
       return 'bg-purple-950 text-purple-300 border border-purple-800';
     }
 
@@ -9866,7 +9979,9 @@
         elFrente.textContent = c.frente;
       }
 
-      if (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS') {
+      if (fcEhInterativo_(c.tipo)) {
+        renderizarFrenteInterativaFC_(c);
+      } else if (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS') {
         barraCE.classList.remove('hidden');
       } else {
         barraVirar.classList.remove('hidden');
@@ -9989,6 +10104,199 @@
       mostrarBarraAvaliacaoFC_();
     }
 
+    /* ===== PLAYER DOS CARTÕES INTERATIVOS (OMISSÃO / SELEÇÃO) =====
+       Omissão: clique nas alternativas na ordem das lacunas (ou teclas 1–9); clique numa lacuna para trocá-la; Backspace apaga.
+       Seleção: marque todas as opções corretas (teclas 1–9 marcam/desmarcam).
+       Enter (ou o botão Conferir) corrige; depois seguem os botões normais de avaliação. */
+    function renderizarFrenteInterativaFC_(c) {
+      const a = fcAnalisarInterativo_(c.tipo, c.frente, c.verso);
+      const alts = a.alternativas.slice();
+      a.gabarito.forEach(g => { if (!alts.some(x => fcNormItem_(x) === fcNormItem_(g))) alts.push(g); });
+      FC_SESSAO.interativo = {
+        id: c.id,
+        tipo: c.tipo,
+        alternativas: alts,
+        ordem: embaralharFisherYates_(alts.map((_, i) => i)),
+        gabarito: a.gabarito,
+        respostas: new Array(Math.max(1, a.lacunas)).fill(null),
+        ativa: 0,
+        marcadas: new Set(),
+        conferido: false,
+        resultado: null
+      };
+      pintarInterativoFC_();
+    }
+
+    function pintarInterativoFC_() {
+      const S = FC_SESSAO;
+      const st = S && S.interativo;
+      const c = S && S.cardAtual;
+      const el = document.getElementById('fcCardFrente');
+      if (!st || !c || !el || st.id !== c.id) return;
+      el.className = 'fcx-int';
+      const md = (t) => (typeof window.fcxAplicarMarkupEscapado === 'function') ? window.fcxAplicarMarkupEscapado(esc(t)) : esc(t);
+      const fim = st.conferido;
+      const gabN = st.gabarito.map(fcNormItem_);
+      let topo = '';
+
+      if (st.tipo === 'OMISSAO') {
+        const pedacos = String(c.frente).split(/_{3,}/);
+        topo = '<div class="fcx-int-frase">' + pedacos.map((txt, k) => {
+          if (k === pedacos.length - 1) return md(txt);
+          const r = st.respostas[k];
+          const valor = r === null || r === undefined ? '' : st.alternativas[r];
+          let cls = 'fcx-lac';
+          let conteudo = valor ? esc(valor) : '(' + (k + 1) + ')';
+          if (fim) {
+            const ok = st.resultado[k];
+            cls += ok ? ' ok' : ' erro';
+            conteudo = ok ? '✔ ' + esc(valor) : '<s>' + esc(valor || '—') + '</s><span class="fcx-certa">→ ' + esc(st.gabarito[k] || '') + '</span>';
+          } else {
+            if (valor) cls += ' cheia';
+            if (k === st.ativa) cls += ' ativa';
+          }
+          return md(txt) + '<button type="button" class="' + cls + '" ' + (fim ? 'disabled' : 'onclick="fcxCliqueLacuna(' + k + ')"') + '>' + conteudo + '</button>';
+        }).join('') + '</div>';
+      } else {
+        topo = '<div class="fcx-int-pergunta">' + md(c.frente) + '</div>';
+      }
+
+      const usadas = new Set(st.respostas.filter(r => r !== null));
+      const botoes = st.ordem.map((i, pos) => {
+        const txt = st.alternativas[i];
+        const correta = gabN.indexOf(fcNormItem_(txt)) >= 0;
+        let cls = 'fcx-alt';
+        let res = '';
+        if (st.tipo === 'SELECAO') {
+          const m = st.marcadas.has(i);
+          if (fim) {
+            if (correta && m) { cls += ' ok'; res = '✔ certa'; }
+            else if (!correta && m) { cls += ' erro'; res = '✘ não é'; }
+            else if (correta && !m) { cls += ' faltou'; res = 'faltou'; }
+          } else if (m) cls += ' marcada';
+        } else if (fim) {
+          if (correta) { cls += ' ok'; res = 'resposta'; }
+        } else if (usadas.has(i)) cls += ' usada';
+        return '<button type="button" class="' + cls + '" ' + (fim ? 'disabled' : 'onclick="fcxEscolherAlternativa(' + i + ')"') + '>' +
+          '<span class="fcx-num">' + (pos + 1) + '</span><span>' + md(txt) + '</span>' + (res ? '<span class="fcx-res">' + res + '</span>' : '') + '</button>';
+      }).join('');
+
+      let rodape = '';
+      if (!fim) {
+        const pronto = st.tipo === 'OMISSAO' ? st.respostas.every(r => r !== null) : st.marcadas.size > 0;
+        const dica = st.tipo === 'OMISSAO'
+          ? 'Escolha as alternativas na ordem das lacunas (teclas 1–9). Clique numa lacuna para trocá-la • Backspace apaga • Enter confere'
+          : 'Marque TODAS as corretas (teclas 1–9 marcam/desmarcam) • Enter confere';
+        rodape = '<div class="fcx-int-dica">' + dica + '</div>' +
+          '<button type="button" class="fcx-conferir" onclick="conferirInterativoFC()" ' + (pronto ? '' : 'disabled') + '>Conferir resposta [Enter]</button>';
+      }
+      el.innerHTML = topo + '<div class="fcx-alts">' + botoes + '</div>' + rodape;
+    }
+
+    function fcxEscolherAlternativa(i) {
+      const st = FC_SESSAO && FC_SESSAO.interativo;
+      if (!st || st.conferido || i === undefined || !st.alternativas[i]) return;
+      if (st.tipo === 'SELECAO') {
+        if (st.marcadas.has(i)) st.marcadas.delete(i); else st.marcadas.add(i);
+      } else {
+        const n = st.respostas.length;
+        st.respostas[st.ativa] = i;
+        let prox = -1;
+        for (let d = 1; d <= n; d++) {
+          const k = (st.ativa + d) % n;
+          if (st.respostas[k] === null) { prox = k; break; }
+        }
+        st.ativa = prox >= 0 ? prox : Math.min(st.ativa + 1, n - 1);
+      }
+      pintarInterativoFC_();
+    }
+
+    function fcxCliqueLacuna(k) {
+      const st = FC_SESSAO && FC_SESSAO.interativo;
+      if (!st || st.conferido || st.tipo !== 'OMISSAO') return;
+      if (st.ativa === k && st.respostas[k] !== null) st.respostas[k] = null;
+      st.ativa = k;
+      pintarInterativoFC_();
+    }
+
+    function teclaInterativaFC_(ev) {
+      const st = FC_SESSAO && FC_SESSAO.interativo;
+      if (!st || st.conferido) return false;
+      if (/^[1-9]$/.test(ev.key)) {
+        const pos = Number(ev.key) - 1;
+        if (pos < st.ordem.length) fcxEscolherAlternativa(st.ordem[pos]);
+        return true;
+      }
+      if (ev.key === 'Enter' || ev.code === 'Space') { conferirInterativoFC(); return true; }
+      if (ev.key === 'Backspace' && st.tipo === 'OMISSAO') {
+        let k = st.respostas[st.ativa] !== null ? st.ativa : -1;
+        if (k < 0) for (let j = st.respostas.length - 1; j >= 0; j--) if (st.respostas[j] !== null) { k = j; break; }
+        if (k >= 0) { st.respostas[k] = null; st.ativa = k; pintarInterativoFC_(); }
+        return true;
+      }
+      return false;
+    }
+
+    function conferirInterativoFC() {
+      const S = FC_SESSAO;
+      const c = S && S.cardAtual;
+      const st = S && S.interativo;
+      if (!c || !st || S.versoRevelado || st.id !== c.id) return;
+      const gabN = st.gabarito.map(fcNormItem_);
+      let acertou = false;
+      let detalhe = '';
+      if (st.tipo === 'OMISSAO') {
+        if (st.respostas.some(r => r === null)) { notificar('Preencha todas as lacunas antes de conferir.', true); return; }
+        st.resultado = st.respostas.map((r, k) => fcNormItem_(st.alternativas[r]) === (gabN[k] || '#'));
+        acertou = st.resultado.every(Boolean);
+        detalhe = st.resultado.filter(Boolean).length + ' de ' + st.resultado.length + ' lacuna(s) certa(s)';
+      } else {
+        if (!st.marcadas.size) { notificar('Marque pelo menos uma opção antes de conferir.', true); return; }
+        let ok = 0, errad = 0, falt = 0;
+        const totalCorretas = new Set(gabN).size;
+        st.alternativas.forEach((t, i) => {
+          const corr = gabN.indexOf(fcNormItem_(t)) >= 0;
+          const m = st.marcadas.has(i);
+          if (corr && m) ok++; else if (!corr && m) errad++; else if (corr && !m) falt++;
+        });
+        acertou = errad === 0 && falt === 0;
+        detalhe = ok + ' de ' + totalCorretas + ' correta(s)' + (errad ? ' • ' + errad + ' marcada(s) indevidamente' : '') + (falt ? ' • faltou ' + falt : '');
+      }
+      st.conferido = true;
+      S.versoRevelado = true;
+      S.escolhaUsuarioCE = acertou ? c.gabaritoCE : '__ERRO__';
+      if (acertou) S.acertosSessao += 1;
+      else {
+        S.errosSessao += 1;
+        S.errosPorCard[c.id] = (S.errosPorCard[c.id] || 0) + 1;
+      }
+
+      const shell = document.getElementById('fcCardShell');
+      if (shell) { shell.classList.remove('fc-mode-front'); shell.classList.add('fc-mode-back'); }
+      pintarInterativoFC_();
+
+      const box = document.getElementById('fcBoxFeedbackEstruturado');
+      box.className = 'rounded-xl p-3.5 border ' + (acertou ? 'bg-emerald-950/60 border-emerald-600 text-emerald-100' : 'bg-rose-950/60 border-rose-600 text-rose-100') + ' flex flex-wrap items-center justify-between gap-2.5';
+      box.innerHTML = '<div class="flex items-center gap-2"><span class="text-sm md:text-base font-extrabold">' + (acertou ? 'RESPOSTA CORRETA' : 'RESPOSTA INCORRETA') + '</span>' +
+        '<span class="text-xs opacity-90 font-semibold">(' + esc(detalhe) + ')</span></div>' +
+        '<span class="px-2.5 py-1 rounded font-extrabold text-xs ' + (acertou ? 'bg-emerald-600' : 'bg-rose-600') + ' text-white">Resposta: ' + esc(st.gabarito.join(' • ')) + '</span>';
+
+      const dados = extrairDadosEstruturadosCertoErrado_(c.frente, c.verso, c.tags);
+      if (/(^|\|)\s*(alternativas|op[cç][oõ]es)\s*:/i.test(String(dados.explicacao || ''))) dados.explicacao = '';
+      if (!dados.resumo && !dados.explicacao) dados.resumo = (st.tipo === 'OMISSAO' ? 'Frase completa: ' : 'Corretas: ') +
+        (st.tipo === 'OMISSAO' ? String(c.frente).split(/_{3,}/).map((t, k, arr) => t + (k < arr.length - 1 ? '[' + (st.gabarito[k] || '') + ']' : '')).join('') : st.gabarito.join(' • '));
+      const versoEl = document.getElementById('fcCardVersoTexto');
+      try {
+        versoEl.innerHTML = montarHtmlVersoDuasCamadasFC_(dados, 'CERTO', c)
+          .replace('Explicação rápida — por que está certa', 'Explicação rápida');
+      } catch (e) {
+        versoEl.innerHTML = montarHtmlVersoDidaticoFC_(dados);
+      }
+      renderizarPainelTermosFC_(dados.termos, true);
+      document.getElementById('fcBackLessonContainer').classList.remove('hidden');
+      mostrarBarraAvaliacaoFC_();
+    }
+
     async function avaliarCardSessaoFC(avaliacao) {
       if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
       if (FC_SESSAO.modoBlocoNovo) return avaliarCardBlocoNovoFC_(avaliacao);
@@ -10002,7 +10310,7 @@
         FC_SESSAO.refBlocoEstado.respondidosSet[c.id] = true;
       }
 
-      const isCardCE = c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS';
+      const isCardCE = fcEhTipoEstudo_(c.tipo);
       const acertouJulgamento = isCardCE
         ? (FC_SESSAO.escolhaUsuarioCE === c.gabaritoCE && avaliacao !== 'ERREI')
         : (avaliacao === 'BOM' || avaliacao === 'FACIL');
@@ -10086,7 +10394,7 @@
       S.ultimaAvaliacaoPorCard[c.id] = avaliacao;
       B.respondidosSet[c.id] = true;
 
-      const isCE = c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS';
+      const isCE = fcEhTipoEstudo_(c.tipo);
       const positivo = avaliacao === 'ENTENDI' || avaliacao === 'BOM' || avaliacao === 'FACIL';
       const acertou = isCE ? (S.escolhaUsuarioCE === c.gabaritoCE && positivo) : positivo;
       if (!isCE) {
@@ -10208,6 +10516,11 @@
       const c = FC_SESSAO?.cardAtual;
       if (!c) return;
       const isCE = c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS';
+
+      if (fcEhInterativo_(c.tipo) && !FC_SESSAO.versoRevelado) {
+        if (teclaInterativaFC_(ev)) ev.preventDefault();
+        return;
+      }
 
       if (ev.code === 'Space' && !FC_SESSAO.versoRevelado && !isCE) {
         ev.preventDefault();
@@ -10505,6 +10818,7 @@
                   ${esc(obterLabelFuncionalTipoFC_(c.tipo))}
                 </span>
                 ${isCE ? `<span class="px-2 py-0.5 rounded font-extrabold text-[10px] ${c.gabaritoCE === 'CERTO' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">Gabarito: ${c.gabaritoCE}</span>` : ''}
+                ${fcEhInterativo_(c.tipo) ? `<span class="px-2 py-0.5 rounded font-extrabold text-[10px] bg-indigo-600 text-white">Gabarito: ${esc(fcAnalisarInterativo_(c.tipo, c.frente, c.verso).gabarito.join(' • '))}</span>` : ''}
                 <span class="text-xs font-bold text-indigo-400">${esc(tObj ? tObj.materia + ' — ' + tObj.topico : c.idTopico)}</span>
               </div>
 
@@ -10913,7 +11227,9 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         `PDF_BASE;A casa é asilo inviolável do indivíduo, podendo a autoridade policial nela ingressar durante a noite para cumprir mandado judicial de busca e apreensão.;Gabarito: ERRADO | Explicação: Embora a casa seja asilo inviolável, o ingresso por **determinação judicial** somente é admitido **durante o dia**. Durante a noite, a entrada sem consentimento do morador só é lícita nas hipóteses de **flagrante delito**, **desastre** ou **para prestar socorro**. | Fundamento: Art. 5º, inciso XI, da CF/88 | Exemplo: Mandado judicial nunca pode ser cumprido às 21h. | Frase Corrigida: O cumprimento de determinação judicial em domicílio só pode ocorrer [durante o dia].;PDF-Base,Domicílio`,
         `CADERNO_ERROS;É livre a manifestação do pensamento, sendo garantido o anonimato nos casos de denúncias encaminhadas ao Ministério Público.;Gabarito: ERRADO | Explicação: A Constituição assegura a livre manifestação do pensamento, mas **veda expressamente o anonimato** em qualquer hipótese, para viabilizar direito de resposta e responsabilização por eventuais danos. | Fundamento: Art. 5º, inciso IV, da CF/88 | Frase Corrigida: É livre a manifestação do pensamento, sendo [vedado o anonimato].;Caderno de Erros,Anonimato`,
         `LEI_SECA;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum, praticado {{c2::antes}} da naturalização, ou de comprovado envolvimento em {{c3::tráfico ilícito de entorpecentes}}.;Explicação: O brasileiro **nato** jamais será extraditado (vedação absoluta). O brasileiro **naturalizado** admite extradição apenas por crime comum anterior à naturalização ou comprovado envolvimento em tráfico ilícito de entorpecentes. | Fundamento: Art. 5º, inciso LI, da CF/88;Lei Seca,Extradição`,
-        `DECOREBA;Quais são os prazos de conclusão do Inquérito Policial (CPP vs. Polícia Federal vs. Lei de Drogas)?;Explicação: • **CPP (Regra Geral):** 10 dias (preso) e 30 dias (solto). • **Polícia Federal (Lei 5.010/66):** 15 dias (+15 dias) para preso e 30 dias para solto. • **Lei de Drogas:** 30 dias (preso) e 90 dias (solto), ambos duplicáveis. | Fundamento: Art. 10 do CPP e Art. 51 da Lei 11.343/06 | Frase Corrigida: CPP: [10d/30d] — PF: [15+15d/30d] — Drogas: [30d/90d (x2)].;Decoreba,Prazos`
+        `DECOREBA;Quais são os prazos de conclusão do Inquérito Policial (CPP vs. Polícia Federal vs. Lei de Drogas)?;Explicação: • **CPP (Regra Geral):** 10 dias (preso) e 30 dias (solto). • **Polícia Federal (Lei 5.010/66):** 15 dias (+15 dias) para preso e 30 dias para solto. • **Lei de Drogas:** 30 dias (preso) e 90 dias (solto), ambos duplicáveis. | Fundamento: Art. 10 do CPP e Art. 51 da Lei 11.343/06 | Frase Corrigida: CPP: [10d/30d] — PF: [15+15d/30d] — Drogas: [30d/90d (x2)].;Decoreba,Prazos`,
+        `OMISSAO;O erro de tipo essencial _____ exclui dolo e culpa, enquanto o _____ exclui o dolo, mas permite punição culposa.;Alternativas: inevitável / evitável / acidental / de proibição / sobre a pessoa | Gabarito: inevitável / evitável | Resumo: Inevitável (escusável) afasta dolo e culpa. Evitável (inescusável) afasta só o dolo. | Fundamento: Art. 20, caput, do CP;Erro de Tipo`,
+        `SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político / Garantir o desenvolvimento nacional / Erradicar a pobreza / Independência nacional | Gabarito: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político | Bizu: SO-CI-DI-VA-PLU | Fundamento: Art. 1º da CF/88;Princípios Fundamentais`
       ];
       document.getElementById('fcInputCSVBruto').value = linhas.join('\n');
     }
@@ -10945,7 +11261,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         'PDFBASE', 'PDF', 'BASE', 'CERTOERRADO', 'CE', 'PADRAO',
         'CADERNODEERROS', 'CADERNOERROS', 'CADERNO', 'ERROS', 'MULTIPLA',
         'LEISECA', 'LEI', 'CLOZE', 'LACUNA', 'LEGISLACAO',
-        'DECOREBA', 'DECOREBAS', 'EXCLUSAO'
+        'DECOREBA', 'DECOREBAS', 'EXCLUSAO',
+        '5', '6', 'OMISSAO', 'OMISSOES', 'OMISSAOCOMALTERNATIVAS', 'SELECAO', 'SELECOES', 'SELECAODEALTERNATIVAS'
       ].includes(t);
     }
 
@@ -11110,6 +11427,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
                 <option value="CADERNO_ERROS" ${item.tipo === 'CADERNO_ERROS' ? 'selected' : ''}>2. Caderno de Erros</option>
                 <option value="LEI_SECA" ${item.tipo === 'LEI_SECA' ? 'selected' : ''}>3. Lei Seca</option>
                 <option value="DECOREBA" ${item.tipo === 'DECOREBA' ? 'selected' : ''}>4. Decoreba</option>
+                <option value="OMISSAO" ${item.tipo === 'OMISSAO' ? 'selected' : ''}>5. Omissão</option>
+                <option value="SELECAO" ${item.tipo === 'SELECAO' ? 'selected' : ''}>6. Seleção</option>
               </select>
             </td>
             <td class="py-2.5 px-2.5 text-[11px]">
@@ -11355,6 +11674,12 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       } else if (tipo === 'LEI_SECA') {
         lblFrente.textContent = '3. Lei Seca — Dispositivo Legal (Opcional usar {{c1::termo}} para lacuna) *';
         lblVerso.textContent = 'Fundamentação Legal, Artigo e Explicação da Regra/Exceção *';
+      } else if (tipo === 'OMISSAO') {
+        lblFrente.textContent = '5. Omissão — Afirmação com lacunas _____ (máx. 25 palavras) *';
+        lblVerso.textContent = 'Verso: Alternativas: A / B / C / D | Gabarito: resposta 1 / resposta 2 | Resumo: ... | Fundamento: ... *';
+      } else if (tipo === 'SELECAO') {
+        lblFrente.textContent = '6. Seleção — Pergunta curta (ex.: Quais são os fundamentos da RFB?) *';
+        lblVerso.textContent = 'Verso: Opções: A / B / C / D / E | Gabarito: A / B / E | Resumo: ... | Bizu: ... | Fundamento: ... *';
       } else {
         lblFrente.textContent = '4. Decoreba — Pergunta Direta, Prazo, Quórum ou Regra Literal *';
         lblVerso.textContent = 'Resposta Direta em Destaque + Esquema para Fixação *';
@@ -15841,7 +16166,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     try {
       const c = FC_SESSAO && FC_SESSAO.cardAtual;
       const el = $('fcCardFrente');
-      if (c && el && !/\{\{c\d+::/i.test(c.frente) && RE_TEM_MARKUP.test(c.frente)) {
+      if (c && el && !fcEhInterativo_(c.tipo) && !/\{\{c\d+::/i.test(c.frente) && RE_TEM_MARKUP.test(c.frente)) {
         el.innerHTML = aplicarMarkupEscapado(esc(c.frente));
       }
     } catch (e) { /* sem efeito visual */ }
@@ -15857,7 +16182,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     termos: 'termos', 'termos juridicos': 'termos',
     resumo: 'resumo', 'explicacao rapida': 'resumo', 'resposta rapida': 'resumo',
     analise: 'analise', 'explicacao detalhada': 'analise', 'analise da afirmacao': 'analise',
-    pdf: 'pdf', 'fonte pdf': 'pdf', 'fonte': 'pdf'
+    pdf: 'pdf', 'fonte pdf': 'pdf', 'fonte': 'pdf',
+    alternativas: 'alternativas', opcoes: 'alternativas'
   };
 
   function normGab(v) {
@@ -15869,13 +16195,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
   }
 
   function parseVersoCampos(verso) {
-    const campos = { gabarito: '', resumo: '', explicacao: '', analise: '', pdf: '', fundamento: '', frase: '', exemplo: '', bizu: '', atencao: '', termos: '' };
+    const campos = { gabarito: '', resumo: '', explicacao: '', analise: '', pdf: '', fundamento: '', frase: '', exemplo: '', bizu: '', atencao: '', termos: '', alternativas: '', gabaritoBruto: '' };
     const s = String(verso || '').trim();
     const partes = s.split('|').map((p) => p.trim()).filter((p) => p !== '');
     let ultimo = null;
     let rotulado = false;
     partes.forEach((p) => {
-      const m = p.match(/^(gabarito|fonte\s*pdf|pdf|fonte|resumo|explica[cç][aã]o\s*r[aá]pida|resposta\s*r[aá]pida|an[aá]lise\s*da\s*afirma[cç][aã]o|an[aá]lise|explica[cç][aã]o\s*detalhada|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo|bizu|aten[cç][aã]o\s*[àa]\s*prova|aten[cç][aã]o|termos\s*jur[ií]dicos|termos)\s*:\s*([\s\S]*)$/i);
+      const m = p.match(/^(alternativas|op[cç][oõ]es|gabarito|fonte\s*pdf|pdf|fonte|resumo|explica[cç][aã]o\s*r[aá]pida|resposta\s*r[aá]pida|an[aá]lise\s*da\s*afirma[cç][aã]o|an[aá]lise|explica[cç][aã]o\s*detalhada|explica[cç][aã]o|endere[cç]o|fundamento|artigo|dispositivo|frase\s*corrigida|corre[cç][aã]o|conceito|exemplo|bizu|aten[cç][aã]o\s*[àa]\s*prova|aten[cç][aã]o|termos\s*jur[ií]dicos|termos)\s*:\s*([\s\S]*)$/i);
       if (m) {
         rotulado = true;
         const chave = CAMPO_POR_ROTULO[nn(m[1])];
@@ -15890,6 +16216,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       }
     });
     if (!rotulado) campos.explicacao = s;
+    campos.gabaritoBruto = campos.gabarito;
     campos.gabarito = normGab(campos.gabarito);
     return { campos, rotulado };
   }
@@ -15899,9 +16226,13 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
   function montarVerso(tipo, c) {
     const L = (s) => String(s || '').replace(/\s*\|\s*/g, ' / ').trim();
     const p = [];
+    if (fcEhInterativo_(tipo)) {
+      p.push((tipo === 'SELECAO' ? 'Opções: ' : 'Alternativas: ') + L(c.alternativas));
+      p.push('Gabarito: ' + L(c.gabaritoBruto !== undefined ? c.gabaritoBruto : c.gabarito));
+    }
     if (ehCE(tipo)) p.push('Gabarito: ' + (c.gabarito === 'ERRADO' ? 'ERRADO' : 'CERTO'));
     if (L(c.resumo)) p.push('Resumo: ' + L(c.resumo));
-    p.push('Explicação: ' + L(c.explicacao));
+    if (L(c.explicacao) || !fcEhInterativo_(tipo)) p.push('Explicação: ' + L(c.explicacao));
     if (L(c.analise)) p.push('Análise: ' + L(c.analise));
     if (L(c.fundamento)) p.push('Fundamento: ' + L(c.fundamento));
     if (L(c.pdf)) p.push('PDF: ' + L(c.pdf));
@@ -15919,7 +16250,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
   const FC_LIM_KEY = 'GR_FC_LIMITE_PALAVRAS';
   function limitePalavras() {
     const v = Number(localStorage.getItem(FC_LIM_KEY));
-    return v >= 8 && v <= 120 ? v : 30;
+    return v >= 8 && v <= 120 ? v : 25;
   }
 
   const VERBOS = ('é|são|era|eram|foi|serão|será|pode|podem|poderá|poderão|deve|devem|deverá|deverão|cabe|cabem|caberá|compete|competem|tem|têm|terá|possui|possuem|admite|admitem|exige|exigem|depende|dependem|ocorre|ocorrem|configura|configuram|constitui|constituem|prescreve|prescrevem|veda|vedam|proíbe|proíbem|permite|permitem|garante|garantem|assegura|asseguram|extingue|extinguem|inicia|iniciam|começa|começam|cessa|cessam|há|haverá|existe|existem|incide|incidem|aplica|aplicam|aplica-se|aplicam-se|responde|respondem|prevê|preveem|estabelece|estabelecem|dispõe|dispõem|determina|determinam|autoriza|autorizam|impede|impedem|afasta|afastam|exclui|excluem|inclui|incluem|abrange|abrangem|decorre|decorrem|nasce|nascem|consiste|consistem|subsiste|persiste|produz|produzem|gera|geram|cumpre|cumprem|fica|ficam|equivale|equivalem|vigora|prevalece|prevalecem|basta|bastam|independe|independem|impõe|impõem|vincula|vinculam|protege|protegem|passa|passam|corresponde|correspondem|inicia-se|extingue-se|conta-se|contam-se|computa-se|considera-se|consideram-se|reputa-se|reputam-se|realiza-se|realizam-se|processa-se|processam-se|julga-se|julgam-se|dá-se|dão-se|faz-se|fazem-se|torna-se|tornam-se|opera-se|operam-se')
@@ -15985,6 +16316,10 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     let sugestaoGabarito = '';
 
     if (!frente.trim()) problemas.push({ nivel: 'erro', codigo: 'FRENTE_VAZIA', msg: 'Frente vazia.' });
+    if (fcEhInterativo_(c.tipo)) {
+      const ai = fcAnalisarInterativo_(c.tipo, frente, c.verso);
+      return { problemas: problemas.concat(ai.problemas), palavras: ai.palavras, gabaritoAtual: '', sugestaoGabarito: '', campos, rotulado };
+    }
 
     if (ce) {
       const explicito = campos.gabarito;
@@ -16059,7 +16394,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
 REGRA CENTRAL: CADA CARTÃO = UMA AFIRMAÇÃO = UMA ÚNICA IDEIA.
 - Proibido reunir duas ou mais ideias independentes na mesma afirmação (nada de "X, e Y", "além de", "bem como", ponto e vírgula).
 - Se o conteúdo tiver várias ideias, crie VÁRIOS cartões, um para cada ideia.
-- Máximo de ${lim} palavras por afirmação (PDF_BASE e CADERNO_ERROS), sem perder a precisão jurídica.
+- Máximo de ${lim} palavras na FRENTE de todo cartão: afirmação C/E, afirmação com lacunas (OMISSAO) e pergunta (SELECAO), sem perder a precisão jurídica.
 - Afirmação objetiva, clara e adequada à revisão rápida.
 
 COERÊNCIA DO GABARITO (OBRIGATÓRIA):
@@ -16075,12 +16410,21 @@ FORMATAÇÃO DO ARQUIVO (ZERO ERRO DE IMPORTAÇÃO):
 - NUNCA use ";" dentro dos textos (use vírgula, dois-pontos ou "|" apenas para separar campos do verso).
 - Mantenha a ordem lógica do conteúdo.
 
-TIPOS PERMITIDOS: PDF_BASE (afirmação C/E do PDF) · CADERNO_ERROS (pegadinha de prova convertida em C/E) · LEI_SECA (texto literal, lacunas {{c1::termo}}) · DECOREBA (pergunta direta sobre prazo, lista, quórum, competência).
+TIPOS PERMITIDOS: PDF_BASE (afirmação C/E do PDF) · CADERNO_ERROS (pegadinha de prova convertida em C/E) · LEI_SECA (texto literal, lacunas {{c1::termo}}) · DECOREBA (pergunta direta sobre prazo, lista, quórum, competência) · OMISSAO (afirmação com lacunas + alternativas: prazos, terminologias, classificações, competências, requisitos, consequências, diferenciações) · SELECAO (pergunta curta + opções misturadas, marcar todas as corretas: listas, espécies, hipóteses legais, excludentes, princípios, fundamentos/objetivos).
 
 VERSO — PDF_BASE e CADERNO_ERROS:
 Gabarito: CERTO ou ERRADO | Explicação: Certo./Errado. + explicação curta | Fundamento: Art. X da Lei Y | Frase Corrigida: frase com o [conceito correto]
 VERSO — LEI_SECA e DECOREBA:
 Explicação: resposta direta e esquematizada | Fundamento: Art. X da Lei Y | Frase Corrigida: [resumo literal]
+VERSO — OMISSAO (frente com lacunas escritas como _____ , uma por informação omitida):
+Alternativas: opção 1 / opção 2 / opção 3 / ... | Gabarito: resposta da 1ª lacuna / resposta da 2ª lacuna | Resumo: explicação rápida | Bizu: ... | Fundamento: Art. X | PDF: pág. — tópico
+VERSO — SELECAO (frente = só a pergunta):
+Opções: item 1 / item 2 / item 3 / ... | Gabarito: todas as corretas / separadas por barra | Resumo: ... | Bizu: mnemônico | Fundamento: Art. X | PDF: pág. — tópico
+REGRAS DE OMISSAO e SELECAO:
+- Separe os itens das listas com " / " (barra com espaço dos dois lados). Escreva o gabarito com as MESMAS palavras da alternativa.
+- O gabarito da OMISSAO segue a ordem das lacunas; o número de respostas = número de lacunas.
+- As alternativas erradas (distratores) devem reproduzir as confusões reais das questões (institutos vizinhos, categorias parecidas), nunca opções absurdas.
+- Na SELECAO, misture as corretas com itens de categorias próximas (ex.: fundamentos misturados com objetivos e princípios das relações internacionais).
 
 FORMATAÇÃO OPCIONAL DO TEXTO: **negrito** · ==destaque== · __sublinhado__ · ~~itálico~~ · {{vm::vermelho}} {{vd::verde}} {{az::azul}} {{lj::laranja}} {{rx::roxo}}
 
@@ -16088,7 +16432,9 @@ EXEMPLO (cada linha é um cartão, uma ideia por afirmação):
 PDF_BASE;O ingresso em domicílio por ordem judicial só pode ocorrer durante o dia.;Gabarito: CERTO | Explicação: Certo. A Constituição admite o ingresso sem consentimento, por determinação judicial, apenas durante o dia. | Fundamento: Art. 5º, XI, da CF/88 | Frase Corrigida: O ingresso por ordem judicial só pode ocorrer [durante o dia].;Inviolabilidade Domiciliar
 PDF_BASE;A casa é inviolável mesmo em caso de flagrante delito.;Gabarito: ERRADO | Explicação: Errado. Em flagrante delito, desastre ou para prestar socorro, o ingresso é permitido a qualquer hora. | Fundamento: Art. 5º, XI, da CF/88 | Frase Corrigida: Em [flagrante delito] o ingresso na casa é permitido a qualquer hora.;Inviolabilidade Domiciliar
 LEI_SECA;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum praticado {{c2::antes da naturalização}}.;Explicação: O brasileiro nato jamais é extraditado. | Fundamento: Art. 5º, LI, da CF/88 | Frase Corrigida: Nato: [nunca extraditado].;Extradição
-DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado solto no CPP?;Explicação: **30 dias**, prorrogáveis. | Fundamento: Art. 10 do CPP | Frase Corrigida: CPP solto: [30 dias].;Prazos IP`;
+DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado solto no CPP?;Explicação: **30 dias**, prorrogáveis. | Fundamento: Art. 10 do CPP | Frase Corrigida: CPP solto: [30 dias].;Prazos IP
+OMISSAO;O erro de tipo essencial _____ exclui dolo e culpa, enquanto o _____ exclui o dolo, mas permite punição culposa.;Alternativas: inevitável / evitável / acidental / de proibição / escusável por culpa / sobre a pessoa | Gabarito: inevitável / evitável | Resumo: Inevitável (escusável) afasta dolo e culpa. Evitável (inescusável) afasta só o dolo. | Fundamento: Art. 20, caput, do CP;Erro de Tipo
+SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político / Garantir o desenvolvimento nacional / Erradicar a pobreza / Independência nacional / Prevalência dos direitos humanos | Gabarito: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político | Resumo: Os cinco fundamentos estão no art. 1º. Objetivos (art. 3º) são verbos de ação. | Bizu: SO-CI-DI-VA-PLU | Fundamento: Art. 1º da CF/88;Princípios Fundamentais`;
   };
 
   function diagnosticarItemPrevia(item) {
@@ -16099,6 +16445,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       item.avisos = a.problemas;
       const conf = a.problemas.find((p) => p.codigo === 'GABARITO_X_EXPLICACAO');
       if (conf) item._conflito = conf.msg + ' Corrija antes de importar.';
+    } else if (fcEhInterativo_(item.tipo) && item.frente && item.verso) {
+      const ai = fcAnalisarInterativo_(item.tipo, item.frente, item.verso);
+      item.avisos = ai.problemas.map((p) => (p.nivel === 'erro' ? Object.assign({}, p, { codigo: 'INT_' + p.codigo }) : p));
+      const erro = ai.problemas.find((p) => p.nivel === 'erro');
+      if (erro) item._conflito = erro.msg;
     }
   }
 
@@ -16106,7 +16457,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const pill = item.erroValidacao
       ? '<span class="px-2 py-0.5 rounded bg-rose-600 text-white font-bold text-[10px]">' + esc(item.erroValidacao) + '</span>'
       : '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold text-[10px]">OK • Validado</span>';
-    const extras = (item.avisos || []).filter((p) => p.codigo !== 'GABARITO_X_EXPLICACAO')
+    const extras = (item.avisos || []).filter((p) => p.codigo !== 'GABARITO_X_EXPLICACAO' && !/^INT_/.test(p.codigo))
       .map((p) => '<div class="text-[10px] text-amber-300 mt-0.5 text-left whitespace-normal">• ' + esc(p.msg) + '</div>').join('');
     return pill + (extras ? '<div style="max-width:240px;margin:0 auto">' + extras + '</div>' : '');
   }
@@ -16199,7 +16550,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   const ED = { itens: [], pagina: 0, porPagina: 6, focado: null };
 
   function rotuloTipo(t) {
-    return { PDF_BASE: '1. PDF-Base (C/E)', CADERNO_ERROS: '2. Caderno de Erros (C/E)', LEI_SECA: '3. Lei Seca', DECOREBA: '4. Decoreba' }[t] || t;
+    return { PDF_BASE: '1. PDF-Base (C/E)', CADERNO_ERROS: '2. Caderno de Erros (C/E)', LEI_SECA: '3. Lei Seca', DECOREBA: '4. Decoreba', OMISSAO: '5. Omissão (lacunas)', SELECAO: '6. Seleção (marque as corretas)' }[t] || t;
   }
 
   async function abrirEditorCartoes(ids) {
@@ -16223,13 +16574,14 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       const n = nomesDoCartao(c);
       const it = {
         id: c.id, seq: c.ordemCriacao, seqTag: seq, rotuloTopico: n.materia + ' • ' + n.topico,
-        tipo: c.tipo, frente: c.frente, gabarito: campos.gabarito || (ehCE(c.tipo) ? c.gabaritoCE : ''),
+        tipo: c.tipo, frente: c.frente, gabarito: fcEhInterativo_(c.tipo) ? campos.gabaritoBruto : (campos.gabarito || (ehCE(c.tipo) ? c.gabaritoCE : '')),
+        alternativas: campos.alternativas,
         explicacao: campos.explicacao, fundamento: campos.fundamento, frase: campos.frase, exemplo: campos.exemplo,
         bizu: campos.bizu, atencao: campos.atencao, termos: campos.termos,
         resumo: campos.resumo, analise: campos.analise, pdf: campos.pdf,
         tags: tagsUsuario
       };
-      it.orig = JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags });
+      it.orig = JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags, l: it.alternativas });
       return it;
     });
     ED.pagina = 0;
@@ -16240,7 +16592,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   window.abrirEditorCartoes = abrirEditorCartoes;
 
   function edAlterado(it) {
-    return JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags }) !== it.orig;
+    return JSON.stringify({ t: it.tipo, f: it.frente, g: it.gabarito, e: it.explicacao, u: it.fundamento, p: it.frase, x: it.exemplo, a: it.tags, l: it.alternativas }) !== it.orig;
   }
 
   function edBlocoHTML(it, idx) {
@@ -16253,10 +16605,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       '<div class="flex flex-wrap items-center justify-between gap-2">' +
       '<span class="font-mono text-[11px] font-bold text-slate-300">#' + it.seq + ' • ' + esc(it.rotuloTopico) + (edAlterado(it) ? ' <span class="text-amber-300">● alterado</span>' : '') + '</span>' +
       '<div class="flex items-center gap-1.5">' +
-      '<select data-edsel="' + idx + '|tipo" class="rounded border px-2 py-1 text-[11px] font-bold">' + opt('PDF_BASE') + opt('CADERNO_ERROS') + opt('LEI_SECA') + opt('DECOREBA') + '</select>' +
+      '<select data-edsel="' + idx + '|tipo" class="rounded border px-2 py-1 text-[11px] font-bold">' + opt('PDF_BASE') + opt('CADERNO_ERROS') + opt('LEI_SECA') + opt('DECOREBA') + opt('OMISSAO') + opt('SELECAO') + '</select>' +
       (ce ? '<select data-edsel="' + idx + '|gabarito" class="rounded border px-2 py-1 text-[11px] font-extrabold"><option value="CERTO"' + (it.gabarito !== 'ERRADO' ? ' selected' : '') + '>Gabarito: CERTO</option><option value="ERRADO"' + (it.gabarito === 'ERRADO' ? ' selected' : '') + '>Gabarito: ERRADO</option></select>' : '') +
       '</div></div>' +
-      campo('frente', 'Frente (afirmação com uma única ideia)', 2) +
+      campo('frente', it.tipo === 'OMISSAO' ? 'Frente (afirmação com lacunas _____ — máx. ' + limitePalavras() + ' palavras)' : it.tipo === 'SELECAO' ? 'Frente (pergunta curta)' : 'Frente (afirmação com uma única ideia)', 2) +
+      (fcEhInterativo_(it.tipo) ? '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' + campo('alternativas', (it.tipo === 'SELECAO' ? 'Opções' : 'Alternativas') + ' (separe com " / ")', 2) + campo('gabarito', it.tipo === 'OMISSAO' ? 'Gabarito (na ordem das lacunas, separe com " / ")' : 'Gabarito (todas as corretas, separe com " / ")', 2) + '</div>' : '') +
       campo('explicacao', 'Explicação', 3) +
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' + campo('fundamento', 'Fundamento / dispositivo', 0) + campo('frase', 'Frase corrigida / conceito-chave', 0) + '</div>' +
       '<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">' + campo('exemplo', 'Exemplo prático', 0) + campo('tags', 'Tags', 0) + '</div>' +
@@ -16280,11 +16633,11 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (q) {
       const a = analisarCartaoCompleto({ tipo: it.tipo, frente: it.frente, verso: montarVerso(it.tipo, it), tags: it.tags });
       const chips = [];
-      if (ehCE(it.tipo)) chips.push('<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">' + a.palavras + ' / ' + limitePalavras() + ' palavras</span>');
+      if (ehCE(it.tipo) || fcEhInterativo_(it.tipo)) chips.push('<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">' + a.palavras + ' / ' + limitePalavras() + ' palavras</span>');
       a.problemas.forEach((p) => {
         chips.push('<span class="px-1.5 py-0.5 rounded text-[10px] font-bold ' + (p.nivel === 'erro' ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-amber-950 text-amber-300 border border-amber-800') + '">' + (p.nivel === 'erro' ? '⛔ ' : '⚠ ') + esc(p.msg) + '</span>');
       });
-      if (!a.problemas.length && ehCE(it.tipo)) chips.push('<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">✓ Sem alertas</span>');
+      if (!a.problemas.length && (ehCE(it.tipo) || fcEhInterativo_(it.tipo))) chips.push('<span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold">✓ Sem alertas</span>');
       q.innerHTML = chips.join('');
     }
     const cab = document.querySelector('[data-ed-bloco="' + idx + '"] .font-mono');
@@ -17313,7 +17666,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     sel.value = '';
     let lista;
     try { lista = orig(); } finally { sel.value = 'CICLO'; }
-    return lista.filter((c) => c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS');
+    return lista.filter((c) => fcEhTipoEstudo_(c.tipo));
   });
 
   const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
@@ -17409,7 +17762,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
   let memoPeriodo = { t: 0, v: null };
   let revCtx = null;
   let qtdAntesRev = null;
-  const TIPOS_REV = ['PDF_BASE', 'CADERNO_ERROS', 'LEI_SECA'];
+  const TIPOS_REV = ['PDF_BASE', 'CADERNO_ERROS', 'LEI_SECA', 'OMISSAO', 'SELECAO'];
   const cfgRev = (id) => { ciclo.rev = ciclo.rev || {}; return ciclo.rev[id] || { qtd: 1 }; };
 
   function topicoGlobal(nome, materiaPref) {
@@ -17468,10 +17821,10 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const vT = selT.value;
     if (selT.innerHTML !== htmlT) selT.innerHTML = htmlT;
     selT.value = tops.some((t) => t.id === vT) ? vT : '';
-    const htmlTp = '<option value="CICLO">PDF-Base + Caderno de Erros</option><option value="PDF_BASE">1. PDF-Base (C/E)</option><option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>';
+    const htmlTp = '<option value="CICLO">Todos (C/E + Omissão + Seleção)</option><option value="PDF_BASE">1. PDF-Base (C/E)</option><option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option><option value="OMISSAO">5. Omissão com alternativas</option><option value="SELECAO">6. Seleção de alternativas</option>';
     const vTp = selTp.value;
     if (selTp.innerHTML !== htmlTp) selTp.innerHTML = htmlTp;
-    selTp.value = ['CICLO', 'PDF_BASE', 'CADERNO_ERROS'].indexOf(vTp) >= 0 ? vTp : 'CICLO';
+    selTp.value = ['CICLO', 'PDF_BASE', 'CADERNO_ERROS', 'OMISSAO', 'SELECAO'].indexOf(vTp) >= 0 ? vTp : 'CICLO';
   }
 
   envolver('obterCardsFiltradosFC', (orig) => {
@@ -17483,7 +17836,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     if (abaAq !== 'estudos') return lista;
     const per = periodoAtual();
     if (!per || !per.permitidos.size) return lista;
-    return lista.filter((c) => per.permitidos.has(c.idTopico) && (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS'));
+    return lista.filter((c) => per.permitidos.has(c.idTopico) && fcEhTipoEstudo_(c.tipo));
   });
 
   /* chave estável dos blocos durante todo o período (não muda com modalidade/ordem) */
@@ -17630,7 +17983,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     const painelDia = htmlPainelDia();
     if (!per) { topo.innerHTML = painelDia + '<div class="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs text-slate-400">Nenhuma meta do cronograma encontrada para este período.</div>'; return; }
     const tel = lerJSON('GR_FC_TELEMETRIA_V2', {});
-    const cards = FC_DECK.filter((c) => per.permitidos.has(c.idTopico) && (c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS'));
+    const cards = FC_DECK.filter((c) => per.permitidos.has(c.idTopico) && fcEhTipoEstudo_(c.tipo));
     const estud = cards.filter((c) => c.totalRevisoes > 0);
     const pctEst = cards.length ? Math.round((estud.length / cards.length) * 100) : 0;
     const esperado = Math.round((per.dia / per.dias) * 100);
@@ -17707,7 +18060,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       if (!sel.querySelector('option[value="CICLO"]')) {
         const op = document.createElement('option');
         op.value = 'CICLO';
-        op.textContent = '★ PDF-Base + Caderno de Erros';
+        op.textContent = '★ C/E + Omissão + Seleção';
         sel.insertBefore(op, sel.options[1] || null);
       }
     }
