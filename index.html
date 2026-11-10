@@ -3709,6 +3709,15 @@
                   <div id="fcBarraProgressoDinamica" class="h-full bg-indigo-600 transition-all duration-300" style="width: 0%"></div>
                 </div>
               </div>
+
+              <!-- Contagem da etapa: INÉDITOS (1ª passagem) ou REVISÃO (reorganizados) — contagens separadas -->
+              <div id="fcContagemEtapa" class="hidden flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-2.5 py-1.5 text-[11px]">
+                <span id="fcContagemEtapaNome" class="font-extrabold uppercase tracking-wide">Estudo inicial — cartões inéditos</span>
+                <span class="text-slate-300">Total: <strong id="fcContagemTotal" class="text-white">0</strong></span>
+                <span class="text-slate-300">Resolvidos: <strong id="fcContagemResolvidos" class="text-white">0/0</strong></span>
+                <span class="text-slate-300">Restantes: <strong id="fcContagemRestantes" class="text-white">0</strong></span>
+                <span class="text-slate-300">Tempo estimado: <strong id="fcContagemTempo" class="text-white">—</strong></span>
+              </div>
             </div>
 
             <!-- PALCO CENTRALIZADO -->
@@ -9511,6 +9520,15 @@
         inicioTimestamp: Date.now(),
         segundosDecorridos: 0
       };
+      /* Contagem da etapa (Regras definitivas, item 7): inéditos e reorganizados têm contagens próprias */
+      FC_SESSAO.etapa = {
+        nome: FC_SESSAO.modoBlocoNovo ? (FC_SESSAO.fase === 1 ? 'INEDITOS' : 'REVISAO') : 'SESSAO',
+        total: (FC_SESSAO.modoBlocoNovo && FC_SESSAO.fase === 1)
+          ? FC_SESSAO.totalCardsUnicos
+          : new Set(filaInicial.map(x => x.id)).size,
+        segInicio: 0,
+        respostasInicio: 0
+      };
 
       const lblSubErrei = document.getElementById('lblSubBtnErreiRetorno');
       if (lblSubErrei) lblSubErrei.textContent = `Retorna após ${FC_SESSAO.intervaloRetornoConfigurado} cartão(ões)`;
@@ -9581,6 +9599,97 @@
       if (elTempoEst) {
         elTempoEst.textContent = segsRestantes <= 25 ? '< 1 min' : `~${minRestantes} min`;
       }
+      renderizarContagemEtapaFC_();
+    }
+
+    /* ===== Contagem por etapa (inéditos x reorganizados) ===== */
+    function formatarTempoEstimadoFC_(segs) {
+      if (segs <= 0) return '0 min';
+      if (segs <= 25) return '< 1 min';
+      const min = Math.ceil(segs / 60);
+      if (min < 60) return `${min} minuto${min === 1 ? '' : 's'}`;
+      const h = Math.floor(min / 60), m = min % 60;
+      return `${h}h${m ? String(m).padStart(2, '0') : ''}`;
+    }
+    function velocidadeEtapaFC_() {
+      const S = FC_SESSAO;
+      const E = S.etapa || { segInicio: 0, respostasInicio: 0 };
+      const resp = S.respostasComputadas - E.respostasInicio;
+      if (resp >= 2) return (S.segundosDecorridos - E.segInicio) / resp;
+      if (S.respostasComputadas >= 2) return S.segundosDecorridos / S.respostasComputadas;
+      return S.velocidadeHistoricaSeg || 20;
+    }
+    function calcularContagemEtapaFC_() {
+      const S = FC_SESSAO;
+      if (!S || !S.etapa) return null;
+      const total = Math.max(0, S.etapa.total);
+      const restantes = Math.min(total, new Set(S.filaAtiva.map(x => x.id)).size);
+      const resolvidos = Math.max(0, total - restantes);
+      const segs = Math.round(S.filaAtiva.length * velocidadeEtapaFC_());
+      return { nome: S.etapa.nome, total, resolvidos, restantes, tempo: formatarTempoEstimadoFC_(segs) };
+    }
+    function renderizarContagemEtapaFC_() {
+      const box = document.getElementById('fcContagemEtapa');
+      const k = calcularContagemEtapaFC_();
+      if (!box) return;
+      if (!k) { box.classList.add('hidden'); return; }
+      box.classList.remove('hidden');
+      const nomes = {
+        INEDITOS: 'Estudo inicial — cartões inéditos',
+        REVISAO: 'Revisão — cartões reorganizados',
+        SESSAO: 'Sessão de cartões'
+      };
+      const cores = {
+        INEDITOS: 'border-amber-700 bg-amber-950/40 text-amber-300',
+        REVISAO: 'border-emerald-700 bg-emerald-950/40 text-emerald-300',
+        SESSAO: 'border-slate-700 bg-slate-950 text-slate-300'
+      };
+      box.className = 'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-2.5 py-1.5 text-[11px] ' + cores[k.nome];
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('fcContagemEtapaNome', nomes[k.nome] + (FC_SESSAO.totalBlocos > 1 ? ` • Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}` : ''));
+      set('fcContagemTotal', `${k.total} cartões`);
+      set('fcContagemResolvidos', `${k.resolvidos}/${k.total}`);
+      set('fcContagemRestantes', String(k.restantes));
+      set('fcContagemTempo', k.tempo);
+    }
+
+    /* Anúncio obrigatório da transição: INÉDITOS CONCLUÍDOS → REVISÃO (contagem reiniciada) */
+    function anunciarTransicaoParaRevisaoFC_(k) {
+      const antigo = document.getElementById('fcxTransicaoEtapa');
+      if (antigo) antigo.remove();
+      const fundo = document.createElement('div');
+      fundo.id = 'fcxTransicaoEtapa';
+      fundo.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(2,6,23,.8);display:flex;align-items:center;justify-content:center;padding:16px';
+      const temRevisao = k && k.total > 0;
+      fundo.innerHTML = `
+        <div class="bg-slate-900 border border-emerald-600 rounded-2xl p-5 w-full max-w-md space-y-3 shadow-2xl text-left">
+          <div class="text-lg font-black text-emerald-400">INÉDITOS CONCLUÍDOS!</div>
+          <div class="text-[12px] text-slate-200">Você finalizou todos os cartões inéditos${FC_SESSAO && FC_SESSAO.totalBlocos > 1 ? ` do bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}` : ''}.</div>
+          ${temRevisao ? `
+          <div class="text-[12px] text-slate-200">Agora começaremos uma nova etapa:</div>
+          <div class="text-sm font-extrabold text-white">REVISÃO — CARTÕES REORGANIZADOS</div>
+          <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 text-[12px] text-slate-200 space-y-0.5">
+            <div class="font-bold text-amber-300">Contagem reiniciada.</div>
+            <div>Total: <strong>${k.total} cartões</strong>.</div>
+            <div>Resolvidos: <strong>0/${k.total}</strong>.</div>
+            <div>Restantes: <strong>${k.total}</strong>.</div>
+            <div>Tempo estimado: <strong>${k.tempo}</strong>.</div>
+          </div>
+          <div class="text-[10px] text-slate-400">Os não entendidos vêm primeiro. A contagem considera só os cartões selecionados para a revisão.</div>
+          <button type="button" data-op="ok" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">Começar a revisão (Enter)</button>`
+          : `<button type="button" data-op="ok" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">OK (Enter)</button>`}
+        </div>`;
+      const fechar = () => { window.removeEventListener('keydown', teclas, true); fundo.remove(); };
+      const teclas = (ev) => {
+        ev.stopImmediatePropagation();
+        if (ev.key === 'Enter' || ev.key === 'Escape' || ev.code === 'Space') { ev.preventDefault(); fechar(); }
+      };
+      window.addEventListener('keydown', teclas, true);
+      fundo.addEventListener('click', (ev) => {
+        const op = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-op');
+        if (op === 'ok') fechar();
+      });
+      document.body.appendChild(fundo);
     }
 
     function carregarProximoCardSessaoFC_() {
@@ -10418,7 +10527,12 @@
             S.fase = 2;
             S.filaAtiva = fila2.map(x => ({ ...x }));
             const nNao = fila2.filter(x => B.statusPorCard[x.id] === 'NAO_ENTENDI').length;
+            /* contagem reiniciada: a revisão conta só os cartões reorganizados, do zero */
+            S.etapa = { nome: 'REVISAO', total: new Set(fila2.map(x => x.id)).size, segInicio: S.segundosDecorridos, respostasInicio: S.respostasComputadas };
             notificar(`Bloco ${S.numeroBloco} feito ✓. Cartões reorganizados: ${nNao} não entendido(s) primeiro, depois os entendidos.`);
+            anunciarTransicaoParaRevisaoFC_(calcularContagemEtapaFC_());
+          } else {
+            anunciarTransicaoParaRevisaoFC_(null);
           }
         }
       } else if (avaliacao === 'ERREI') {
@@ -16391,6 +16505,39 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     const lim = limitePalavras();
     txtEl.value = `ATUE COMO ESPECIALISTA EM CONCURSOS JURÍDICOS E GERE CARTÕES DE ESTUDO NO FORMATO ABAIXO (${nomeMat} — ${nomeTop}).
 
+REGRA DE OURO: reduzir a quantidade de cartões, NUNCA a quantidade de conteúdo estudado. A frente testa o conhecimento; o verso consolida o aprendizado.
+
+1. COBERTURA INTEGRAL DO PDF (fonte principal da teoria):
+- Todo conteúdo relevante do PDF vira cartão, mesmo que não apareça nas questões.
+- Assunto sem incidência nas questões: crie o cartão com base só no PDF e informe no verso "Fonte: exclusivamente PDF".
+- Não corte conteúdo para diminuir o número de cartões.
+
+2. ANÁLISE INTEGRAL DA BATERIA DE QUESTÕES:
+- Analise TODAS as questões e TODAS as alternativas (200 questões = 200 analisadas).
+- Identifique: assuntos cobrados, padrões de cobrança, pegadinhas recorrentes, diferenças entre institutos, terminologias, conceitos mais explorados, decorebas e como a banca induz ao erro.
+- Sem reserva de porcentagem para questões inéditas e sem cartões artificiais.
+- SÍNTESE: 10 questões com a mesma informação = 1 cartão inteligente; se exploram particularidades diferentes, todas entram. Elimine repetições, nunca conteúdo.
+
+3. TRÊS MODALIDADES:
+- CERTO OU ERRADO (PDF_BASE / CADERNO_ERROS): compreensão, institutos, diferenciações, exceções, ressalvas, interpretação de dispositivos e pegadinhas. Redação no estilo das bancas. Não deixe esta modalidade carregar sozinha todo o conteúdo.
+- OMISSÃO COM ALTERNATIVAS (OMISSAO): prazos, terminologias, classificações, características, requisitos, exceções, competências, consequências jurídicas, expressões legais, diferenciações. Alternativas inspiradas nas confusões reais das questões.
+- SELEÇÃO DE ALTERNATIVAS (SELECAO): listas, classificações, espécies, hipóteses legais, requisitos, elementos, princípios, competências, objetivos, fundamentos, direitos e garantias, excludentes.
+
+4. DECOREBAS (identificação obrigatória): prazos, quantidades, percentuais, classificações, rol taxativo x exemplificativo, nomenclaturas, requisitos cumulativos, hipóteses legais, exceções, competências, expressões específicas da lei.
+- Nada de pergunta discursiva: o decoreba é resolvido por OMISSAO ou SELECAO (meta: ~30 s por cartão).
+- Prazo específico → OMISSAO · Lista de elementos → SELECAO · Classificação jurídica → SELECAO · Diferença de nomenclaturas → OMISSAO · Hipóteses legais → SELECAO.
+- Ex.: várias situações + 4 prazos possíveis para marcar os correspondentes.
+
+5. PADRÃO DOS VERSOS (vale para as três modalidades): o verso ENSINA, não só repete a frente. Sempre que pertinente: Resumo (explicação objetiva do instituto), Análise (onde está o erro / a pegadinha), Exemplo prático, Atenção à prova (exceções, consequências, como reconhecer a pegadinha), Bizu (gatilho de memória — complementa, nunca substitui a fundamentação), Fundamento, PDF e Termos Jurídicos. Não repita a frase da frente no verso.
+
+6. FUNDAMENTAÇÃO DA LEI SECA (precisa, sem referência solta): nome do diploma + artigo + caput/inciso/parágrafo/alínea quando houver. Ex.: "Fundamento: Constituição Federal de 1988, art. 5º, XI" · "Fundamento: Código Penal, art. 23, parágrafo único". Quando a informação vier só do PDF, escreva "Fonte: exclusivamente PDF" e indique em "PDF:" a página e o tópico › subtópico.
+
+7. AUDITORIA ANTES DE ENTREGAR (se houver lacuna, os cartões NÃO estão prontos):
+- PDF: todos os tópicos relevantes têm cartão?
+- Questões: todas e todas as alternativas analisadas? Padrões sintetizados? Algo relevante ficou de fora?
+- Decorebas: prazos, classificações, terminologias, listas e hipóteses legais viraram cartões na modalidade adequada?
+- Antes do código, entregue um quadro curto da auditoria (cobertura do PDF, questões analisadas, decorebas identificados e a modalidade escolhida).
+
 REGRA CENTRAL: CADA CARTÃO = UMA AFIRMAÇÃO = UMA ÚNICA IDEIA.
 - Proibido reunir duas ou mais ideias independentes na mesma afirmação (nada de "X, e Y", "além de", "bem como", ponto e vírgula).
 - Se o conteúdo tiver várias ideias, crie VÁRIOS cartões, um para cada ideia.
@@ -16412,14 +16559,14 @@ FORMATAÇÃO DO ARQUIVO (ZERO ERRO DE IMPORTAÇÃO):
 
 TIPOS PERMITIDOS: PDF_BASE (afirmação C/E do PDF) · CADERNO_ERROS (pegadinha de prova convertida em C/E) · LEI_SECA (texto literal, lacunas {{c1::termo}}) · DECOREBA (pergunta direta sobre prazo, lista, quórum, competência) · OMISSAO (afirmação com lacunas + alternativas: prazos, terminologias, classificações, competências, requisitos, consequências, diferenciações) · SELECAO (pergunta curta + opções misturadas, marcar todas as corretas: listas, espécies, hipóteses legais, excludentes, princípios, fundamentos/objetivos).
 
-VERSO — PDF_BASE e CADERNO_ERROS:
-Gabarito: CERTO ou ERRADO | Explicação: Certo./Errado. + explicação curta | Fundamento: Art. X da Lei Y | Frase Corrigida: frase com o [conceito correto]
+VERSO — PDF_BASE e CADERNO_ERROS (padrão aprovado, campos separados por " | "):
+Gabarito: CERTO ou ERRADO | Resumo: explicação rápida e simples (1–2 frases) | Explicação: Certo./Errado. + explicação curta | Análise: ✔ "trecho" → explicação curta / ✘ "trecho" → onde está o erro / Em uma frase: síntese | Exemplo: caso prático | Atenção à prova: pegadinha / exceção | Bizu: gatilho de memória | Fundamento: Diploma, art. X, inciso/§/alínea | PDF: pág. — tópico › subtópico | Termos Jurídicos: Termo: significado • Termo: significado | Frase Corrigida: frase com o [conceito correto]
 VERSO — LEI_SECA e DECOREBA:
-Explicação: resposta direta e esquematizada | Fundamento: Art. X da Lei Y | Frase Corrigida: [resumo literal]
+Explicação: resposta direta e esquematizada | Bizu: ... | Fundamento: Diploma, art. X | Frase Corrigida: [resumo literal]
 VERSO — OMISSAO (frente com lacunas escritas como _____ , uma por informação omitida):
-Alternativas: opção 1 / opção 2 / opção 3 / ... | Gabarito: resposta da 1ª lacuna / resposta da 2ª lacuna | Resumo: explicação rápida | Bizu: ... | Fundamento: Art. X | PDF: pág. — tópico
+Alternativas: opção 1 / opção 2 / opção 3 / ... | Gabarito: resposta da 1ª lacuna / resposta da 2ª lacuna | Resumo: explicação rápida | Exemplo: ... | Atenção à prova: a confusão que a banca explora | Bizu: ... | Fundamento: Diploma, art. X | PDF: pág. — tópico › subtópico
 VERSO — SELECAO (frente = só a pergunta):
-Opções: item 1 / item 2 / item 3 / ... | Gabarito: todas as corretas / separadas por barra | Resumo: ... | Bizu: mnemônico | Fundamento: Art. X | PDF: pág. — tópico
+Opções: item 1 / item 2 / item 3 / ... | Gabarito: todas as corretas / separadas por barra | Resumo: ... | Atenção à prova: por que os intrusos não pertencem à categoria | Bizu: mnemônico | Fundamento: Diploma, art. X | PDF: pág. — tópico › subtópico
 REGRAS DE OMISSAO e SELECAO:
 - Separe os itens das listas com " / " (barra com espaço dos dois lados). Escreva o gabarito com as MESMAS palavras da alternativa.
 - O gabarito da OMISSAO segue a ordem das lacunas; o número de respostas = número de lacunas.
@@ -16429,12 +16576,12 @@ REGRAS DE OMISSAO e SELECAO:
 FORMATAÇÃO OPCIONAL DO TEXTO: **negrito** · ==destaque== · __sublinhado__ · ~~itálico~~ · {{vm::vermelho}} {{vd::verde}} {{az::azul}} {{lj::laranja}} {{rx::roxo}}
 
 EXEMPLO (cada linha é um cartão, uma ideia por afirmação):
-PDF_BASE;O ingresso em domicílio por ordem judicial só pode ocorrer durante o dia.;Gabarito: CERTO | Explicação: Certo. A Constituição admite o ingresso sem consentimento, por determinação judicial, apenas durante o dia. | Fundamento: Art. 5º, XI, da CF/88 | Frase Corrigida: O ingresso por ordem judicial só pode ocorrer [durante o dia].;Inviolabilidade Domiciliar
-PDF_BASE;A casa é inviolável mesmo em caso de flagrante delito.;Gabarito: ERRADO | Explicação: Errado. Em flagrante delito, desastre ou para prestar socorro, o ingresso é permitido a qualquer hora. | Fundamento: Art. 5º, XI, da CF/88 | Frase Corrigida: Em [flagrante delito] o ingresso na casa é permitido a qualquer hora.;Inviolabilidade Domiciliar
-LEI_SECA;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum praticado {{c2::antes da naturalização}}.;Explicação: O brasileiro nato jamais é extraditado. | Fundamento: Art. 5º, LI, da CF/88 | Frase Corrigida: Nato: [nunca extraditado].;Extradição
-DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado solto no CPP?;Explicação: **30 dias**, prorrogáveis. | Fundamento: Art. 10 do CPP | Frase Corrigida: CPP solto: [30 dias].;Prazos IP
-OMISSAO;O erro de tipo essencial _____ exclui dolo e culpa, enquanto o _____ exclui o dolo, mas permite punição culposa.;Alternativas: inevitável / evitável / acidental / de proibição / escusável por culpa / sobre a pessoa | Gabarito: inevitável / evitável | Resumo: Inevitável (escusável) afasta dolo e culpa. Evitável (inescusável) afasta só o dolo. | Fundamento: Art. 20, caput, do CP;Erro de Tipo
-SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político / Garantir o desenvolvimento nacional / Erradicar a pobreza / Independência nacional / Prevalência dos direitos humanos | Gabarito: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político | Resumo: Os cinco fundamentos estão no art. 1º. Objetivos (art. 3º) são verbos de ação. | Bizu: SO-CI-DI-VA-PLU | Fundamento: Art. 1º da CF/88;Princípios Fundamentais`;
+PDF_BASE;O ingresso em domicílio por ordem judicial só pode ocorrer durante o dia.;Gabarito: CERTO | Explicação: Certo. A Constituição admite o ingresso sem consentimento, por determinação judicial, apenas durante o dia. | Fundamento: Constituição Federal de 1988, art. 5º, XI | Frase Corrigida: O ingresso por ordem judicial só pode ocorrer [durante o dia].;Inviolabilidade Domiciliar
+PDF_BASE;A casa é inviolável mesmo em caso de flagrante delito.;Gabarito: ERRADO | Explicação: Errado. Em flagrante delito, desastre ou para prestar socorro, o ingresso é permitido a qualquer hora. | Fundamento: Constituição Federal de 1988, art. 5º, XI | Frase Corrigida: Em [flagrante delito] o ingresso na casa é permitido a qualquer hora.;Inviolabilidade Domiciliar
+LEI_SECA;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum praticado {{c2::antes da naturalização}}.;Explicação: O brasileiro nato jamais é extraditado. | Fundamento: Constituição Federal de 1988, art. 5º, LI | Frase Corrigida: Nato: [nunca extraditado].;Extradição
+DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado solto no CPP?;Explicação: **30 dias**, prorrogáveis. | Fundamento: Código de Processo Penal, art. 10, caput | Frase Corrigida: CPP solto: [30 dias].;Prazos IP
+OMISSAO;O erro de tipo essencial _____ exclui dolo e culpa, enquanto o _____ exclui o dolo, mas permite punição culposa.;Alternativas: inevitável / evitável / acidental / de proibição / escusável por culpa / sobre a pessoa | Gabarito: inevitável / evitável | Resumo: Inevitável (escusável) afasta dolo e culpa. Evitável (inescusável) afasta só o dolo. | Fundamento: Código Penal, art. 20, caput;Erro de Tipo
+SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político / Garantir o desenvolvimento nacional / Erradicar a pobreza / Independência nacional / Prevalência dos direitos humanos | Gabarito: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político | Resumo: Os cinco fundamentos estão no art. 1º. Objetivos (art. 3º) são verbos de ação. | Bizu: SO-CI-DI-VA-PLU | Fundamento: Constituição Federal de 1988, art. 1º, I a V;Princípios Fundamentais`;
   };
 
   function diagnosticarItemPrevia(item) {
