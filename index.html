@@ -5415,7 +5415,9 @@
         const modoBanco = listaQIndiv.length > 0 ? 'Individual' : 'Agregado';
         if (listaQIndiv.length > totalBancoInformado) totalBancoInformado = listaQIndiv.length;
 
-        const sessoesTopico = sessoes.filter(s => s.idTopico === idTopico && s.resolvidas > 0);
+        /* sessões de ajuste manual (Gerenciar Tópicos) podem ter valores negativos: entram nos totais, mas não viram "última sessão" */
+        const ehAjusteSessao = (s) => /^\[AJUSTE MANUAL/.test(String(s.observacoes || ''));
+        const sessoesTopico = sessoes.filter(s => s.idTopico === idTopico && (s.resolvidas > 0 || ehAjusteSessao(s)));
         let resolvidasTotalHistorico = 0;
         let acertosTotalHistorico = 0;
         let resolvidasNaRodadaSessoes = 0;
@@ -5428,6 +5430,7 @@
           resolvidasTotalHistorico += s.resolvidas;
           acertosTotalHistorico += s.acertos;
           if (s.rodada === rodadaAtual) resolvidasNaRodadaSessoes += s.resolvidas;
+          if (ehAjusteSessao(s)) return;
           if (!primeiraDataEstudo || s.dataSessao < primeiraDataEstudo) {
             primeiraDataEstudo = s.dataSessao;
           }
