@@ -3618,7 +3618,7 @@
                   <span class="font-extrabold text-purple-400 uppercase text-[10px]">4. Decoreba</span>
                   <span id="fcCountDecoreba" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold text-[10px]">0</span>
                 </div>
-                <p class="text-[11px] text-slate-400 mt-1">Prazos, listas e tabelas de exclusão</p>
+                <p class="text-[11px] text-slate-400 mt-1">Conjunto diário de todas as matérias (tag decoreba-diaria)</p>
               </div>
             </div>
 
@@ -8269,7 +8269,7 @@
     let FC_QTD_BLOCOS = Number(localStorage.getItem('GR_FC_QTD_BLOCOS') || 3);
     let FC_INTERVALO_RETORNO = Number(localStorage.getItem('GR_FC_INTERVALO_RETORNO') || 3);
     let FC_CRITERIO_DOMINIO = Number(localStorage.getItem('GR_FC_CRITERIO_DOMINIO') || 1);
-    let DEC_LIMITE_DIARIO = Number(localStorage.getItem('GR_DEC_LIMITE_DIARIO') || 30);
+    let DEC_LIMITE_DIARIO = Number(localStorage.getItem('GR_DEC_LIMITE_DIARIO') || 999);
 
     let FC_ESTADO_BLOCOS_MAP = {};
     let FC_PREVIA_LOTE_ITENS = [];
@@ -8377,7 +8377,7 @@
     function fcEhTipoEstudo_(tipo) { return tipo === 'PDF_BASE' || tipo === 'CADERNO_ERROS' || fcEhInterativo_(tipo); }
     function fcNormItem_(s) {
       return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-        .replace(/\*\*|==|~~/g, '').replace(/\s+/g, ' ').replace(/^[\s\-•\d.)]+/, '').replace(/[\s.;:,]+$/, '').trim();
+        .replace(/\*\*|==|~~/g, '').replace(/\s+/g, ' ').replace(/^\s*(?:[\-•]+|\d+[.)])\s+/, '').replace(/[\s.;:,]+$/, '').trim();
     }
     function fcDividirLista_(s) {
       return String(s || '').split(/\s+\/\s+|\r?\n/).map(x => x.replace(/^\s*[\-•]\s*/, '').replace(/[.\s]+$/, '').trim()).filter(Boolean);
@@ -8934,7 +8934,7 @@
       const filtrados = FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
-        if (tipo && c.tipo !== tipo) return false;
+        if (tipo === 'DECOREBA' ? !fcEhDecoreba_(c) : (tipo && c.tipo !== tipo)) return false;
         if (assunto && c.assunto !== assunto) return false;
         return true;
       });
@@ -8969,10 +8969,28 @@
     /* ==========================================================================
      * 8.4 SISTEMA INTELIGENTE DE DECOREBA
      * ========================================================================== */
+    /* DECOREBA UNIFICADA (2026-11-10): o conjunto diário reúne, de todas as matérias, os cartões do tipo DECOREBA
+       e os de qualquer modalidade com a tag "decoreba-diaria" (Lei Seca, Omissão/associação, Seleção).
+       A fila do dia = todos os do conjunto ainda não feitos hoje (feito = avaliado sem "Errei"), sem depender da data de revisão. */
+    function fcEhDecoreba_(c) {
+      return !!c && (c.tipo === 'DECOREBA' || /(^|,)\s*decoreba-diaria\s*(?=,|$)/i.test(String(c.tags || '')));
+    }
+    function decorebaFeitosHoje_() {
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      try { return new Set(JSON.parse(localStorage.getItem('GR_DEC_FEITOS_' + hojeYMD) || '[]')); } catch (e) { return new Set(); }
+    }
+    function marcarDecorebaFeitaHoje_(idCard) {
+      const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
+      const feitos = decorebaFeitosHoje_();
+      feitos.add(String(idCard));
+      try { localStorage.setItem('GR_DEC_FEITOS_' + hojeYMD, JSON.stringify(Array.from(feitos))); } catch (e) { /* ignora */ }
+    }
+
     function obterFilaInteligenteDecorebaHoje_() {
       const hojeYMD = ESTADO ? ESTADO.hojeYMD : formatarDataYMD_(new Date());
-      const todosDecoreba = FC_DECK.filter(c => c.tipo === 'DECOREBA');
-      const vencidosOuHoje = todosDecoreba.filter(c => !c.dataProximaRevisao || c.dataProximaRevisao <= hojeYMD);
+      const todosDecoreba = FC_DECK.filter(fcEhDecoreba_);
+      const feitosHoje = decorebaFeitosHoje_();
+      const vencidosOuHoje = todosDecoreba.filter(c => !feitosHoje.has(c.id));
 
       vencidosOuHoje.sort((a, b) => {
         if (a.isNovo !== b.isNovo) return a.isNovo ? -1 : 1;
@@ -9082,7 +9100,7 @@
         const qtdPdf = cardsTopico.filter(c => c.tipo === 'PDF_BASE').length;
         const qtdErros = cardsTopico.filter(c => c.tipo === 'CADERNO_ERROS').length;
         const qtdLei = cardsTopico.filter(c => c.tipo === 'LEI_SECA').length;
-        const qtdDec = cardsTopico.filter(c => c.tipo === 'DECOREBA').length;
+        const qtdDec = cardsTopico.filter(fcEhDecoreba_).length;
 
         return `
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between gap-2">
@@ -9205,7 +9223,7 @@
       if (elPdf) elPdf.textContent = baseTopico.filter(c => c.tipo === 'PDF_BASE').length;
       if (elErros) elErros.textContent = baseTopico.filter(c => c.tipo === 'CADERNO_ERROS').length;
       if (elLei) elLei.textContent = baseTopico.filter(c => c.tipo === 'LEI_SECA').length;
-      if (elDec) elDec.textContent = baseTopico.filter(c => c.tipo === 'DECOREBA').length;
+      if (elDec) elDec.textContent = baseTopico.filter(fcEhDecoreba_).length;
 
       const filtrados = obterCardsFiltradosFC();
       const blocos = construirEstruturaBlocosFiltroAtual_(filtrados);
@@ -10436,8 +10454,9 @@
 
       registrarTelemetriaIndividualCartao_(c, acertouJulgamento, segsNoCard, avaliacao);
 
-      if (c.tipo === 'DECOREBA') {
+      if (fcEhDecoreba_(c)) {
         registrarResultadoDiarioDecoreba_(acertouJulgamento, segsNoCard);
+        if (!/^(ERREI|NAO_ENTENDI)$/.test(avaliacao)) marcarDecorebaFeitaHoje_(c.id);
       }
 
       const itemAtual = FC_SESSAO.filaAtiva.shift();
@@ -16557,12 +16576,15 @@ FORMATAÇÃO DO ARQUIVO (ZERO ERRO DE IMPORTAÇÃO):
 - NUNCA use ";" dentro dos textos (use vírgula, dois-pontos ou "|" apenas para separar campos do verso).
 - Mantenha a ordem lógica do conteúdo.
 
-TIPOS PERMITIDOS: PDF_BASE (afirmação C/E do PDF) · CADERNO_ERROS (pegadinha de prova convertida em C/E) · LEI_SECA (texto literal, lacunas {{c1::termo}}) · DECOREBA (pergunta direta sobre prazo, lista, quórum, competência) · OMISSAO (afirmação com lacunas + alternativas: prazos, terminologias, classificações, competências, requisitos, consequências, diferenciações) · SELECAO (pergunta curta + opções misturadas, marcar todas as corretas: listas, espécies, hipóteses legais, excludentes, princípios, fundamentos/objetivos).
+TIPOS PERMITIDOS: PDF_BASE (afirmação C/E do PDF) · CADERNO_ERROS (pegadinha de prova convertida em C/E) · LEI_SECA (texto literal com UMA palavra-chave omitida, no máximo duas palavras no total: {{c1::termo}}) · DECOREBA (resposta de poucos segundos, nunca discursiva: prefira OMISSAO em associação ou SELECAO) · OMISSAO (afirmação com lacunas + alternativas: prazos, terminologias, classificações, competências, requisitos, consequências, diferenciações) · SELECAO (pergunta curta + opções misturadas, marcar todas as corretas: listas, espécies, hipóteses legais, excludentes, princípios, fundamentos/objetivos).
 
 VERSO — PDF_BASE e CADERNO_ERROS (padrão aprovado, campos separados por " | "):
 Gabarito: CERTO ou ERRADO | Resumo: explicação rápida e simples (1–2 frases) | Explicação: Certo./Errado. + explicação curta | Análise: ✔ "trecho" → explicação curta / ✘ "trecho" → onde está o erro / Em uma frase: síntese | Exemplo: caso prático | Atenção à prova: pegadinha / exceção | Bizu: gatilho de memória | Fundamento: Diploma, art. X, inciso/§/alínea | PDF: pág. — tópico › subtópico | Termos Jurídicos: Termo: significado • Termo: significado | Frase Corrigida: frase com o [conceito correto]
+LEI_SECA — FRENTE: Contexto: assunto em poucas palavras ¶ Diploma, art. X ¶ texto literal do dispositivo com a palavra-chave em {{c1::...}}
+- Omita preferencialmente UMA palavra-chave, juridicamente relevante e identificável pelo contexto (prazo, número, sujeito, negação, órgão). Limite absoluto: DUAS palavras omitidas por cartão. Nunca omita frases ou trechos.
 VERSO — LEI_SECA e DECOREBA:
-Explicação: resposta direta e esquematizada | Bizu: ... | Fundamento: Diploma, art. X | Frase Corrigida: [resumo literal]
+Explicação: por que essa palavra importa, em 1–2 frases | Atenção à prova: a troca que a banca faz | Bizu: ... | Fundamento: Diploma, art. X
+DECOREBA nunca é discursiva: para diferenciar conceitos use OMISSAO em formato de associação (uma linha por definição separada por ¶, cada linha começando com _____, e os termos nas alternativas). Só vira decoreba o que é muito cobrado, difícil, específico (prazo, percentual, requisito, exceção) e fácil de esquecer. Marque esses cartões com a tag decoreba-diaria.
 VERSO — OMISSAO (frente com lacunas escritas como _____ , uma por informação omitida):
 Alternativas: opção 1 / opção 2 / opção 3 / ... | Gabarito: resposta da 1ª lacuna / resposta da 2ª lacuna | Resumo: explicação rápida | Exemplo: ... | Atenção à prova: a confusão que a banca explora | Bizu: ... | Fundamento: Diploma, art. X | PDF: pág. — tópico › subtópico
 VERSO — SELECAO (frente = só a pergunta):
@@ -16578,8 +16600,8 @@ FORMATAÇÃO OPCIONAL DO TEXTO: **negrito** · ==destaque== · __sublinhado__ ·
 EXEMPLO (cada linha é um cartão, uma ideia por afirmação):
 PDF_BASE;O ingresso em domicílio por ordem judicial só pode ocorrer durante o dia.;Gabarito: CERTO | Explicação: Certo. A Constituição admite o ingresso sem consentimento, por determinação judicial, apenas durante o dia. | Fundamento: Constituição Federal de 1988, art. 5º, XI | Frase Corrigida: O ingresso por ordem judicial só pode ocorrer [durante o dia].;Inviolabilidade Domiciliar
 PDF_BASE;A casa é inviolável mesmo em caso de flagrante delito.;Gabarito: ERRADO | Explicação: Errado. Em flagrante delito, desastre ou para prestar socorro, o ingresso é permitido a qualquer hora. | Fundamento: Constituição Federal de 1988, art. 5º, XI | Frase Corrigida: Em [flagrante delito] o ingresso na casa é permitido a qualquer hora.;Inviolabilidade Domiciliar
-LEI_SECA;Nenhum brasileiro será extraditado, salvo o {{c1::naturalizado}}, em caso de crime comum praticado {{c2::antes da naturalização}}.;Explicação: O brasileiro nato jamais é extraditado. | Fundamento: Constituição Federal de 1988, art. 5º, LI | Frase Corrigida: Nato: [nunca extraditado].;Extradição
-DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado solto no CPP?;Explicação: **30 dias**, prorrogáveis. | Fundamento: Código de Processo Penal, art. 10, caput | Frase Corrigida: CPP solto: [30 dias].;Prazos IP
+LEI_SECA;Contexto: Extradição de brasileiro ¶ CF, art. 5º, LI ¶ Nenhum brasileiro será extraditado, salvo o naturalizado, em caso de crime comum, praticado {{c1::antes}} da naturalização, ou de comprovado envolvimento em tráfico ilícito de entorpecentes e drogas afins, na forma da lei.;Explicação: Crime comum só autoriza extradição se for anterior à naturalização. | Atenção à prova: a banca troca por antes ou depois. | Fundamento: Constituição Federal de 1988, art. 5º, LI;Extradição, decoreba-diaria
+OMISSAO;Associe cada conceito ao termo: ¶ _____ — conjunto de nacionais, ligado ao Estado pela nacionalidade. ¶ _____ — todos os que estão no território, inclusive estrangeiros. ¶ _____ — titularidade de direitos políticos.;Alternativas: Povo / População / Cidadania / Nação | Gabarito: Povo / População / Cidadania | Resumo: Povo é jurídico, população é demográfica, cidadania é política. | Fundamento: Doutrina (Teoria do Estado);Nacionalidade, decoreba-diaria
 OMISSAO;O erro de tipo essencial _____ exclui dolo e culpa, enquanto o _____ exclui o dolo, mas permite punição culposa.;Alternativas: inevitável / evitável / acidental / de proibição / escusável por culpa / sobre a pessoa | Gabarito: inevitável / evitável | Resumo: Inevitável (escusável) afasta dolo e culpa. Evitável (inescusável) afasta só o dolo. | Fundamento: Código Penal, art. 20, caput;Erro de Tipo
 SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político / Garantir o desenvolvimento nacional / Erradicar a pobreza / Independência nacional / Prevalência dos direitos humanos | Gabarito: Soberania / Cidadania / Dignidade da pessoa humana / Valores sociais do trabalho e da livre iniciativa / Pluralismo político | Resumo: Os cinco fundamentos estão no art. 1º. Objetivos (art. 3º) são verbos de ação. | Bizu: SO-CI-DI-VA-PLU | Fundamento: Constituição Federal de 1988, art. 1º, I a V;Princípios Fundamentais`;
   };
@@ -17838,7 +17860,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   const TITULO_DEC_TOPICO = 'Zerar Decoreba do Tópico';
 
   function htmlDecTopico(a) {
-    const qtd = FC_DECK.filter((c) => c.tipo === 'DECOREBA' && c.idTopico === a.idTopico).length;
+    const qtd = FC_DECK.filter((c) => fcEhDecoreba_(c) && c.idTopico === a.idTopico).length;
     const r = (ciclo.dec && ciclo.dec[a.idTopico]) || { n: 0, ult: '' };
     return '<div data-fcx-dec="1" class="mt-1 pt-1.5 border-t border-purple-900/60 flex flex-wrap items-center justify-between gap-1.5">' +
       '<span class="text-[10px] text-purple-300">Decoreba do tópico: <strong>' + qtd + '</strong> • zeradas <strong class="' + (r.n >= DEC_META_ZERADAS ? 'text-emerald-400' : 'text-slate-100') + '">' + Math.min(r.n || 0, 99) + '/' + DEC_META_ZERADAS + '</strong>' + (r.ult === hojeYMD() ? ' • feita hoje ✓' : '') + '</span>' +
@@ -17864,7 +17886,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   const reatualizarTilesDec = () => { if (typeof renderizarAtalhosTopicosHojeFC === 'function') renderizarAtalhosTopicosHojeFC(); };
 
   window.fcxZerarDecorebaTopico = function (idTopico) {
-    const cards = FC_DECK.filter((c) => c.tipo === 'DECOREBA' && c.idTopico === idTopico)
+    const cards = FC_DECK.filter((c) => fcEhDecoreba_(c) && c.idTopico === idTopico)
       .sort((a, b) => (b.scoreUrgencia || 0) - (a.scoreUrgencia || 0) || a.ordemCriacao - b.ordemCriacao);
     if (!cards.length) { aviso('Este tópico não tem cartões de decoreba.', true); return; }
     const t = ((ESTADO && ESTADO.topicos) || []).find((x) => x.id === idTopico);
@@ -20651,6 +20673,353 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   }
 })();
 
+</script>
+
+<!-- ==========================================================================
+     MÓDULO REVISÃO LIMPA (2026-11-10)
+     1. Cartão sem poluição: tags, nº de sequência, histórico e matéria/tópico saem do cartão
+        e vão para o painel ⓘ (canto superior direito do cartão, tecla I).
+     2. Símbolos padronizados de incidência: ▲ muito cobrado · ● pouco cobrado · ■ cobrado uma vez · ◇ nunca cobrado.
+     3. Lei Seca com contexto: "Contexto: … ¶ Diploma, art. … ¶ dispositivo com {{c1::palavra}}" (¶ ou quebra de linha).
+     4. Associação: Omissão com várias linhas (¶) vira lista "_____ — definição".
+     5. Botão de tema (claro/escuro) dentro da tela de revisão, inclusive em tela cheia (tecla T).
+     ========================================================================== -->
+<style>
+  /* 1. cabeçalho do cartão limpo */
+  #fcCardTags, #fcCardHistoricoBadge, #fcCardMateriaTopicoLabel, #fcCardBadgeNovo { display: none !important; }
+  #fcCardShell { position: relative; }
+  #fcCardBadgeTipo.fcx-tipo-discreto { background: transparent !important; border: 0 !important; padding: 0 !important; font-size: 10px !important; letter-spacing: .09em; opacity: .85; }
+  #fcCardShell > div:first-child { border-bottom-color: rgba(51, 65, 85, .45) !important; }
+  html:not(.dark) #fcCardShell > div:first-child { border-bottom-color: rgba(203, 213, 225, .7) !important; }
+  .fc-box-lbl .fc-chip-peg { display: none; }
+
+  /* 2. símbolos de incidência */
+  .fcx-simb { font-size: 13px; line-height: 1; cursor: help; user-select: none; }
+  .fcx-simb.n1 { color: #f43f5e; } .fcx-simb.n2 { color: #f59e0b; } .fcx-simb.n3 { color: #38bdf8; } .fcx-simb.n4 { color: #94a3b8; }
+  html:not(.dark) .fcx-simb.n1 { color: #e11d48; } html:not(.dark) .fcx-simb.n2 { color: #d97706; }
+  html:not(.dark) .fcx-simb.n3 { color: #0284c7; } html:not(.dark) .fcx-simb.n4 { color: #64748b; }
+
+  /* painel ⓘ */
+  .fcx-btn-info { width: 22px; height: 22px; border-radius: 999px; border: 1px solid #334155; color: #94a3b8; font: italic 700 12px/1 Georgia, serif; display: inline-flex; align-items: center; justify-content: center; background: transparent; transition: all .15s; }
+  .fcx-btn-info:hover, .fcx-btn-info.on { border-color: #818cf8; color: #c7d2fe; background: rgba(79, 70, 229, .18); }
+  html:not(.dark) .fcx-btn-info { border-color: #cbd5e1; color: #64748b; }
+  html:not(.dark) .fcx-btn-info:hover, html:not(.dark) .fcx-btn-info.on { border-color: #6366f1; color: #4338ca; background: #eef2ff; }
+  .fcx-info { position: absolute; top: 46px; right: 14px; z-index: 40; width: min(23rem, calc(100% - 28px)); max-height: 62vh; overflow-y: auto;
+    background: #0b1222; border: 1px solid #334155; border-radius: 14px; box-shadow: 0 18px 40px rgba(0, 0, 0, .45); padding: 12px 14px; font-size: 12px; color: #cbd5e1; text-align: left; }
+  .fcx-info.hidden { display: none; }
+  .fcx-info h4 { font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: #818cf8; margin: 10px 0 5px; }
+  .fcx-info h4:first-child { margin-top: 0; }
+  .fcx-info dl { display: grid; grid-template-columns: 6.6rem 1fr; gap: 3px 10px; margin: 0; }
+  .fcx-info dt { color: #64748b; font-weight: 700; }
+  .fcx-info dd { margin: 0; color: #e2e8f0; word-break: break-word; }
+  .fcx-info .fcx-leg { display: grid; grid-template-columns: 1.1rem 1fr; gap: 3px 6px; align-items: center; }
+  .fcx-info .fcx-chip { display: inline-block; margin: 0 4px 3px 0; padding: 1px 7px; border-radius: 6px; background: #1e293b; color: #cbd5e1; font-size: 11px; }
+  .fcx-info .fcx-fechar { position: absolute; top: 8px; right: 10px; color: #64748b; font-size: 16px; line-height: 1; }
+  html:not(.dark) .fcx-info { background: #ffffff; border-color: #cbd5e1; color: #334155; box-shadow: 0 18px 40px rgba(15, 23, 42, .16); }
+  html:not(.dark) .fcx-info h4 { color: #4f46e5; }
+  html:not(.dark) .fcx-info dt { color: #64748b; }
+  html:not(.dark) .fcx-info dd { color: #0f172a; }
+  html:not(.dark) .fcx-info .fcx-chip { background: #f1f5f9; color: #334155; }
+
+  /* 3. Lei Seca */
+  .fcl-lei { max-width: 46rem; margin: 0 auto; text-align: center; }
+  .fcl-ctx { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #818cf8; margin-bottom: .45rem; }
+  .fcl-ref { display: inline-block; font-size: 12px; font-weight: 700; color: #cbd5e1; border: 1px solid #334155; border-radius: 999px; padding: .12rem .75rem; margin-bottom: 1rem; }
+  .fcl-texto { font-family: Georgia, 'Times New Roman', serif; font-size: 1.2rem; line-height: 1.9; color: #f1f5f9; font-weight: 400; text-wrap: pretty; }
+  .fcl-lacuna { display: inline-block; min-width: 6.5em; height: 1.05em; border-bottom: 2px solid #818cf8; margin: 0 .2em; vertical-align: -0.12em; }
+  .fcl-resp { color: #6ee7b7; font-weight: 700; padding: 0 .2em; border-bottom: 2px solid #10b981; background: rgba(16, 185, 129, .13); border-radius: .25em .25em 0 0; }
+  .fcl-revelado .fcl-texto { font-size: 1.08rem; }
+  .fcl-revelado { padding-bottom: .25rem; }
+  html:not(.dark) .fcl-ctx { color: #4f46e5; }
+  html:not(.dark) .fcl-ref { color: #334155; border-color: #cbd5e1; background: #fff; }
+  html:not(.dark) .fcl-texto { color: #1e293b; }
+  html:not(.dark) .fcl-lacuna { border-bottom-color: #4f46e5; }
+  html:not(.dark) .fcl-resp { color: #047857; background: rgba(16, 185, 129, .12); }
+  .fcl-feedback-resp { font-family: Georgia, serif; font-size: 15px; font-weight: 700; }
+
+  /* 4. associação */
+  .fcx-int-frase.fcx-assoc { text-align: left; line-height: 1.5; font-weight: 600; font-size: 1rem; max-width: 46rem; margin: 0 auto; display: flex; flex-direction: column; gap: .55rem; }
+  .fcx-assoc-linha { display: flex; align-items: center; gap: .6rem; }
+  .fcx-assoc-linha.titulo { font-weight: 800; margin-bottom: .2rem; }
+  .fcx-assoc-txt { flex: 1 1 auto; min-width: 0; }
+  .fcx-int-frase.fcx-assoc .fcx-lac { flex: none; min-width: 9.5rem; margin: 0; text-align: center; line-height: 1.9; }
+  /* verso da Lei Seca / Decoreba legível no modo claro */
+  html:not(.dark) #fcCardVersoTexto .bg-violet-950\/30 { background: #f5f3ff !important; border-color: #c4b5fd !important; }
+  html:not(.dark) #fcCardVersoTexto .text-violet-300 { color: #6d28d9 !important; }
+  html:not(.dark) #fcCardVersoTexto .bg-violet-950\/30 .text-slate-100, html:not(.dark) #fcCardVersoTexto .bg-violet-950\/30 div, html:not(.dark) #fcCardVersoTexto .bg-violet-950\/30 p { color: #1e1b4b !important; }
+  html:not(.dark) #fcCardVersoTexto .text-rose-300 { color: #be123c !important; }
+  html:not(.dark) #fcCardVersoTexto .text-amber-400 { color: #b45309 !important; }
+  html:not(.dark) #fcCardVersoTexto .text-emerald-400 { color: #047857 !important; }
+
+  /* 5. botão de tema */
+  .fcx-btn-tema { padding: .38rem .65rem; border-radius: .5rem; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 11px; font-weight: 700; transition: all .15s; }
+  .fcx-btn-tema:hover { border-color: #818cf8; }
+  html:not(.dark) .fcx-btn-tema { background: #fff; border-color: #cbd5e1; color: #1e293b; }
+</style>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const escH = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const envolver = (nome, fn) => {
+    const orig = window[nome];
+    if (typeof orig !== 'function') return;
+    window[nome] = function () { return fn.apply(this, [orig.bind(this)].concat(Array.prototype.slice.call(arguments))); };
+  };
+  const sessao = () => (typeof FC_SESSAO !== 'undefined' ? FC_SESSAO : null);
+  const markup = (s) => (typeof window.fcxAplicarMarkupEscapado === 'function' ? window.fcxAplicarMarkupEscapado(s) : s);
+
+  /* ---------- incidência e símbolos ---------- */
+  const NIVEIS = {
+    1: { simb: '▲', nome: 'Muito cobrado', desc: '3 ou mais questões do caderno' },
+    2: { simb: '●', nome: 'Pouco cobrado', desc: '2 questões do caderno' },
+    3: { simb: '■', nome: 'Cobrado uma vez', desc: '1 questão do caderno' },
+    4: { simb: '◇', nome: 'Nunca cobrado', desc: 'só do PDF, sem questão no caderno' }
+  };
+  function listaTags(c) { return String((c && c.tags) || '').split(/\s*[,|]\s*/).map((t) => t.trim()).filter(Boolean); }
+  function nivelIncidencia(c) {
+    const tl = listaTags(c).map((t) => t.toLowerCase());
+    for (const t of tl) { const m = t.match(/^inc-([1-4])\b/); if (m) return Number(m[1]); }
+    if (tl.includes('incidencia-alta')) return 1;
+    if (tl.includes('incidencia-media')) return 2;
+    if (tl.some((t) => /^incidencia-(rara|baixa)$/.test(t))) return 3;
+    const bancas = tl.filter((t) => /^banca-/.test(t));
+    if (bancas.length && bancas.every((t) => t === 'banca-geral') && !tl.includes('cobrado')) return 4;
+    return null;
+  }
+  function htmlLegenda() {
+    return '<div class="fcx-leg">' + [1, 2, 3, 4].map((n) =>
+      '<span class="fcx-simb n' + n + '">' + NIVEIS[n].simb + '</span><span><b>' + NIVEIS[n].nome + '</b> — ' + NIVEIS[n].desc + '</span>').join('') + '</div>';
+  }
+  window.fcxNivelIncidencia_ = nivelIncidencia;
+
+  /* ---------- painel ⓘ ---------- */
+  function montarPainelInfo(c) {
+    const tags = listaTags(c);
+    const bancas = [], outras = [];
+    let lote = '';
+    tags.forEach((t) => {
+      const l = t.toLowerCase();
+      if (/^banca-/.test(l)) bancas.push(l === 'banca-geral' ? 'Só do PDF' : t.slice(6).toUpperCase());
+      else if (/^lote-/.test(l)) lote = t.slice(5);
+      else if (/^(inc-|incidencia-|peg-|mod-|assunto\s*:)/.test(l) || ['cobrado', 'reverso', 'decoreba-diaria'].includes(l)) { /* já exibidos */ }
+      else outras.push(t);
+    });
+    let pegs = [];
+    try { pegs = (typeof tiposPegadinhaFC_ === 'function') ? tiposPegadinhaFC_(c.tags) : []; } catch (e) { pegs = []; }
+    const top = ((typeof ESTADO !== 'undefined' && ESTADO && ESTADO.topicos) || []).find((t) => t.id === c.idTopico);
+    const n = nivelIncidencia(c);
+    const chip = (x) => '<span class="fcx-chip">' + escH(x) + '</span>';
+    const linha = (k, v) => (v === '' || v == null) ? '' : '<dt>' + k + '</dt><dd>' + v + '</dd>';
+    const modalidade = (typeof obterLabelCurtoTipoFC_ === 'function' ? obterLabelCurtoTipoFC_(c.tipo) : c.tipo) +
+      ((typeof fcEhDecoreba_ === 'function' && fcEhDecoreba_(c)) ? ' · decoreba diária' : '');
+    const fmtData = (ymd) => { const m = String(ymd || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : escH(ymd || ''); };
+    return '<button type="button" class="fcx-fechar" onclick="fcxAlternarInfo(false)" title="Fechar (Esc)">×</button>' +
+      '<h4>Cartão</h4><dl>' +
+      linha('Classificação', n ? '<span class="fcx-simb n' + n + '">' + NIVEIS[n].simb + '</span> ' + NIVEIS[n].nome : 'sem classificação') +
+      linha('Matéria', top ? escH(top.materia) : '') +
+      linha('Tópico', top ? escH(top.topico) : '') +
+      linha('Assunto', escH(c.assunto || '')) +
+      linha('Modalidade', escH(modalidade)) +
+      linha('Nº', '#' + escH(c.ordemCriacao)) +
+      linha('Bancas', bancas.map(chip).join('')) +
+      linha('Pegadinha', pegs.map(chip).join('')) +
+      linha('Lote', escH(lote)) +
+      linha('Outras tags', outras.map(chip).join('')) +
+      '</dl><h4>Estatísticas</h4><dl>' +
+      linha('Situação', c.isNovo ? 'inédito (1ª exposição)' : (c.isDominado ? 'dominado' : 'em revisão')) +
+      linha('Revisões', c.totalRevisoes ? escH(c.totalRevisoes + 'x — ' + c.totalAcertos + ' acertos / ' + c.totalErros + ' erros (' + c.taxaAcerto + '%)') : 'nenhuma') +
+      linha('Tempo médio', c.tempoMedioSeg ? escH(c.tempoMedioSeg + ' s') : '') +
+      linha('Última nota', escH(c.ultimaAvaliacao || '')) +
+      linha('Etapa', escH('etapa ' + c.etapa + ' · intervalo ' + c.intervaloDias + ' dia(s)')) +
+      linha('Próx. revisão', fmtData(c.dataProximaRevisao)) +
+      '</dl><h4>Legenda dos símbolos</h4>' + htmlLegenda() +
+      '<div style="margin-top:8px;color:#64748b;font-size:10.5px">Atalhos: <b>I</b> abre/fecha este painel · <b>T</b> alterna claro/escuro · <b>F</b> tela cheia</div>';
+  }
+  window.fcxAlternarInfo = function (forcar) {
+    const painel = $('fcxPainelInfo');
+    const btn = $('fcxBtnInfo');
+    const c = (sessao() && sessao().cardAtual);
+    if (!painel || !c) return;
+    const abrir = typeof forcar === 'boolean' ? forcar : painel.classList.contains('hidden');
+    if (abrir) painel.innerHTML = montarPainelInfo(c);
+    painel.classList.toggle('hidden', !abrir);
+    if (btn) btn.classList.toggle('on', abrir);
+  };
+
+  function garantirCabecalho() {
+    const shell = $('fcCardShell');
+    const hist = $('fcCardHistoricoBadge');
+    if (!shell || !hist) return;
+    const dir = hist.parentElement;
+    if (!$('fcxSimbolo')) {
+      const s = document.createElement('span');
+      s.id = 'fcxSimbolo';
+      s.className = 'fcx-simb';
+      dir.appendChild(s);
+    }
+    if (!$('fcxBtnInfo')) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.id = 'fcxBtnInfo';
+      b.className = 'fcx-btn-info';
+      b.title = 'Informações do cartão: classificação, bancas, estatísticas e legenda (tecla I)';
+      b.textContent = 'i';
+      b.onclick = (ev) => { ev.stopPropagation(); window.fcxAlternarInfo(); };
+      dir.appendChild(b);
+    }
+    if (!$('fcxPainelInfo')) {
+      const p = document.createElement('div');
+      p.id = 'fcxPainelInfo';
+      p.className = 'fcx-info hidden';
+      p.addEventListener('click', (ev) => ev.stopPropagation());
+      shell.appendChild(p);
+    }
+  }
+
+  function pintarCabecalho(c) {
+    garantirCabecalho();
+    const badge = $('fcCardBadgeTipo');
+    if (badge) {
+      badge.classList.add('fcx-tipo-discreto');
+      badge.textContent = (typeof obterLabelCurtoTipoFC_ === 'function' ? obterLabelCurtoTipoFC_(c.tipo) : c.tipo).toUpperCase();
+    }
+    const simb = $('fcxSimbolo');
+    if (simb) {
+      const n = nivelIncidencia(c);
+      simb.className = 'fcx-simb' + (n ? ' n' + n : '');
+      simb.textContent = n ? NIVEIS[n].simb : '';
+      simb.title = n ? NIVEIS[n].nome + ' (' + NIVEIS[n].desc + ')' : '';
+    }
+    window.fcxAlternarInfo(false);
+  }
+
+  /* ---------- Lei Seca com contexto ---------- */
+  function partesLeiSeca(frente) {
+    const linhas = String(frente || '').split(/\r?\n|\s*¶\s*/).map((l) => l.trim()).filter(Boolean);
+    let ctx = '', ref = '';
+    if (linhas.length > 1 && /^contexto\s*:/i.test(linhas[0])) ctx = linhas.shift().replace(/^contexto\s*:\s*/i, '');
+    if (linhas.length > 1 && linhas[0].length <= 70 && !/\{\{c\d+::/i.test(linhas[0])) ref = linhas.shift();
+    return { ctx, ref, texto: linhas.join('\n') };
+  }
+  function respostasLeiSeca(frente) {
+    const r = [];
+    String(frente || '').replace(/\{\{c\d+::(.*?)\}\}/gi, (_, t) => { r.push(t); return _; });
+    return r;
+  }
+  function htmlLeiSeca(frente, revelar) {
+    const p = partesLeiSeca(frente);
+    const corpo = markup(escH(p.texto)).replace(/\{\{c\d+::(.*?)\}\}/gi, (_, t) =>
+      revelar ? '<span class="fcl-resp">' + t + '</span>' : '<span class="fcl-lacuna" aria-label="lacuna"></span>').replace(/\n/g, '<br>');
+    return '<div class="fcl-lei' + (revelar ? ' fcl-revelado' : '') + '">' +
+      (p.ctx ? '<div class="fcl-ctx">' + escH(p.ctx) + '</div>' : '') +
+      (p.ref ? '<div class="fcl-ref">' + escH(p.ref) + '</div>' : '') +
+      '<div class="fcl-texto">' + corpo + '</div></div>';
+  }
+  window.fcxHtmlLeiSeca_ = htmlLeiSeca;
+
+  /* ---------- wrappers do player ---------- */
+  // ¶ (TXT de uma linha) vira quebra de linha na frente
+  envolver('normalizarRegistroFlashcard_', (orig, ...args) => {
+    const r = orig(...args);
+    if (r && /¶/.test(r.frente)) r.frente = r.frente.replace(/\s*¶\s*/g, '\n');
+    return r;
+  });
+
+  envolver('renderizarCardAtualNoPlayerFC_', (orig) => {
+    orig();
+    const c = (sessao() && sessao().cardAtual);
+    if (!c) return;
+    try { pintarCabecalho(c); } catch (e) { console.warn('cabeçalho do cartão', e); }
+    try {
+      if (c.tipo === 'LEI_SECA') {
+        const el = $('fcCardFrente');
+        el.className = 'fcl-host';
+        el.innerHTML = htmlLeiSeca(c.frente, false);
+      }
+    } catch (e) { console.warn('lei seca', e); }
+  });
+
+  envolver('revelarVersoCardAtualFC', (orig) => {
+    const c = (sessao() && sessao().cardAtual);
+    const jaRevelado = (sessao() && sessao().versoRevelado);
+    orig();
+    if (!c || jaRevelado || c.tipo !== 'LEI_SECA') return;
+    try {
+      const el = $('fcCardFrente');
+      el.className = 'fcl-host';
+      el.innerHTML = htmlLeiSeca(c.frente, true);
+      const box = $('fcBoxFeedbackEstruturado');
+      const resp = respostasLeiSeca(c.frente);
+      const d = extrairDadosEstruturadosCertoErrado_(c.frente, c.verso, c.tags);
+      if (box) {
+        box.className = 'rounded-xl p-3 border bg-emerald-950/40 border-emerald-700/70 text-emerald-100 flex flex-wrap items-center justify-between gap-2';
+        box.innerHTML = '<div class="flex items-baseline gap-2"><span class="text-[10px] font-extrabold uppercase tracking-wider opacity-80">Resposta</span>' +
+          '<span class="fcl-feedback-resp">' + escH(resp.join(' • ')) + '</span></div>' +
+          (d.endereco ? '<span class="px-2 py-0.5 rounded bg-indigo-600 text-white font-extrabold text-[11px]">' + escH(d.endereco) + '</span>' : '');
+      }
+    } catch (e) { console.warn('lei seca verso', e); }
+  });
+
+  envolver('pintarInterativoFC_', (orig) => {
+    orig();
+    try {
+      const c = (sessao() && sessao().cardAtual);
+      if (c && c.tipo === 'OMISSAO' && /\n/.test(c.frente)) {
+        const fr = document.querySelector('#fcCardFrente .fcx-int-frase');
+        if (fr && !fr.classList.contains('fcx-assoc')) {
+          // cada linha da frente vira uma linha da associação: [lacuna] — definição  ou  item → [lacuna]
+          const linhas = fr.innerHTML.split('\n').map((h) => h.trim()).filter(Boolean);
+          fr.innerHTML = linhas.map((h) => {
+            const m1 = h.match(/^(<button[\s\S]*?<\/button>)\s*([\s\S]*)$/);
+            const m2 = h.match(/^([\s\S]*?)\s*(<button[\s\S]*<\/button>)\s*$/);
+            let dentro = h;
+            if (m1) dentro = m1[1] + '<span class="fcx-assoc-txt">' + m1[2] + '</span>';
+            else if (m2) dentro = '<span class="fcx-assoc-txt">' + m2[1] + '</span>' + m2[2];
+            return '<div class="fcx-assoc-linha' + (/fcx-lac/.test(h) ? '' : ' titulo') + '">' + dentro + '</div>';
+          }).join('');
+          fr.classList.add('fcx-assoc');
+        }
+      }
+    } catch (e) { /* ignora */ }
+  });
+
+  /* ---------- tema dentro da revisão ---------- */
+  function atualizarBotaoTema() {
+    const b = $('fcxBtnTema');
+    if (!b) return;
+    const escuro = document.documentElement.classList.contains('dark');
+    b.textContent = escuro ? '☀ Modo claro' : '☾ Modo escuro';
+    b.title = (escuro ? 'Mudar para o modo claro' : 'Mudar para o modo escuro') + ' (tecla T)';
+  }
+  function montarBotaoTema() {
+    const fs = $('btnFullscreenFC');
+    if (!fs || $('fcxBtnTema')) return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = 'fcxBtnTema';
+    b.className = 'fcx-btn-tema';
+    b.onclick = () => { if (typeof alternarTemaGlobal === 'function') alternarTemaGlobal(); };
+    fs.parentElement.insertBefore(b, fs);
+    atualizarBotaoTema();
+  }
+  envolver('aplicarTemaGlobalUI', (orig, ...args) => { const r = orig(...args); atualizarBotaoTema(); return r; });
+
+  /* ---------- teclado e cliques ---------- */
+  window.addEventListener('keydown', (ev) => {
+    const player = $('fcSessaoPlayer');
+    if (!player || player.classList.contains('hidden')) return;
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement && document.activeElement.tagName)) return;
+    const k = (ev.key || '').toUpperCase();
+    if (k === 'I' && !ev.ctrlKey && !ev.metaKey) { ev.preventDefault(); window.fcxAlternarInfo(); }
+    else if (k === 'T' && !ev.ctrlKey && !ev.metaKey) { ev.preventDefault(); if (typeof alternarTemaGlobal === 'function') alternarTemaGlobal(); }
+    else if (ev.key === 'Escape') { const p = $('fcxPainelInfo'); if (p && !p.classList.contains('hidden')) { ev.preventDefault(); window.fcxAlternarInfo(false); } }
+  });
+  document.addEventListener('click', () => { const p = $('fcxPainelInfo'); if (p && !p.classList.contains('hidden')) window.fcxAlternarInfo(false); });
+
+  montarBotaoTema();
+  garantirCabecalho();
+})();
 </script>
 
 </body>
