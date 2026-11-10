@@ -3731,6 +3731,21 @@
                     </button>
                   </div>
 
+                  <!-- 1ª passagem (cartão inédito no bloco): só Entendi / Não entendi -->
+                  <div id="fcBarraPrimeiraPassagem" class="hidden space-y-1.5">
+                    <div class="grid grid-cols-2 gap-3 max-w-md mx-auto text-xs">
+                      <button type="button" onclick="avaliarCardSessaoFC('NAO_ENTENDI')" class="py-2.5 px-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold transition">
+                        1. Não entendi
+                        <span class="block text-[10px] font-normal opacity-90">Volta primeiro na reorganização</span>
+                      </button>
+                      <button type="button" onclick="avaliarCardSessaoFC('ENTENDI')" class="py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
+                        2. Entendi
+                        <span class="block text-[10px] font-normal opacity-90">Segue para o próximo</span>
+                      </button>
+                    </div>
+                    <div class="text-center text-[10px] text-slate-400">1ª passagem: cartão inédito neste bloco. Depois de passar por todos, o bloco fica feito (verde) e os cartões são reorganizados.</div>
+                  </div>
+
                   <!-- Botões de Avaliação e Rotação Configurável -->
                   <div id="fcBarraAvaliacaoCard" class="hidden space-y-1.5">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
@@ -3744,11 +3759,11 @@
                       </button>
                       <button type="button" onclick="avaliarCardSessaoFC('BOM')" class="py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
                         3. Compreendi / Avançar
-                        <span class="block text-[10px] font-normal opacity-90">Contabiliza domínio</span>
+                        <span id="lblSubBtnBom" class="block text-[10px] font-normal opacity-90">Contabiliza domínio</span>
                       </button>
                       <button type="button" onclick="avaliarCardSessaoFC('FACIL')" class="py-2.5 px-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold transition">
                         4. Já Domino Totalmente
-                        <span class="block text-[10px] font-normal opacity-90">Domínio imediato + Escala longa</span>
+                        <span id="lblSubBtnFacil" class="block text-[10px] font-normal opacity-90">Domínio imediato + Escala longa</span>
                       </button>
                     </div>
                   </div>
@@ -9231,17 +9246,17 @@
       /* Bloco CONCLUÍDO continua concluído (verde): nunca é zerado nem recontado ao ser aberto de novo.
          Você escolhe: refazer o bloco inteiro (revisão, sem mexer no progresso) ou fazer só os cartões ainda não dominados. */
       if (blocoObj.concluido) {
-        const naoDominados = blocoObj.cardsOriginais.filter(c => !blocoObj.dominadosSet[c.id]);
+        const naoDominados = filaReorganizadaDoBlocoFC_(blocoObj);
         const iniciarBlocoInteiro = () => {
           const copiaRevisao = {
             numeroBloco: blocoObj.numeroBloco, totalBloco: blocoObj.totalBloco, cardsOriginais: blocoObj.cardsOriginais,
             respondidosSet: {}, acertosPorCard: {}, emReforcoSet: {}, dominadosSet: {}, concluido: false, ehRevisaoDeBlocoConcluido: true
           };
-          iniciarPlayerBlocoEspecifico_(blocoObj.cardsOriginais, titulo + ' (revisão do bloco inteiro)', blocoObj.numeroBloco, blocos.length, copiaRevisao, false);
+          iniciarPlayerBlocoEspecifico_(blocoObj.cardsOriginais, titulo + ' (revisão do bloco inteiro)', blocoObj.numeroBloco, blocos.length, copiaRevisao, false, 2);
         };
         const iniciarSoNaoDominados = () => {
           if (!naoDominados.length) { notificar('Todos os cartões deste bloco já estão dominados.'); return; }
-          iniciarPlayerBlocoEspecifico_(naoDominados, titulo + ' (só não dominados)', blocoObj.numeroBloco, blocos.length, blocoObj, false);
+          iniciarPlayerBlocoEspecifico_(naoDominados, titulo + ' (não dominados — reorganizados)', blocoObj.numeroBloco, blocos.length, blocoObj, false, 2);
           blocoObj.concluido = true;
         };
         if (modoEscolhido === 'inteiro') return iniciarBlocoInteiro();
@@ -9250,8 +9265,14 @@
         return;
       }
 
-      const pendentesDoBloco = blocoObj.cardsOriginais.filter(c => !blocoObj.dominadosSet[c.id]);
-      const listaParaFila = pendentesDoBloco.length > 0 ? pendentesDoBloco : blocoObj.cardsOriginais;
+      /* 1ª passagem: só os cartões ainda não feitos neste bloco; se todos já foram feitos, o bloco é concluído e vai para a fila reorganizada */
+      const naoFeitos = blocoObj.cardsOriginais.filter(c => !blocoObj.respondidosSet[c.id]);
+      if (!naoFeitos.length) {
+        blocoObj.concluido = true;
+        return iniciarBlocoAquecimentoPorIndice(idxBloco, modoEscolhido || 'pendentes');
+      }
+      const listaParaFila = naoFeitos;
+      const faseInicial = 1;
 
       iniciarPlayerBlocoEspecifico_(
         listaParaFila,
@@ -9259,7 +9280,8 @@
         blocoObj.numeroBloco,
         blocos.length,
         blocoObj,
-        false
+        false,
+        faseInicial
       );
     }
 
@@ -9274,7 +9296,8 @@
         <div class="bg-slate-900 border border-emerald-700 rounded-2xl p-4 w-full max-w-sm space-y-3 shadow-2xl">
           <div class="text-sm font-extrabold text-white">Bloco ${numBloco} já está concluído ✓</div>
           <div class="text-[11px] text-slate-300">Ele continua marcado como concluído (verde). O que você quer fazer?</div>
-          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">Só os não dominados (${qtdNaoDominados} de ${total})</button>
+          <div class="text-[11px] text-slate-300">Dominados: <strong class="text-emerald-400">${total - qtdNaoDominados} de ${total}</strong> • Ainda não dominados: <strong class="text-amber-300">${qtdNaoDominados}</strong></div>
+          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">${qtdNaoDominados ? `Fazer os ${qtdNaoDominados} não dominados (não entendidos primeiro)` : 'Todos já estão dominados'}</button>
           <button type="button" data-op="inteiro" class="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Revisar o bloco inteiro (${total} cartões)</button>
           <button type="button" data-op="cancelar" class="w-full py-1.5 px-3 rounded-lg border border-slate-700 text-slate-300 font-semibold text-[11px]">Cancelar</button>
         </div>`;
@@ -9287,13 +9310,56 @@
       document.body.appendChild(fundo);
     }
 
-    function iniciarPlayerBlocoEspecifico_(listaCards, tituloSessao, numeroBloco, totalBlocos, refBlocoEstado, isModoDecoreba) {
+    /* Mostra os botões de avaliação certos: 1ª passagem (inédito no bloco) = Entendi / Não entendi; depois = 4 botões */
+    function cartaoEmPrimeiraPassagemFC_() {
+      return Boolean(FC_SESSAO && FC_SESSAO.modoBlocoNovo && FC_SESSAO.fase === 1);
+    }
+    function mostrarBarraAvaliacaoFC_() {
+      const prim = cartaoEmPrimeiraPassagemFC_();
+      const bPrim = document.getElementById('fcBarraPrimeiraPassagem');
+      const bAval = document.getElementById('fcBarraAvaliacaoCard');
+      if (bPrim) bPrim.classList.toggle('hidden', !prim);
+      if (bAval) bAval.classList.toggle('hidden', prim);
+      const novo = Boolean(FC_SESSAO && FC_SESSAO.modoBlocoNovo);
+      const sE = document.getElementById('lblSubBtnErreiRetorno');
+      const sD = document.getElementById('lblSubBtnDificilRetorno');
+      const sB = document.getElementById('lblSubBtnBom');
+      const sF = document.getElementById('lblSubBtnFacil');
+      if (novo) {
+        if (sE) sE.textContent = `Volta após ${FC_SESSAO.intervaloRetornoConfigurado} cartão(ões)`;
+        if (sD) sD.textContent = 'Vai para o final da fila';
+        if (sB) sB.textContent = 'Compreendido (não dominado) • sai da fila';
+        if (sF) sF.textContent = 'Dominado • não aparece mais hoje';
+      } else {
+        if (sB) sB.textContent = 'Contabiliza domínio';
+        if (sF) sF.textContent = 'Domínio imediato + Escala longa';
+      }
+    }
+
+    /* fila da reorganização: primeiro os não entendidos / com dificuldade, depois os entendidos; dominados ficam de fora */
+    function filaReorganizadaDoBlocoFC_(bloco) {
+      const st = bloco.statusPorCard || {};
+      const peso = (c) => {
+        const x = st[c.id];
+        if (x === 'NAO_ENTENDI' || x === 'ERREI') return 0;
+        if (x === 'DIFICIL' || bloco.emReforcoSet[c.id]) return 1;
+        if (x === 'ENTENDI') return 2;
+        return 3;
+      };
+      return bloco.cardsOriginais
+        .filter(c => !bloco.dominadosSet[c.id])
+        .map((c, i) => ({ c, i }))
+        .sort((a, b) => (peso(a.c) - peso(b.c)) || (a.i - b.i))
+        .map(x => x.c);
+    }
+
+    function iniciarPlayerBlocoEspecifico_(listaCards, tituloSessao, numeroBloco, totalBlocos, refBlocoEstado, isModoDecoreba, faseBloco) {
       const idTop = listaCards[0]?.idTopico || '';
       const idMat = listaCards[0]?.idMateria || '';
       const topObj = (ESTADO?.topicos || []).find(t => t.id === idTop);
       const metodoOrd = document.getElementById('fcSelectOrdemApresentacao')?.value || ESTADO?.config?.Metodo_Organizacao_Cartoes || 'SEQUENCIAL_INICIAL_DEPOIS_ERROS';
 
-      const filaInicial = metodoOrd === 'ALEATORIO'
+      const filaInicial = (metodoOrd === 'ALEATORIO' && faseBloco !== 2)
         ? embaralharFisherYates_(listaCards.map(c => ({ ...c })))
         : listaCards.map(c => ({ ...c }));
 
@@ -9305,6 +9371,8 @@
         totalBlocos: totalBlocos || 1,
         refBlocoEstado: refBlocoEstado || null,
         isModoDecoreba: Boolean(isModoDecoreba),
+        modoBlocoNovo: Boolean(refBlocoEstado && !isModoDecoreba && (faseBloco === 1 || faseBloco === 2)),
+        fase: faseBloco || 0,
         intervaloRetornoConfigurado: Math.max(1, FC_INTERVALO_RETORNO),
         criterioDominioConfigurado: Math.max(1, FC_CRITERIO_DOMINIO),
         comportamentoDificil: ESTADO?.config?.Comportamento_Dificil_Sessao || 'RETORNAR_NA_SESSAO',
@@ -9379,7 +9447,12 @@
       if (barra) barra.style.width = `${perc}%`;
       if (txtPerc) txtPerc.textContent = `${perc}%`;
       if (txtBarra) {
-        txtBarra.textContent = `Domínio do Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}: ${dominadosCount} de ${total} cartões dominados`;
+        if (FC_SESSAO.modoBlocoNovo) {
+          const feitos = Object.keys(FC_SESSAO.refBlocoEstado.respondidosSet || {}).length;
+          txtBarra.textContent = `Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos} • ${FC_SESSAO.fase === 1 ? '1ª passagem' : 'Reorganizado'} • Feitos: ${Math.min(feitos, total)} de ${total} • Dominados: ${dominadosCount}`;
+        } else {
+          txtBarra.textContent = `Domínio do Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}: ${dominadosCount} de ${total} cartões dominados`;
+        }
       }
 
       const velSessao = FC_SESSAO.respostasComputadas >= 2
@@ -9780,6 +9853,8 @@
       barraVirar.classList.add('hidden');
       barraCE.classList.add('hidden');
       barraAval.classList.add('hidden');
+      const barraPrim = document.getElementById('fcBarraPrimeiraPassagem');
+      if (barraPrim) barraPrim.classList.add('hidden');
 
       const temCloze = /\{\{c\d+::/i.test(c.frente);
       if (temCloze) {
@@ -9846,7 +9921,7 @@
 
       document.getElementById('fcBackLessonContainer').classList.remove('hidden');
       document.getElementById('fcBarraVirarCard').classList.add('hidden');
-      document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
+      mostrarBarraAvaliacaoFC_();
     }
 
     function julgarCardCertoErradoFC(escolhaUsuario) {
@@ -9908,11 +9983,12 @@
 
       document.getElementById('fcBackLessonContainer').classList.remove('hidden');
       document.getElementById('fcBarraCertoErradoPdfBase').classList.add('hidden');
-      document.getElementById('fcBarraAvaliacaoCard').classList.remove('hidden');
+      mostrarBarraAvaliacaoFC_();
     }
 
     async function avaliarCardSessaoFC(avaliacao) {
       if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      if (FC_SESSAO.modoBlocoNovo) return avaliarCardBlocoNovoFC_(avaliacao);
       const c = FC_SESSAO.cardAtual;
       const segsNoCard = Math.max(1, Math.round((Date.now() - FC_SESSAO.inicioCardTimestamp) / 1000));
 
@@ -9983,6 +10059,79 @@
           const posConfirmacao = Math.min(N_RETORNO + 2, FC_SESSAO.filaAtiva.length);
           FC_SESSAO.filaAtiva.splice(posConfirmacao, 0, itemAtual);
         }
+      }
+
+      carregarProximoCardSessaoFC_();
+    }
+
+    /* Fluxo dos blocos:
+       1ª passagem (inédito no bloco): Entendi / Não entendi; cada cartão aparece uma vez.
+       Ao passar por todos: bloco FEITO (verde) e fila reorganizada (não entendidos primeiro).
+       Depois: 1 Errei → volta após N cartões | 2 Dificuldade → final da fila |
+               3 Compreendi → compreendido (não dominado), sai da fila de agora | 4 Dominado → não aparece mais hoje. */
+    async function avaliarCardBlocoNovoFC_(avaliacao) {
+      const S = FC_SESSAO;
+      const c = S.cardAtual;
+      const B = S.refBlocoEstado;
+      if (!B.statusPorCard) B.statusPorCard = {};
+      const primeira = S.fase === 1;
+      if (primeira && avaliacao !== 'ENTENDI' && avaliacao !== 'NAO_ENTENDI') return;
+      if (!primeira && ['ERREI', 'DIFICIL', 'BOM', 'FACIL'].indexOf(avaliacao) < 0) return;
+
+      const segsNoCard = Math.max(1, Math.round((Date.now() - S.inicioCardTimestamp) / 1000));
+      S.respostasComputadas += 1;
+      S.ultimaAvaliacaoPorCard[c.id] = avaliacao;
+      B.respondidosSet[c.id] = true;
+
+      const isCE = c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS';
+      const positivo = avaliacao === 'ENTENDI' || avaliacao === 'BOM' || avaliacao === 'FACIL';
+      const acertou = isCE ? (S.escolhaUsuarioCE === c.gabaritoCE && positivo) : positivo;
+      if (!isCE) {
+        if (acertou) S.acertosSessao += 1;
+        else { S.errosSessao += 1; S.errosPorCard[c.id] = (S.errosPorCard[c.id] || 0) + 1; }
+      } else if (!positivo && S.escolhaUsuarioCE === c.gabaritoCE) {
+        S.errosPorCard[c.id] = (S.errosPorCard[c.id] || 0) + 1;
+      }
+      registrarTelemetriaIndividualCartao_(c, acertou, segsNoCard, avaliacao);
+
+      const item = S.filaAtiva.shift();
+      const N = Math.max(1, S.intervaloRetornoConfigurado);
+
+      if (primeira) {
+        B.statusPorCard[c.id] = avaliacao;
+        if (avaliacao === 'NAO_ENTENDI') B.emReforcoSet[c.id] = true; else delete B.emReforcoSet[c.id];
+        if (S.filaAtiva.length === 0) {
+          B.concluido = true;
+          const fila2 = filaReorganizadaDoBlocoFC_(B);
+          if (fila2.length) {
+            S.fase = 2;
+            S.filaAtiva = fila2.map(x => ({ ...x }));
+            const nNao = fila2.filter(x => B.statusPorCard[x.id] === 'NAO_ENTENDI').length;
+            notificar(`Bloco ${S.numeroBloco} feito ✓. Cartões reorganizados: ${nNao} não entendido(s) primeiro, depois os entendidos.`);
+          }
+        }
+      } else if (avaliacao === 'ERREI') {
+        B.statusPorCard[c.id] = 'NAO_ENTENDI';
+        B.emReforcoSet[c.id] = true;
+        delete B.dominadosSet[c.id];
+        S.loopsProvocados += 1;
+        S.filaAtiva.splice(Math.min(N, S.filaAtiva.length), 0, item);
+      } else if (avaliacao === 'DIFICIL') {
+        B.statusPorCard[c.id] = 'DIFICIL';
+        B.emReforcoSet[c.id] = true;
+        delete B.dominadosSet[c.id];
+        S.loopsProvocados += 1;
+        S.filaAtiva.push(item);
+      } else if (avaliacao === 'BOM') {
+        B.statusPorCard[c.id] = 'COMPREENDIDO';
+        delete B.emReforcoSet[c.id];
+        await persistirEscalonamentoCardNoSupabase_(item, 'BOM');
+      } else if (avaliacao === 'FACIL') {
+        B.statusPorCard[c.id] = 'DOMINADO';
+        B.dominadosSet[c.id] = true;
+        delete B.emReforcoSet[c.id];
+        S.dominadosNaSessao.push(item);
+        await persistirEscalonamentoCardNoSupabase_(item, 'FACIL');
       }
 
       carregarProximoCardSessaoFC_();
@@ -10068,6 +10217,11 @@
         alternarVersoCompletoFC();
       } else if (['1', '2', '3', '4'].includes(ev.key) && FC_SESSAO.versoRevelado) {
         ev.preventDefault();
+        if (cartaoEmPrimeiraPassagemFC_()) {
+          const m1 = { 1: 'NAO_ENTENDI', 2: 'ENTENDI' };
+          if (m1[Number(ev.key)]) avaliarCardSessaoFC(m1[Number(ev.key)]);
+          return;
+        }
         const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'BOM', 4: 'FACIL' };
         avaliarCardSessaoFC(mapa[Number(ev.key)]);
       }
@@ -17052,7 +17206,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
       Object.keys(mapa).forEach((chave) => {
         ciclo.blocos[chave] = (mapa[chave] || []).map((b) => ({
           respondidosSet: b.respondidosSet || {}, acertosPorCard: b.acertosPorCard || {},
-          emReforcoSet: b.emReforcoSet || {}, dominadosSet: b.dominadosSet || {}, concluido: Boolean(b.concluido)
+          emReforcoSet: b.emReforcoSet || {}, dominadosSet: b.dominadosSet || {}, concluido: Boolean(b.concluido),
+          statusPorCard: b.statusPorCard || {}
         }));
       });
       persistirCiclo();
@@ -17075,6 +17230,7 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
         const x = sv[i] || {};
         b.respondidosSet = x.respondidosSet || {}; b.acertosPorCard = x.acertosPorCard || {};
         b.emReforcoSet = x.emReforcoSet || {}; b.dominadosSet = x.dominadosSet || {}; b.concluido = Boolean(x.concluido);
+        b.statusPorCard = x.statusPorCard || {};
       });
     }
     let comp = ciclo.comp[chave];
@@ -17102,6 +17258,8 @@ DECOREBA;Qual é o prazo para conclusão do inquérito policial com indiciado so
     blocos.forEach((b, i) => {
       b.cardsOriginais = comp[i].filter((id) => porId.has(id)).map((id) => porId.get(id)).sort((x, y) => pos.get(x.id) - pos.get(y.id));
       b.totalBloco = b.cardsOriginais.length;
+      /* bloco FEITO = todos os cartões dele já foram passados (independe de domínio) */
+      if (!b.concluido && b.cardsOriginais.length > 0 && b.cardsOriginais.every((c) => b.respondidosSet && b.respondidosSet[c.id])) b.concluido = true;
     });
     /* recupera o que já foi estudado (desempenho registrado nos cartões) uma única vez por conjunto de blocos */
     if (chave.indexOf('E__') === 0 && ciclo.recon[chave] !== 'reset') {
