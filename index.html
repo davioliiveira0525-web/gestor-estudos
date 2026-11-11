@@ -9981,8 +9981,8 @@
       return `
         <div class="fc-faces-barra">
           <button type="button" id="fcFaceBtn1" onclick="alternarVersoCompletoFC(false)" class="fc-face-btn fc-face-btn-on">① Rápido</button>
-          <button type="button" id="fcFaceBtn2" onclick="alternarVersoCompletoFC(true)" class="fc-face-btn">② Detalhado</button>
-          <span class="fc-faces-dica">Tecla <b>V</b> troca o verso</span>
+          <button type="button" id="fcFaceBtn2" onclick="alternarVersoCompletoFC(true)" class="fc-face-btn">② Detalhado [4]</button>
+          <span class="fc-faces-dica">Tecla <b>4</b> troca o verso (Rápido ⇄ Detalhado)</span>
         </div>
         ${faceRapida}
         ${faceDetalhada}`;
@@ -10653,7 +10653,7 @@
       } else if ((keyUpper === 'C' || keyUpper === 'E') && !FC_SESSAO.versoRevelado && isCE) {
         ev.preventDefault();
         julgarCardCertoErradoFC(keyUpper === 'C' ? 'CERTO' : 'ERRADO');
-      } else if (keyUpper === 'V' && FC_SESSAO.versoRevelado) {
+      } else if ((ev.key === '4' || keyUpper === 'V') && FC_SESSAO.versoRevelado) {
         ev.preventDefault();
         alternarVersoCompletoFC();
       } else if (['1', '2', '3'].includes(ev.key) && FC_SESSAO.versoRevelado) {
