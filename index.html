@@ -2722,7 +2722,7 @@
                     <option value="SEQUENCIAL_INICIAL_DEPOIS_ERROS">Sequencial na 1ª Exposição -> Depois Classificar por Erros/Acertos (Padrão Recomendado)</option>
                     <option value="SEQUENCIAL_CRIACAO">Sempre em Ordem Sequencial Estrita de Criação/Importação</option>
                     <option value="PRIORIDADE_ERROS">Priorizar Diretamente Cartões com Maior Taxa de Erro</option>
-                    <option value="NOVOS_PRIMEIRO">Priorizar Cartões Inéditos / Novos Primeiro</option>
+                    <option value="NOVOS_PRIMEIRO">Priorizar Cartões Ainda Não Respondidos</option>
                     <option value="ALEATORIO">Embaralhamento Aleatório (Fisher-Yates)</option>
                   </select>
                 </div>
@@ -3443,21 +3443,23 @@
                   </select>
                 </div>
                 <div class="md:col-span-2">
-                  <label class="block font-bold text-slate-300 mb-1">Modalidade do Cartão</label>
-                  <select id="fcFiltroTipo" onchange="aoMudarFiltroDeckResetarBlocos()" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                    <option value="">[ Todas as modalidades ]</option>
-                    <option value="PDF_BASE">1. PDF-Base (C/E)</option>
-                    <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
-                    <option value="LEI_SECA">3. Lei Seca</option>
-                    <option value="DECOREBA">4. Decoreba</option>
-                    <option value="OMISSAO">5. Omissão com alternativas</option>
-                    <option value="SELECAO">6. Seleção de alternativas</option>
+                  <label class="block font-bold text-slate-300 mb-1">Modalidades (combine livremente)</label>
+                  <!-- Valor real do filtro (oculto): '' = todas; senão lista separada por vírgula. Os botões abaixo escrevem aqui. -->
+                  <select id="fcFiltroTipo" onchange="aoMudarFiltroDeckResetarBlocos()" class="hidden">
+                    <option value="">Todas as modalidades</option>
+                    <option value="PDF_BASE">PDF Base</option>
+                    <option value="CADERNO_ERROS">Caderno de Erros</option>
+                    <option value="DECOREBA">Decoreba</option>
+                    <option value="PDF_BASE,CADERNO_ERROS">PDF Base + Caderno de Erros</option>
+                    <option value="PDF_BASE,DECOREBA">PDF Base + Decoreba</option>
+                    <option value="CADERNO_ERROS,DECOREBA">Caderno de Erros + Decoreba</option>
                   </select>
+                  <div id="fcFiltroTipoChips" class="flex flex-wrap gap-1.5"></div>
                 </div>
                 <div class="md:col-span-2">
                   <label class="block font-bold text-emerald-300 mb-1">Ordem de Apresentação</label>
                   <select id="fcSelectOrdemApresentacao" onchange="atualizarOrdemApresentacaoUI(this.value)" class="w-full rounded-lg border px-2.5 py-1.5 font-bold">
-                    <option value="SEQUENCIAL_INICIAL_DEPOIS_ERROS">1º Sequencial (Inéditos) -> Depois por Erros</option>
+                    <option value="SEQUENCIAL_INICIAL_DEPOIS_ERROS">1º Sequencial -> Depois por Erros</option>
                     <option value="SEQUENCIAL_CRIACAO">Ordem Sequencial Estrita de Criação</option>
                     <option value="PRIORIDADE_ERROS">Priorizar Mais Errados Primeiro</option>
                     <option value="ALEATORIO">Embaralhado (Aleatório)</option>
@@ -3710,9 +3712,9 @@
                 </div>
               </div>
 
-              <!-- Contagem da etapa: INÉDITOS (1ª passagem) ou REVISÃO (reorganizados) — contagens separadas -->
+              <!-- Contagem do bloco (sem etapa de "inéditos") -->
               <div id="fcContagemEtapa" class="hidden flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-2.5 py-1.5 text-[11px]">
-                <span id="fcContagemEtapaNome" class="font-extrabold uppercase tracking-wide">Estudo inicial — cartões inéditos</span>
+                <span id="fcContagemEtapaNome" class="font-extrabold uppercase tracking-wide">Cartões do bloco</span>
                 <span class="text-slate-300">Total: <strong id="fcContagemTotal" class="text-white">0</strong></span>
                 <span class="text-slate-300">Resolvidos: <strong id="fcContagemResolvidos" class="text-white">0/0</strong></span>
                 <span class="text-slate-300">Restantes: <strong id="fcContagemRestantes" class="text-white">0</strong></span>
@@ -3733,7 +3735,6 @@
                       1. PDF-BASE (CERTO / ERRADO)
                     </span>
                     <span id="fcCardMateriaTopicoLabel" class="text-[11px] font-bold text-slate-300"></span>
-                    <span id="fcCardBadgeNovo" class="hidden px-1.5 py-0.5 rounded bg-amber-500 text-slate-950 font-extrabold text-[9px] uppercase">INÉDITO (1ª EXPOSIÇÃO)</span>
                     <span id="fcCardBadgeReincidencia" class="hidden px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold text-[10px]">Em Reforço</span>
                   </div>
                   <div class="flex items-center gap-2">
@@ -3776,39 +3777,20 @@
                     </button>
                   </div>
 
-                  <!-- 1ª passagem (cartão inédito no bloco): só Entendi / Não entendi -->
-                  <div id="fcBarraPrimeiraPassagem" class="hidden space-y-1.5">
-                    <div class="grid grid-cols-2 gap-3 max-w-md mx-auto text-xs">
-                      <button type="button" onclick="avaliarCardSessaoFC('NAO_ENTENDI')" class="py-2.5 px-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold transition">
-                        1. Não entendi
-                        <span class="block text-[10px] font-normal opacity-90">Volta primeiro na reorganização</span>
-                      </button>
-                      <button type="button" onclick="avaliarCardSessaoFC('ENTENDI')" class="py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
-                        2. Entendi
-                        <span class="block text-[10px] font-normal opacity-90">Segue para o próximo</span>
-                      </button>
-                    </div>
-                    <div class="text-center text-[10px] text-slate-400">1ª passagem: cartão inédito neste bloco. Depois de passar por todos, o bloco fica feito (verde) e os cartões são reorganizados.</div>
-                  </div>
-
-                  <!-- Botões de Avaliação e Rotação Configurável -->
+                  <!-- Avaliação do cartão (2026-11-11): só 3 opções — Repetir após 3 cartões / Tive dificuldades / Dominei -->
                   <div id="fcBarraAvaliacaoCard" class="hidden space-y-1.5">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs max-w-3xl mx-auto">
                       <button type="button" onclick="avaliarCardSessaoFC('ERREI')" class="py-2.5 px-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold transition">
-                        1. Errei / Não Entendi
-                        <span id="lblSubBtnErreiRetorno" class="block text-[10px] font-normal opacity-90">Retorna após 3 cartões</span>
+                        1. Repetir após <span id="lblBtnRepetirQtd">3</span> cartões
+                        <span id="lblSubBtnErreiRetorno" class="block text-[10px] font-normal opacity-90">Volta depois de 3 cartões respondidos</span>
                       </button>
                       <button type="button" onclick="avaliarCardSessaoFC('DIFICIL')" class="py-2.5 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold transition">
-                        2. Tive Dificuldade
-                        <span id="lblSubBtnDificilRetorno" class="block text-[10px] font-normal opacity-90">Reforço no bloco</span>
+                        2. Tive dificuldades
+                        <span id="lblSubBtnDificilRetorno" class="block text-[10px] font-normal opacity-90">Vai para o final do bloco</span>
                       </button>
-                      <button type="button" onclick="avaliarCardSessaoFC('BOM')" class="py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
-                        3. Compreendi / Avançar
-                        <span id="lblSubBtnBom" class="block text-[10px] font-normal opacity-90">Contabiliza domínio</span>
-                      </button>
-                      <button type="button" onclick="avaliarCardSessaoFC('FACIL')" class="py-2.5 px-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold transition">
-                        4. Já Domino Totalmente
-                        <span id="lblSubBtnFacil" class="block text-[10px] font-normal opacity-90">Domínio imediato + Escala longa</span>
+                      <button type="button" onclick="avaliarCardSessaoFC('FACIL')" class="py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
+                        3. Dominei
+                        <span id="lblSubBtnFacil" class="block text-[10px] font-normal opacity-90">Não se repete neste bloco</span>
                       </button>
                     </div>
                   </div>
@@ -8546,6 +8528,61 @@
       renderizarVisaoDeckFC();
     }
 
+    /* ===== MODALIDADES (2026-11-11): só 3 categorias combináveis — PDF Base, Caderno de Erros, Decoreba — + "Todas".
+       O valor fica no select oculto #fcFiltroTipo: '' = todas; senão "PDF_BASE,CADERNO_ERROS" etc. ===== */
+    const FC_MODALIDADES_BASE = [
+      { id: 'PDF_BASE', label: 'PDF Base', cor: 'emerald' },
+      { id: 'CADERNO_ERROS', label: 'Caderno de Erros', cor: 'rose' },
+      { id: 'DECOREBA', label: 'Decoreba', cor: 'purple' }
+    ];
+    function fcModalidadesSelecionadas_(valor) {
+      const ids = FC_MODALIDADES_BASE.map(m => m.id);
+      const lista = String(valor || '').split(',').map(s => s.trim()).filter(s => ids.indexOf(s) >= 0);
+      return Array.from(new Set(lista));
+    }
+    function fcCardPassaModalidades_(c, valor) {
+      const sel = fcModalidadesSelecionadas_(valor);
+      if (!sel.length || sel.length === FC_MODALIDADES_BASE.length) return true;
+      return sel.some(m => m === 'DECOREBA' ? fcEhDecoreba_(c) : c.tipo === m);
+    }
+    function fcAplicarModalidades_(lista) {
+      const sel = document.getElementById('fcFiltroTipo');
+      if (!sel) return;
+      const ordem = FC_MODALIDADES_BASE.map(m => m.id).filter(id => lista.indexOf(id) >= 0);
+      const valor = (ordem.length === 0 || ordem.length === FC_MODALIDADES_BASE.length) ? '' : ordem.join(',');
+      sel.value = valor;
+      renderizarChipsModalidadesFC_();
+      aoMudarFiltroDeckResetarBlocos();
+    }
+    function alternarModalidadeFC(id) {
+      const sel = document.getElementById('fcFiltroTipo');
+      if (!sel) return;
+      if (id === 'TODAS') return fcAplicarModalidades_([]);
+      const atual = fcModalidadesSelecionadas_(sel.value);
+      const i = atual.indexOf(id);
+      if (i >= 0) atual.splice(i, 1); else atual.push(id);
+      fcAplicarModalidades_(atual);
+    }
+    function renderizarChipsModalidadesFC_() {
+      const box = document.getElementById('fcFiltroTipoChips');
+      const sel = document.getElementById('fcFiltroTipo');
+      if (!box || !sel) return;
+      const marcadas = fcModalidadesSelecionadas_(sel.value);
+      const todas = marcadas.length === 0 || marcadas.length === FC_MODALIDADES_BASE.length;
+      const cores = {
+        emerald: 'bg-emerald-600 border-emerald-400 text-white',
+        rose: 'bg-rose-600 border-rose-400 text-white',
+        purple: 'bg-purple-600 border-purple-400 text-white',
+        indigo: 'bg-indigo-600 border-indigo-400 text-white'
+      };
+      const off = 'bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-500';
+      const chip = (id, label, ativo, cor) =>
+        `<button type="button" onclick="alternarModalidadeFC('${id}')" aria-pressed="${ativo}" class="px-2.5 py-1.5 rounded-lg border text-[11px] font-extrabold transition ${ativo ? cores[cor] : off}">${ativo ? '✓ ' : ''}${label}</button>`;
+      const html = chip('TODAS', 'Todas as modalidades', todas, 'indigo') +
+        FC_MODALIDADES_BASE.map(m => chip(m.id, m.label, !todas && marcadas.indexOf(m.id) >= 0, m.cor)).join('');
+      if (box.innerHTML !== html) box.innerHTML = html;
+    }
+
     function reiniciarProgressoBlocosFiltroAtual() {
       const chave = obterChaveFiltroAtualBlocos_();
       delete FC_ESTADO_BLOCOS_MAP[chave];
@@ -8934,7 +8971,7 @@
       const filtrados = FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
-        if (tipo === 'DECOREBA' ? !fcEhDecoreba_(c) : (tipo && c.tipo !== tipo)) return false;
+        if (!fcCardPassaModalidades_(c, tipo)) return false;
         if (assunto && c.assunto !== assunto) return false;
         return true;
       });
@@ -9204,6 +9241,7 @@
     }
 
     function renderizarVisaoDeckFC() {
+      renderizarChipsModalidadesFC_();
       const idMat = document.getElementById('fcFiltroMateria')?.value || '';
       const idTop = document.getElementById('fcFiltroTopico')?.value || '';
       atualizarOpcoesFiltroAssuntoFC_();
@@ -9348,7 +9386,7 @@
               <div class="flex flex-wrap items-center gap-1.5">
                 <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono font-bold text-[10px]">#${idxSeq + 1}</span>
                 <span class="px-2 py-0.5 rounded font-bold text-[10px] ${corBadge}">${esc(obterLabelFuncionalTipoFC_(c.tipo))}</span>
-                ${c.isNovo ? `<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[9px] font-bold">Inédito</span>` : `<span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 text-[9px] font-bold">${c.totalRevisoes}x (${c.totalAcertos}C/${c.totalErros}E)</span>`}
+                <span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 text-[9px] font-bold">${c.totalRevisoes || 0}x (${c.totalAcertos || 0}C/${c.totalErros || 0}E)</span>
                 ${isCE ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[9px] font-bold">Gab: ${c.gabaritoCE}</span>` : ''}
                 <span class="text-[11px] font-bold text-indigo-400">${esc(tObj ? tObj.materia + ' • ' + tObj.topico : c.idTopico)}</span>
               </div>
@@ -9408,14 +9446,16 @@
         return;
       }
 
-      /* 1ª passagem: só os cartões ainda não feitos neste bloco; se todos já foram feitos, o bloco é concluído e vai para a fila reorganizada */
-      const naoFeitos = blocoObj.cardsOriginais.filter(c => !blocoObj.respondidosSet[c.id]);
-      if (!naoFeitos.length) {
+      /* Sem etapa de "inéditos": a fila é o bloco inteiro (menos os dominados), na sequência;
+         os marcados como "Tive dificuldades" (inclusive os antigos intermediários) vão para o final. */
+      const listaParaFila = filaReorganizadaDoBlocoFC_(blocoObj);
+      if (!listaParaFila.length) {
         blocoObj.concluido = true;
-        return iniciarBlocoAquecimentoPorIndice(idxBloco, modoEscolhido || 'pendentes');
+        notificar('Todos os cartões deste bloco já estão dominados.');
+        renderizarVisaoDeckFC();
+        return;
       }
-      const listaParaFila = naoFeitos;
-      const faseInicial = 1;
+      const faseInicial = 2;
 
       iniciarPlayerBlocoEspecifico_(
         listaParaFila,
@@ -9440,7 +9480,7 @@
           <div class="text-sm font-extrabold text-white">Bloco ${numBloco} já está concluído ✓</div>
           <div class="text-[11px] text-slate-300">Ele continua marcado como concluído (verde). O que você quer fazer?</div>
           <div class="text-[11px] text-slate-300">Dominados: <strong class="text-emerald-400">${total - qtdNaoDominados} de ${total}</strong> • Ainda não dominados: <strong class="text-amber-300">${qtdNaoDominados}</strong></div>
-          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">${qtdNaoDominados ? `Fazer os ${qtdNaoDominados} não dominados (não entendidos primeiro)` : 'Todos já estão dominados'}</button>
+          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">${qtdNaoDominados ? `Fazer os ${qtdNaoDominados} não dominados (dificuldades no final)` : 'Todos já estão dominados'}</button>
           <button type="button" data-op="inteiro" class="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Revisar o bloco inteiro (${total} cartões)</button>
           <button type="button" data-op="cancelar" class="w-full py-1.5 px-3 rounded-lg border border-slate-700 text-slate-300 font-semibold text-[11px]">Cancelar</button>
         </div>`;
@@ -9453,42 +9493,43 @@
       document.body.appendChild(fundo);
     }
 
-    /* Mostra os botões de avaliação certos: 1ª passagem (inédito no bloco) = Entendi / Não entendi; depois = 4 botões */
-    function cartaoEmPrimeiraPassagemFC_() {
-      return Boolean(FC_SESSAO && FC_SESSAO.modoBlocoNovo && FC_SESSAO.fase === 1);
-    }
+    /* (2026-11-11) Não existe mais 1ª passagem de "inéditos": todo cartão é avaliado com as 3 opções
+       1. Repetir após N cartões | 2. Tive dificuldades (final do bloco) | 3. Dominei (sai do bloco). */
+    function cartaoEmPrimeiraPassagemFC_() { return false; }
     function mostrarBarraAvaliacaoFC_() {
-      const prim = cartaoEmPrimeiraPassagemFC_();
-      const bPrim = document.getElementById('fcBarraPrimeiraPassagem');
       const bAval = document.getElementById('fcBarraAvaliacaoCard');
-      if (bPrim) bPrim.classList.toggle('hidden', !prim);
-      if (bAval) bAval.classList.toggle('hidden', prim);
-      const novo = Boolean(FC_SESSAO && FC_SESSAO.modoBlocoNovo);
+      if (bAval) bAval.classList.remove('hidden');
+      const n = FC_SESSAO ? FC_SESSAO.intervaloRetornoConfigurado : FC_INTERVALO_RETORNO;
+      const qtd = document.getElementById('lblBtnRepetirQtd');
+      if (qtd) qtd.textContent = String(n);
       const sE = document.getElementById('lblSubBtnErreiRetorno');
+      if (sE) sE.textContent = `Volta depois de ${n} cartão(ões) respondido(s)`;
       const sD = document.getElementById('lblSubBtnDificilRetorno');
-      const sB = document.getElementById('lblSubBtnBom');
+      if (sD) sD.textContent = FC_SESSAO && FC_SESSAO.isModoDecoreba ? 'Vai para o final da fila' : 'Vai para o final do bloco';
       const sF = document.getElementById('lblSubBtnFacil');
-      if (novo) {
-        if (sE) sE.textContent = `Volta após ${FC_SESSAO.intervaloRetornoConfigurado} cartão(ões)`;
-        if (sD) sD.textContent = 'Vai para o final da fila';
-        if (sB) sB.textContent = 'Compreendido (não dominado) • sai da fila';
-        if (sF) sF.textContent = 'Dominado • não aparece mais hoje';
-      } else {
-        if (sB) sB.textContent = 'Contabiliza domínio';
-        if (sF) sF.textContent = 'Domínio imediato + Escala longa';
-      }
+      if (sF) sF.textContent = FC_SESSAO && FC_SESSAO.isModoDecoreba ? 'Não se repete nesta fila' : 'Não se repete neste bloco';
     }
 
-    /* fila da reorganização: primeiro os não entendidos / com dificuldade, depois os entendidos; dominados ficam de fora */
+    /* Antiga classificação intermediária (Compreendi / Entendi) passa a valer como "Tive dificuldades" */
+    function fcEhStatusDificil_(st) {
+      return st === 'DIFICIL' || st === 'COMPREENDIDO' || st === 'BOM' || st === 'ENTENDI';
+    }
+    function fcReclassificarIntermediariosBloco_(bloco) {
+      if (!bloco || !bloco.statusPorCard) return;
+      Object.keys(bloco.statusPorCard).forEach((id) => {
+        const st = bloco.statusPorCard[id];
+        if (st !== 'DIFICIL' && fcEhStatusDificil_(st) && !(bloco.dominadosSet && bloco.dominadosSet[id])) {
+          bloco.statusPorCard[id] = 'DIFICIL';
+          if (bloco.emReforcoSet) bloco.emReforcoSet[id] = true;
+        }
+      });
+    }
+
+    /* fila do bloco: todos os não dominados na sequência original; os de "Tive dificuldades" vão para o final */
     function filaReorganizadaDoBlocoFC_(bloco) {
+      fcReclassificarIntermediariosBloco_(bloco);
       const st = bloco.statusPorCard || {};
-      const peso = (c) => {
-        const x = st[c.id];
-        if (x === 'NAO_ENTENDI' || x === 'ERREI') return 0;
-        if (x === 'DIFICIL' || bloco.emReforcoSet[c.id]) return 1;
-        if (x === 'ENTENDI') return 2;
-        return 3;
-      };
+      const peso = (c) => (fcEhStatusDificil_(st[c.id]) ? 1 : 0);
       return bloco.cardsOriginais
         .filter(c => !bloco.dominadosSet[c.id])
         .map((c, i) => ({ c, i }))
@@ -9538,12 +9579,10 @@
         inicioTimestamp: Date.now(),
         segundosDecorridos: 0
       };
-      /* Contagem da etapa (Regras definitivas, item 7): inéditos e reorganizados têm contagens próprias */
+      /* Contagem única do bloco (sem contagem de inéditos) */
       FC_SESSAO.etapa = {
-        nome: FC_SESSAO.modoBlocoNovo ? (FC_SESSAO.fase === 1 ? 'INEDITOS' : 'REVISAO') : 'SESSAO',
-        total: (FC_SESSAO.modoBlocoNovo && FC_SESSAO.fase === 1)
-          ? FC_SESSAO.totalCardsUnicos
-          : new Set(filaInicial.map(x => x.id)).size,
+        nome: FC_SESSAO.modoBlocoNovo ? 'BLOCO' : 'SESSAO',
+        total: new Set(filaInicial.map(x => x.id)).size,
         segInicio: 0,
         respostasInicio: 0
       };
@@ -9551,12 +9590,9 @@
       const lblSubErrei = document.getElementById('lblSubBtnErreiRetorno');
       if (lblSubErrei) lblSubErrei.textContent = `Retorna após ${FC_SESSAO.intervaloRetornoConfigurado} cartão(ões)`;
 
-      const lblSubDif = document.getElementById('lblSubBtnDificilRetorno');
-      if (lblSubDif) {
-        lblSubDif.textContent = FC_SESSAO.comportamentoDificil === 'RETORNAR_NA_SESSAO'
-          ? `Retorna após ${FC_SESSAO.intervaloRetornoConfigurado} cartão(ões)`
-          : 'Agenda revisão curta (1d)';
-      }
+      mostrarBarraAvaliacaoFC_();
+      const barraAvalIni = document.getElementById('fcBarraAvaliacaoCard');
+      if (barraAvalIni) barraAvalIni.classList.add('hidden');
 
       document.getElementById('fcPainelSelecao').classList.add('hidden');
       document.getElementById('fcPainelDiagnosticoFinal').classList.add('hidden');
@@ -9601,7 +9637,7 @@
       if (txtBarra) {
         if (FC_SESSAO.modoBlocoNovo) {
           const feitos = Object.keys(FC_SESSAO.refBlocoEstado.respondidosSet || {}).length;
-          txtBarra.textContent = `Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos} • ${FC_SESSAO.fase === 1 ? '1ª passagem' : 'Reorganizado'} • Feitos: ${Math.min(feitos, total)} de ${total} • Dominados: ${dominadosCount}`;
+          txtBarra.textContent = `Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos} • Feitos: ${Math.min(feitos, total)} de ${total} • Dominados: ${dominadosCount}`;
         } else {
           txtBarra.textContent = `Domínio do Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}: ${dominadosCount} de ${total} cartões dominados`;
         }
@@ -9620,7 +9656,7 @@
       renderizarContagemEtapaFC_();
     }
 
-    /* ===== Contagem por etapa (inéditos x reorganizados) ===== */
+    /* ===== Contagem do bloco / sessão ===== */
     function formatarTempoEstimadoFC_(segs) {
       if (segs <= 0) return '0 min';
       if (segs <= 25) return '< 1 min';
@@ -9653,61 +9689,20 @@
       if (!k) { box.classList.add('hidden'); return; }
       box.classList.remove('hidden');
       const nomes = {
-        INEDITOS: 'Estudo inicial — cartões inéditos',
-        REVISAO: 'Revisão — cartões reorganizados',
+        BLOCO: 'Cartões do bloco',
         SESSAO: 'Sessão de cartões'
       };
       const cores = {
-        INEDITOS: 'border-amber-700 bg-amber-950/40 text-amber-300',
-        REVISAO: 'border-emerald-700 bg-emerald-950/40 text-emerald-300',
+        BLOCO: 'border-indigo-700 bg-indigo-950/40 text-indigo-300',
         SESSAO: 'border-slate-700 bg-slate-950 text-slate-300'
       };
-      box.className = 'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-2.5 py-1.5 text-[11px] ' + cores[k.nome];
+      box.className = 'flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-2.5 py-1.5 text-[11px] ' + (cores[k.nome] || cores.SESSAO);
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('fcContagemEtapaNome', nomes[k.nome] + (FC_SESSAO.totalBlocos > 1 ? ` • Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}` : ''));
+      set('fcContagemEtapaNome', (nomes[k.nome] || nomes.SESSAO) + (FC_SESSAO.totalBlocos > 1 ? ` • Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}` : ''));
       set('fcContagemTotal', `${k.total} cartões`);
       set('fcContagemResolvidos', `${k.resolvidos}/${k.total}`);
       set('fcContagemRestantes', String(k.restantes));
       set('fcContagemTempo', k.tempo);
-    }
-
-    /* Anúncio obrigatório da transição: INÉDITOS CONCLUÍDOS → REVISÃO (contagem reiniciada) */
-    function anunciarTransicaoParaRevisaoFC_(k) {
-      const antigo = document.getElementById('fcxTransicaoEtapa');
-      if (antigo) antigo.remove();
-      const fundo = document.createElement('div');
-      fundo.id = 'fcxTransicaoEtapa';
-      fundo.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(2,6,23,.8);display:flex;align-items:center;justify-content:center;padding:16px';
-      const temRevisao = k && k.total > 0;
-      fundo.innerHTML = `
-        <div class="bg-slate-900 border border-emerald-600 rounded-2xl p-5 w-full max-w-md space-y-3 shadow-2xl text-left">
-          <div class="text-lg font-black text-emerald-400">INÉDITOS CONCLUÍDOS!</div>
-          <div class="text-[12px] text-slate-200">Você finalizou todos os cartões inéditos${FC_SESSAO && FC_SESSAO.totalBlocos > 1 ? ` do bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}` : ''}.</div>
-          ${temRevisao ? `
-          <div class="text-[12px] text-slate-200">Agora começaremos uma nova etapa:</div>
-          <div class="text-sm font-extrabold text-white">REVISÃO — CARTÕES REORGANIZADOS</div>
-          <div class="rounded-lg border border-slate-700 bg-slate-950 p-3 text-[12px] text-slate-200 space-y-0.5">
-            <div class="font-bold text-amber-300">Contagem reiniciada.</div>
-            <div>Total: <strong>${k.total} cartões</strong>.</div>
-            <div>Resolvidos: <strong>0/${k.total}</strong>.</div>
-            <div>Restantes: <strong>${k.total}</strong>.</div>
-            <div>Tempo estimado: <strong>${k.tempo}</strong>.</div>
-          </div>
-          <div class="text-[10px] text-slate-400">Os não entendidos vêm primeiro. A contagem considera só os cartões selecionados para a revisão.</div>
-          <button type="button" data-op="ok" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">Começar a revisão (Enter)</button>`
-          : `<button type="button" data-op="ok" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs">OK (Enter)</button>`}
-        </div>`;
-      const fechar = () => { window.removeEventListener('keydown', teclas, true); fundo.remove(); };
-      const teclas = (ev) => {
-        ev.stopImmediatePropagation();
-        if (ev.key === 'Enter' || ev.key === 'Escape' || ev.code === 'Space') { ev.preventDefault(); fechar(); }
-      };
-      window.addEventListener('keydown', teclas, true);
-      fundo.addEventListener('click', (ev) => {
-        const op = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-op');
-        if (op === 'ok') fechar();
-      });
-      document.body.appendChild(fundo);
     }
 
     function carregarProximoCardSessaoFC_() {
@@ -10059,7 +10054,6 @@
         lblMatTop.textContent = topObj ? `${topObj.materia} • ${topObj.topico}` : '';
       }
 
-      document.getElementById('fcCardBadgeNovo').classList.toggle('hidden', !c.isNovo);
 
       const histBadge = document.getElementById('fcCardHistoricoBadge');
       if (histBadge) {
@@ -10096,8 +10090,6 @@
       barraVirar.classList.add('hidden');
       barraCE.classList.add('hidden');
       barraAval.classList.add('hidden');
-      const barraPrim = document.getElementById('fcBarraPrimeiraPassagem');
-      if (barraPrim) barraPrim.classList.add('hidden');
 
       const temCloze = /\{\{c\d+::/i.test(c.frente);
       if (temCloze) {
@@ -10426,6 +10418,10 @@
 
     async function avaliarCardSessaoFC(avaliacao) {
       if (!FC_SESSAO || !FC_SESSAO.cardAtual) return;
+      /* só 3 opções: ERREI (repetir após N) | DIFICIL (final do bloco/fila) | FACIL (dominei). Antigas viram as novas. */
+      const mapaLegado = { BOM: 'DIFICIL', ENTENDI: 'DIFICIL', NAO_ENTENDI: 'ERREI' };
+      if (mapaLegado[avaliacao]) avaliacao = mapaLegado[avaliacao];
+      if (['ERREI', 'DIFICIL', 'FACIL'].indexOf(avaliacao) < 0) return;
       if (FC_SESSAO.modoBlocoNovo) return avaliarCardBlocoNovoFC_(avaliacao);
       const c = FC_SESSAO.cardAtual;
       const segsNoCard = Math.max(1, Math.round((Date.now() - FC_SESSAO.inicioCardTimestamp) / 1000));
@@ -10440,7 +10436,7 @@
       const isCardCE = fcEhTipoEstudo_(c.tipo);
       const acertouJulgamento = isCardCE
         ? (FC_SESSAO.escolhaUsuarioCE === c.gabaritoCE && avaliacao !== 'ERREI')
-        : (avaliacao === 'BOM' || avaliacao === 'FACIL');
+        : (avaliacao === 'FACIL');
 
       if (!isCardCE) {
         if (acertouJulgamento) FC_SESSAO.acertosSessao += 1;
@@ -10462,10 +10458,21 @@
       const itemAtual = FC_SESSAO.filaAtiva.shift();
       const N_RETORNO = Math.max(1, FC_SESSAO.intervaloRetornoConfigurado);
 
-      const deveRetornarNaSessao =
-        avaliacao === 'ERREI' ||
-        (!acertouJulgamento) ||
-        (avaliacao === 'DIFICIL' && FC_SESSAO.comportamentoDificil === 'RETORNAR_NA_SESSAO');
+      if (avaliacao === 'DIFICIL') {
+        /* Tive dificuldades → vai para o final do bloco / fila */
+        FC_SESSAO.acertosNoBlocoPorCard[c.id] = 0;
+        if (FC_SESSAO.refBlocoEstado) {
+          FC_SESSAO.refBlocoEstado.acertosPorCard[c.id] = 0;
+          FC_SESSAO.refBlocoEstado.emReforcoSet[c.id] = true;
+          delete FC_SESSAO.refBlocoEstado.dominadosSet[c.id];
+        }
+        FC_SESSAO.loopsProvocados += 1;
+        FC_SESSAO.filaAtiva.push(itemAtual);
+        carregarProximoCardSessaoFC_();
+        return;
+      }
+
+      const deveRetornarNaSessao = avaliacao === 'ERREI';
 
       if (deveRetornarNaSessao) {
         FC_SESSAO.acertosNoBlocoPorCard[c.id] = 0;
@@ -10487,7 +10494,7 @@
           FC_SESSAO.refBlocoEstado.acertosPorCard[c.id] = novoSaldoAcertos;
         }
 
-        if (novoSaldoAcertos >= FC_SESSAO.criterioDominioConfigurado) {
+        if (avaliacao === 'FACIL' || novoSaldoAcertos >= FC_SESSAO.criterioDominioConfigurado) {
           FC_SESSAO.dominadosNaSessao.push(itemAtual);
           if (FC_SESSAO.refBlocoEstado) {
             FC_SESSAO.refBlocoEstado.dominadosSet[c.id] = true;
@@ -10503,19 +10510,18 @@
       carregarProximoCardSessaoFC_();
     }
 
-    /* Fluxo dos blocos:
-       1ª passagem (inédito no bloco): Entendi / Não entendi; cada cartão aparece uma vez.
-       Ao passar por todos: bloco FEITO (verde) e fila reorganizada (não entendidos primeiro).
-       Depois: 1 Errei → volta após N cartões | 2 Dificuldade → final da fila |
-               3 Compreendi → compreendido (não dominado), sai da fila de agora | 4 Dominado → não aparece mais hoje. */
+    /* Fluxo dos blocos (2026-11-11) — sem etapa de "inéditos", só 3 opções:
+       1 Repetir → volta depois de N cartões respondidos (padrão 3)
+       2 Tive dificuldades → vai para o final do bloco
+       3 Dominei → sai do bloco; só volta ao reiniciar os cartões do zero ou no filtro de dominados.
+       O bloco fica FEITO (verde) quando todos os cartões já foram respondidos pelo menos uma vez;
+       a sessão termina quando todos os cartões do bloco estiverem dominados (ou ao sair). */
     async function avaliarCardBlocoNovoFC_(avaliacao) {
       const S = FC_SESSAO;
       const c = S.cardAtual;
       const B = S.refBlocoEstado;
       if (!B.statusPorCard) B.statusPorCard = {};
-      const primeira = S.fase === 1;
-      if (primeira && avaliacao !== 'ENTENDI' && avaliacao !== 'NAO_ENTENDI') return;
-      if (!primeira && ['ERREI', 'DIFICIL', 'BOM', 'FACIL'].indexOf(avaliacao) < 0) return;
+      if (['ERREI', 'DIFICIL', 'FACIL'].indexOf(avaliacao) < 0) return;
 
       const segsNoCard = Math.max(1, Math.round((Date.now() - S.inicioCardTimestamp) / 1000));
       S.respostasComputadas += 1;
@@ -10523,12 +10529,12 @@
       B.respondidosSet[c.id] = true;
 
       const isCE = fcEhTipoEstudo_(c.tipo);
-      const positivo = avaliacao === 'ENTENDI' || avaliacao === 'BOM' || avaliacao === 'FACIL';
-      const acertou = isCE ? (S.escolhaUsuarioCE === c.gabaritoCE && positivo) : positivo;
+      const positivo = avaliacao === 'FACIL';
+      const acertou = isCE ? (S.escolhaUsuarioCE === c.gabaritoCE && avaliacao !== 'ERREI') : positivo;
       if (!isCE) {
         if (acertou) S.acertosSessao += 1;
         else { S.errosSessao += 1; S.errosPorCard[c.id] = (S.errosPorCard[c.id] || 0) + 1; }
-      } else if (!positivo && S.escolhaUsuarioCE === c.gabaritoCE) {
+      } else if (avaliacao === 'ERREI' && S.escolhaUsuarioCE === c.gabaritoCE) {
         S.errosPorCard[c.id] = (S.errosPorCard[c.id] || 0) + 1;
       }
       registrarTelemetriaIndividualCartao_(c, acertou, segsNoCard, avaliacao);
@@ -10536,26 +10542,8 @@
       const item = S.filaAtiva.shift();
       const N = Math.max(1, S.intervaloRetornoConfigurado);
 
-      if (primeira) {
-        B.statusPorCard[c.id] = avaliacao;
-        if (avaliacao === 'NAO_ENTENDI') B.emReforcoSet[c.id] = true; else delete B.emReforcoSet[c.id];
-        if (S.filaAtiva.length === 0) {
-          B.concluido = true;
-          const fila2 = filaReorganizadaDoBlocoFC_(B);
-          if (fila2.length) {
-            S.fase = 2;
-            S.filaAtiva = fila2.map(x => ({ ...x }));
-            const nNao = fila2.filter(x => B.statusPorCard[x.id] === 'NAO_ENTENDI').length;
-            /* contagem reiniciada: a revisão conta só os cartões reorganizados, do zero */
-            S.etapa = { nome: 'REVISAO', total: new Set(fila2.map(x => x.id)).size, segInicio: S.segundosDecorridos, respostasInicio: S.respostasComputadas };
-            notificar(`Bloco ${S.numeroBloco} feito ✓. Cartões reorganizados: ${nNao} não entendido(s) primeiro, depois os entendidos.`);
-            anunciarTransicaoParaRevisaoFC_(calcularContagemEtapaFC_());
-          } else {
-            anunciarTransicaoParaRevisaoFC_(null);
-          }
-        }
-      } else if (avaliacao === 'ERREI') {
-        B.statusPorCard[c.id] = 'NAO_ENTENDI';
+      if (avaliacao === 'ERREI') {
+        B.statusPorCard[c.id] = 'ERREI';
         B.emReforcoSet[c.id] = true;
         delete B.dominadosSet[c.id];
         S.loopsProvocados += 1;
@@ -10566,16 +10554,20 @@
         delete B.dominadosSet[c.id];
         S.loopsProvocados += 1;
         S.filaAtiva.push(item);
-      } else if (avaliacao === 'BOM') {
-        B.statusPorCard[c.id] = 'COMPREENDIDO';
-        delete B.emReforcoSet[c.id];
-        await persistirEscalonamentoCardNoSupabase_(item, 'BOM');
       } else if (avaliacao === 'FACIL') {
         B.statusPorCard[c.id] = 'DOMINADO';
         B.dominadosSet[c.id] = true;
         delete B.emReforcoSet[c.id];
         S.dominadosNaSessao.push(item);
+        /* garante que o cartão dominado não reapareça neste bloco */
+        S.filaAtiva = S.filaAtiva.filter(x => x.id !== c.id);
         await persistirEscalonamentoCardNoSupabase_(item, 'FACIL');
+      }
+
+      if (!B.concluido && B.cardsOriginais && B.cardsOriginais.length &&
+          B.cardsOriginais.every(x => B.respondidosSet[x.id])) {
+        B.concluido = true;
+        notificar(`Bloco ${S.numeroBloco} feito ✓ (todos os cartões já passaram). Continue até dominar os restantes.`);
       }
 
       carregarProximoCardSessaoFC_();
@@ -10664,14 +10656,9 @@
       } else if (keyUpper === 'V' && FC_SESSAO.versoRevelado) {
         ev.preventDefault();
         alternarVersoCompletoFC();
-      } else if (['1', '2', '3', '4'].includes(ev.key) && FC_SESSAO.versoRevelado) {
+      } else if (['1', '2', '3'].includes(ev.key) && FC_SESSAO.versoRevelado) {
         ev.preventDefault();
-        if (cartaoEmPrimeiraPassagemFC_()) {
-          const m1 = { 1: 'NAO_ENTENDI', 2: 'ENTENDI' };
-          if (m1[Number(ev.key)]) avaliarCardSessaoFC(m1[Number(ev.key)]);
-          return;
-        }
-        const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'BOM', 4: 'FACIL' };
+        const mapa = { 1: 'ERREI', 2: 'DIFICIL', 3: 'FACIL' };
         avaliarCardSessaoFC(mapa[Number(ev.key)]);
       }
     });
@@ -17756,6 +17743,8 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
         b.respondidosSet = x.respondidosSet || {}; b.acertosPorCard = x.acertosPorCard || {};
         b.emReforcoSet = x.emReforcoSet || {}; b.dominadosSet = x.dominadosSet || {}; b.concluido = Boolean(x.concluido);
         b.statusPorCard = x.statusPorCard || {};
+        /* antigos intermediários (Compreendi/Entendi) passam a ser "Tive dificuldades" */
+        if (typeof fcReclassificarIntermediariosBloco_ === 'function') fcReclassificarIntermediariosBloco_(b);
       });
     }
     let comp = ciclo.comp[chave];
@@ -17990,10 +17979,11 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     const vT = selT.value;
     if (selT.innerHTML !== htmlT) selT.innerHTML = htmlT;
     selT.value = tops.some((t) => t.id === vT) ? vT : '';
-    const htmlTp = '<option value="CICLO">Todos (C/E + Omissão + Seleção)</option><option value="PDF_BASE">1. PDF-Base (C/E)</option><option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option><option value="OMISSAO">5. Omissão com alternativas</option><option value="SELECAO">6. Seleção de alternativas</option>';
+    /* modalidades: só as 3 combináveis (PDF Base / Caderno de Erros / Decoreba) + Todas — valores antigos (CICLO, Omissão, Seleção...) viram "Todas" */
     const vTp = selTp.value;
-    if (selTp.innerHTML !== htmlTp) selTp.innerHTML = htmlTp;
-    selTp.value = ['CICLO', 'PDF_BASE', 'CADERNO_ERROS', 'OMISSAO', 'SELECAO'].indexOf(vTp) >= 0 ? vTp : 'CICLO';
+    const normTp = fcModalidadesSelecionadas_(vTp);
+    selTp.value = (normTp.length === 0 || normTp.length === FC_MODALIDADES_BASE.length) ? '' : normTp.join(',');
+    renderizarChipsModalidadesFC_();
   }
 
   envolver('obterCardsFiltradosFC', (orig) => {
@@ -18005,7 +17995,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     if (abaAq !== 'estudos') return lista;
     const per = periodoAtual();
     if (!per || !per.permitidos.size) return lista;
-    return lista.filter((c) => per.permitidos.has(c.idTopico) && fcEhTipoEstudo_(c.tipo));
+    return lista.filter((c) => per.permitidos.has(c.idTopico) && (fcEhTipoEstudo_(c.tipo) || fcEhDecoreba_(c)));
   });
 
   /* chave estável dos blocos durante todo o período (não muda com modalidade/ordem) */
@@ -18054,7 +18044,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
       restringirFiltros();
       const primeiro = per.topicos.find((x) => x.topico);
       const dia2 = per.dia > 1;
-      const tipo = (cfg.manualTipo && cfg.tipo) ? cfg.tipo : (dia2 ? 'CICLO' : 'PDF_BASE');
+      const tipo = (cfg.manualTipo && cfg.tipo !== undefined) ? cfg.tipo : (dia2 ? '' : 'PDF_BASE');
       const ordem = (cfg.manualOrdem && cfg.ordem) ? cfg.ordem : (dia2 ? 'PRIORIDADE_ERROS' : 'SEQUENCIAL_INICIAL_DEPOIS_ERROS');
       setVal('fcFiltroMateria', cfg.materia !== undefined ? cfg.materia : (primeiro ? primeiro.topico.idMateria : ''));
       restringirFiltros();
@@ -18226,12 +18216,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     if (sel) {
       const alvo = sel.closest('.rounded-xl');
       if (alvo) cardConfig = alvo;
-      if (!sel.querySelector('option[value="CICLO"]')) {
-        const op = document.createElement('option');
-        op.value = 'CICLO';
-        op.textContent = '★ C/E + Omissão + Seleção';
-        sel.insertBefore(op, sel.options[1] || null);
-      }
+      /* (2026-11-11) a opção combinada "C/E + Omissão + Seleção" deixou de existir: modalidades = PDF Base / Caderno de Erros / Decoreba */
     }
     const marca = (el, cls) => { if (el) el.classList.add(cls); };
     marca(cardConfig, 'fcx-liv');
