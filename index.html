@@ -1232,6 +1232,8 @@
     .fc-face-grid-rapida { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: min(46vh, 460px); }
     .fc-face-grid-detalhe { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; min-height: min(38vh, 380px); }
     .fc-face-col { display: flex; flex-direction: column; gap: 12px; }
+    .fc-face-grid-1 { grid-template-columns: 1fr !important; }
+    .fc-face-grid-memo { min-height: 0 !important; align-items: stretch; }
     .fc-face-col > .fc-box { flex: 1; }
     @media (max-width: 767px) { .fc-face-grid-rapida, .fc-face-grid-detalhe { grid-template-columns: 1fr; min-height: 0; } }
     .fc-box { border-radius: 12px; padding: 12px 14px; border: 1px solid; display: flex; flex-direction: column; gap: 6px; }
@@ -1248,6 +1250,7 @@
     .fc-chip-peg { background: rgb(159,18,57); color: #fff; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 6px; letter-spacing: 0; }
     .fc-fundamento { margin-top: auto; border-top: 1px solid rgb(51,65,85); padding-top: 7px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px; }
     .fc-fundamento b { color: rgb(129,140,248); }
+    .fc-box > .fc-fundamento:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
     .fc-analise-linha { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px dashed rgba(99,102,241,.4); }
     .fc-analise-tag { flex-shrink: 0; min-width: 76px; text-align: center; font-weight: 900; font-size: 11px; padding: 2px 6px; border-radius: 6px; border: 1px solid; margin-top: 2px; }
     .fc-analise-c { background: rgba(22,163,74,.18); color: rgb(134,239,172); border-color: rgba(34,197,94,.6); }
@@ -9929,13 +9932,15 @@
             <span class="fc-box-lbl">Bizu</span>
             <div class="fc-box-txt fc-txt-grande font-extrabold">${F(d.bizu)}</div>
           </div>` : ''}`;
+      // Sem afirmação correta nem bizu: mostra o fundamento (se houver); sem nada, a explicação ocupa a largura toda.
+      const ladoDireitoFinal = ladoDireito.trim() || (d.endereco ? `<div class="fc-box fc-box-neu"><span class="fc-box-lbl">Fundamento</span><div class="fc-box-txt">${esc(d.endereco)}</div></div>` : '');
       const faceRapida = `
-        <div id="fcFaceRapida" class="fc-face fc-face-grid-rapida">
+        <div id="fcFaceRapida" class="fc-face fc-face-grid-rapida${ladoDireitoFinal ? '' : ' fc-face-grid-1'}">
           <div class="fc-box fc-box-ind">
             <span class="fc-box-lbl">${ehErrado ? 'Explicação rápida — por que está errada' : 'Explicação rápida — por que está certa'}</span>
             <div class="fc-box-txt fc-txt-grande">${F(rapida)}</div>
           </div>
-          <div class="fc-face-col">${ladoDireito || `<div class="fc-box fc-box-neu"><span class="fc-box-lbl">Fundamento</span><div class="fc-box-txt">${esc(d.endereco || '')}</div></div>`}</div>
+          ${ladoDireitoFinal ? `<div class="fc-face-col">${ladoDireitoFinal}</div>` : ''}
         </div>`;
 
       // ---------- FACE ② DETALHADO ----------
@@ -9963,18 +9968,19 @@
             <span class="fc-box-lbl">Exemplo</span>
             <div class="fc-box-txt text-[13.5px]">${F(d.exemplo)}</div>
           </div>` : ''}
+        ${(d.atencao || (d.fraseCorrigida && !temCorreta) || fundamento) ? `
         <div class="fc-box fc-box-neu">
           ${d.atencao ? `<span class="fc-box-lbl fc-cor-ros">Atenção à prova</span>
           <div class="fc-box-txt text-[13.5px]">${F(d.atencao)}</div>` : ''}
           ${d.fraseCorrigida && !temCorreta ? `<span class="fc-box-lbl fc-cor-ok">Frase corrigida</span><div class="fc-box-txt text-[13.5px]">${F(d.fraseCorrigida)}</div>` : ''}
           ${fundamento}
-        </div>`;
+        </div>` : ''}`;
       const faceDetalhada = `
         <div id="fcFaceDetalhada" class="fc-face hidden">
           ${faixaErro}
-          <div class="fc-face-grid-detalhe">
+          <div class="fc-face-grid-detalhe${colunaDireita.trim() ? '' : ' fc-face-grid-1'}">
             ${destrinchando}
-            <div class="fc-face-col">${colunaDireita}</div>
+            ${colunaDireita.trim() ? `<div class="fc-face-col">${colunaDireita}</div>` : ''}
           </div>
         </div>`;
 
@@ -9983,6 +9989,92 @@
           <button type="button" id="fcFaceBtn1" onclick="alternarVersoCompletoFC(false)" class="fc-face-btn fc-face-btn-on">① Rápido</button>
           <button type="button" id="fcFaceBtn2" onclick="alternarVersoCompletoFC(true)" class="fc-face-btn">② Detalhado [4]</button>
           <span class="fc-faces-dica">Tecla <b>4</b> troca o verso (Rápido ⇄ Detalhado)</span>
+        </div>
+        ${faceRapida}
+        ${faceDetalhada}`;
+    }
+
+    /* ===== VERSO PADRÃO PARA DECOREBA E LEI SECA (mesma identidade visual do C/E) =====
+       ① Rápido: Resposta objetiva ("Resumo:"; sem ele, a 1ª linha da explicação) + Bizu.
+       ② Detalhado [4]: Explicação detalhada (o resto da explicação) + Exemplo + Atenção à prova + Lei/PDF.
+       Seção sem conteúdo não é desenhada (nenhum retângulo vazio). */
+    function separarRespostaDetalheFC_(d) {
+      const ehTopico = (l) => /^(\-|\•|\*|\d+[\.\)])\s+/.test(l);
+      const norm = (t) => String(t || '').replace(/\*\*|==|__|[\[\]]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+      let resposta = String(d.resumo || '').trim();
+      let linhas = String(d.explicacao || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (resposta) {
+        // não repete a resposta no detalhado
+        if (linhas.length && norm(linhas[0]) === norm(resposta)) linhas.shift();
+      } else if (linhas.length && !ehTopico(linhas[0])) {
+        resposta = linhas.shift();
+      } else {
+        resposta = linhas.join('\n');
+        linhas = [];
+      }
+      return { resposta, detalhe: linhas.join('\n') };
+    }
+
+    function montarHtmlVersoMemoFC_(d, c, rotuloResposta) {
+      const F = (t) => formatarTextoDidaticoEmAula_(String(t || '').replace(/^\s*\*\s+/gm, '• '));
+      const { resposta, detalhe } = separarRespostaDetalheFC_(d);
+      const pegs = tiposPegadinhaFC_(c && c.tags);
+      const chips = pegs.map(p => `<span class="fc-chip-peg">${esc(p)}</span>`).join(' ');
+
+      // ---------- FACE ① RÁPIDO ----------
+      const boxResposta = resposta ? `
+        <div class="fc-box fc-box-ind">
+          <span class="fc-box-lbl">${esc(rotuloResposta || 'Resposta')}</span>
+          <div class="fc-box-txt fc-txt-grande font-semibold">${F(resposta)}</div>
+        </div>` : '';
+      const boxBizu = d.bizu ? `
+        <div class="fc-box fc-box-viol">
+          <span class="fc-box-lbl">Bizu</span>
+          <div class="fc-box-txt fc-txt-grande font-extrabold">${F(d.bizu)}</div>
+        </div>` : '';
+      const nRapida = (boxResposta ? 1 : 0) + (boxBizu ? 1 : 0);
+      const faceRapida = `
+        <div id="fcFaceRapida" class="fc-face fc-face-grid-rapida fc-face-grid-memo${nRapida > 1 ? '' : ' fc-face-grid-1'}">
+          ${boxResposta}${boxBizu}
+        </div>`;
+
+      // ---------- FACE ② DETALHADO ----------
+      const boxDetalhe = detalhe ? `
+        <div class="fc-box fc-box-ind">
+          <span class="fc-box-lbl">Explicação detalhada ${chips}</span>
+          <div class="fc-box-txt">${F(detalhe)}</div>
+        </div>` : '';
+      const fundamento = (d.endereco || d.pdf) ? `
+        <div class="fc-fundamento">
+          ${d.endereco ? `<div><b>LEI:</b> ${esc(d.endereco)}</div>` : ''}
+          ${d.pdf ? `<div><b>PDF:</b> ${esc(d.pdf)}</div>` : ''}
+        </div>` : '';
+      const colunaDireita = `
+        ${d.exemplo ? `
+          <div class="fc-box fc-box-amb">
+            <span class="fc-box-lbl">Exemplo</span>
+            <div class="fc-box-txt text-[13.5px]">${F(d.exemplo)}</div>
+          </div>` : ''}
+        ${(d.atencao || fundamento) ? `
+          <div class="fc-box fc-box-neu">
+            ${d.atencao ? `<span class="fc-box-lbl fc-cor-ros">Atenção à prova ${boxDetalhe ? '' : chips}</span>
+            <div class="fc-box-txt text-[13.5px]">${F(d.atencao)}</div>` : ''}
+            ${fundamento}
+          </div>` : ''}`.trim();
+      const temDetalhado = !!(boxDetalhe || colunaDireita);
+      const faceDetalhada = temDetalhado ? `
+        <div id="fcFaceDetalhada" class="fc-face hidden">
+          <div class="fc-face-grid-detalhe fc-face-grid-memo${boxDetalhe && colunaDireita ? '' : ' fc-face-grid-1'}">
+            ${boxDetalhe}
+            ${colunaDireita ? `<div class="fc-face-col">${colunaDireita}</div>` : ''}
+          </div>
+        </div>` : '';
+
+      return `
+        <div class="fc-faces-barra">
+          <button type="button" id="fcFaceBtn1" onclick="alternarVersoCompletoFC(false)" class="fc-face-btn fc-face-btn-on">① Rápido</button>
+          ${temDetalhado ? `<button type="button" id="fcFaceBtn2" onclick="alternarVersoCompletoFC(true)" class="fc-face-btn">② Detalhado [4]</button>
+          <span class="fc-faces-dica">Tecla <b>4</b> troca o verso (Rápido ⇄ Detalhado)</span>` : ''}
         </div>
         ${faceRapida}
         ${faceDetalhada}`;
@@ -10127,33 +10219,20 @@
       const dados = extrairDadosEstruturadosCertoErrado_(c.frente, c.verso, c.tags);
 
       const boxFeedback = document.getElementById('fcBoxFeedbackEstruturado');
-      boxFeedback.className = 'rounded-xl p-3 border bg-indigo-950/50 border-indigo-700/80 text-indigo-200 flex flex-wrap items-center justify-between gap-2';
+      const ehDecoreba = c.tipo !== 'LEI_SECA';
+      boxFeedback.className = 'rounded-xl p-3.5 border bg-indigo-950/50 border-indigo-700/80 text-indigo-100 flex flex-wrap items-center justify-between gap-2.5';
       boxFeedback.innerHTML = `
-        <div class="font-extrabold text-xs uppercase tracking-wide">
-          ${c.tipo === 'DECOREBA' ? 'Fixação Literal e Pontos-Chave (Decoreba)' : 'Dispositivo Legal e Fundamentação (Lei Seca)'}
-        </div>
-        ${dados.endereco ? `<span class="px-2 py-0.5 rounded bg-indigo-600 text-white font-extrabold text-[11px]">${esc(dados.endereco)}</span>` : ''}
+        <span class="text-sm md:text-base font-extrabold uppercase">${ehDecoreba ? 'Decoreba' : 'Lei Seca'}</span>
+        <span class="text-xs opacity-90 font-semibold">Compare com a sua resposta e avalie: 1 Errei • 2 Difícil • 3 Fácil</span>
       `;
 
       const versoTextoEl = document.getElementById('fcCardVersoTexto');
-      versoTextoEl.innerHTML = `
-        <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-sm">
-          ${formatarTextoDidaticoEmAula_(dados.explicacao || c.verso)}
-        </div>
-        ${dados.fraseCorrigida ? `
-          <div class="p-3 rounded-xl bg-emerald-950/30 border border-emerald-800/70">
-            <span class="text-[10px] font-extrabold uppercase text-emerald-400 block mb-0.5">Conceito / Regra em Destaque:</span>
-            <div class="text-xs md:text-sm font-semibold text-slate-100">${formatarTextoDidaticoEmAula_(dados.fraseCorrigida)}</div>
-          </div>
-        ` : ''}
-        ${dados.exemplo ? `
-          <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-800/70">
-            <span class="text-[10px] font-extrabold uppercase text-amber-400 block mb-0.5">Exemplo / Aplicação Prática:</span>
-            <div class="text-xs md:text-sm text-slate-200">${formatarTextoDidaticoEmAula_(dados.exemplo)}</div>
-          </div>
-        ` : ''}
-        ${montarHtmlBizuAtencaoFC_(dados)}
-      `;
+      try {
+        versoTextoEl.innerHTML = montarHtmlVersoMemoFC_(dados, c, ehDecoreba ? 'Resposta' : 'Explicação rápida');
+      } catch (e) {
+        console.warn('Verso padrão indisponível, usando o verso completo.', e);
+        versoTextoEl.innerHTML = montarHtmlVersoDidaticoFC_(dados);
+      }
       renderizarPainelTermosFC_(dados.termos, true);
 
       document.getElementById('fcBackLessonContainer').classList.remove('hidden');
@@ -16569,8 +16648,11 @@ VERSO — PDF_BASE e CADERNO_ERROS (padrão aprovado, campos separados por " | "
 Gabarito: CERTO ou ERRADO | Resumo: explicação rápida e simples (1–2 frases) | Explicação: Certo./Errado. + explicação curta | Análise: ✔ "trecho" → explicação curta / ✘ "trecho" → onde está o erro / Em uma frase: síntese | Exemplo: caso prático | Atenção à prova: pegadinha / exceção | Bizu: gatilho de memória | Fundamento: Diploma, art. X, inciso/§/alínea | PDF: pág. — tópico › subtópico | Termos Jurídicos: Termo: significado • Termo: significado | Frase Corrigida: frase com o [conceito correto]
 LEI_SECA — FRENTE: Contexto: assunto em poucas palavras ¶ Diploma, art. X ¶ texto literal do dispositivo com a palavra-chave em {{c1::...}}
 - Omita preferencialmente UMA palavra-chave, juridicamente relevante e identificável pelo contexto (prazo, número, sujeito, negação, órgão). Limite absoluto: DUAS palavras omitidas por cartão. Nunca omita frases ou trechos.
-VERSO — LEI_SECA e DECOREBA:
-Explicação: por que essa palavra importa, em 1–2 frases | Atenção à prova: a troca que a banca faz | Bizu: ... | Fundamento: Diploma, art. X
+VERSO — LEI_SECA:
+Explicação: por que essa palavra importa, em 1–2 frases | Atenção à prova: a troca que a banca faz | Bizu: ... | Fundamento: Diploma, art. X | PDF: pág. — tópico › subtópico
+VERSO — DECOREBA (FRENTE = só a pergunta curta, sem exemplo, pegadinha ou explicação):
+Resumo: a resposta objetiva em UMA frase curta (vai para o verso Rápido) | Bizu: gatilho curto em CAIXA ALTA (vai para o Rápido) | Explicação: só os detalhes complementares, em tópicos "* ", sem repetir o Resumo (vai para o Detalhado) | Exemplo: caso prático | Atenção à prova: pegadinhas por banca | Fundamento: Diploma, art. X | PDF: pág. — tópico › subtópico | Termos Jurídicos: Termo: significado
+Omita o campo que não tiver conteúdo (nada de campo vazio).
 DECOREBA nunca é discursiva: para diferenciar conceitos use OMISSAO em formato de associação (uma linha por definição separada por ¶, cada linha começando com _____, e os termos nas alternativas). Só vira decoreba o que é muito cobrado, difícil, específico (prazo, percentual, requisito, exceção) e fácil de esquecer. Marque esses cartões com a tag decoreba-diaria.
 VERSO — OMISSAO (frente com lacunas escritas como _____ , uma por informação omitida):
 Alternativas: opção 1 / opção 2 / opção 3 / ... | Gabarito: resposta da 1ª lacuna / resposta da 2ª lacuna | Resumo: explicação rápida | Exemplo: ... | Atenção à prova: a confusão que a banca explora | Bizu: ... | Fundamento: Diploma, art. X | PDF: pág. — tópico › subtópico
