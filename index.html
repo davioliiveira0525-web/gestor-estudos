@@ -3726,13 +3726,11 @@
                     <div id="fcTempoRestanteEstimado" class="text-[11px] font-extrabold text-indigo-200">~1 min</div>
                   </div>
 
-                  <div class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800">
-                    <div class="text-[9px] font-bold uppercase text-slate-400">Sessão | Média</div>
-                    <div class="text-xs font-mono font-extrabold text-white">
-                      <span id="fcTimerSessao">00:00</span>
-                      <span class="text-slate-500 mx-1">|</span>
-                      <span id="fcTempoMedioCard" class="text-indigo-400">0.0s</span>
-                    </div>
+                  <div id="fcBoxTempoCartao" class="text-right bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800" title="Cronômetro do cartão atual (zera a cada novo cartão). Fica amarelo aos 30s e vermelho aos 60s.">
+                    <div class="text-[9px] font-bold uppercase text-slate-400">Neste cartão</div>
+                    <div id="fcTimerCardAtual" class="text-sm font-mono font-extrabold text-white leading-tight">0s</div>
+                    <div class="text-[9px] font-semibold text-slate-400">média: <span id="fcTempoMedioCard" class="text-indigo-400 font-bold">0s</span>/cartão</div>
+                    <span id="fcTimerSessao" class="hidden">00:00</span><span class="hidden"></span>
                   </div>
 
                   <button type="button" onclick="alternarModoTelaCheiaFC()" id="btnFullscreenFC" class="px-2.5 py-1.5 rounded-lg border border-indigo-700 bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 text-[11px] font-bold transition">
@@ -3746,24 +3744,34 @@
                 </div>
               </div>
 
-              <!-- Barra de Domínio do Bloco Atual -->
+              <!-- Progresso do bloco: 3 barras (Vistos / Em dificuldade / Dominados) -->
               <div class="space-y-1">
-                <div class="flex items-center justify-between text-[10px] font-bold">
-                  <span id="fcTextoProgressoBarra" class="text-slate-300">Domínio do Bloco: 0%</span>
-                  <span id="fcPercentualBarra" class="text-indigo-400 font-extrabold">0%</span>
+                <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] font-bold">
+                  <span id="fcTextoProgressoBarra" class="text-slate-300">Bloco</span>
+                  <span id="fcPercentualBarra" class="text-slate-400 font-semibold">Inéditos 0 + Dificuldade 0 + Dominados 0 = 0</span>
                 </div>
-                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div id="fcBarraProgressoDinamica" class="h-full bg-indigo-600 transition-all duration-300" style="width: 0%"></div>
+                <div class="grid items-center gap-x-2 gap-y-1 text-[10px] font-bold" style="grid-template-columns: 100px 1fr 100px;">
+                  <span class="text-sky-400">Vistos</span>
+                  <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="fcBarraVistos" class="h-full bg-sky-500 transition-all duration-300" style="width: 0%"></div></div>
+                  <span id="fcTxtVistos" class="text-right text-sky-400 font-mono">0/0 • 0%</span>
+
+                  <span class="text-amber-400">Em dificuldade</span>
+                  <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="fcBarraDificuldade" class="h-full bg-amber-500 transition-all duration-300" style="width: 0%"></div></div>
+                  <span id="fcTxtDificuldade" class="text-right text-amber-400 font-mono">0/0 • 0%</span>
+
+                  <span class="text-emerald-400">Dominados</span>
+                  <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden"><div id="fcBarraProgressoDinamica" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div></div>
+                  <span id="fcTxtDominados" class="text-right text-emerald-400 font-mono">0/0 • 0%</span>
                 </div>
               </div>
 
-              <!-- Contagem do bloco (sem etapa de "inéditos") -->
+              <!-- Cartões do bloco: total + tempo médio + tempo das inéditas + tempo de tudo que falta -->
               <div id="fcContagemEtapa" class="hidden flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-2.5 py-1.5 text-[11px]">
                 <span id="fcContagemEtapaNome" class="font-extrabold uppercase tracking-wide">Cartões do bloco</span>
                 <span class="text-slate-300">Total: <strong id="fcContagemTotal" class="text-white">0</strong></span>
-                <span class="text-slate-300">Resolvidos: <strong id="fcContagemResolvidos" class="text-white">0/0</strong></span>
-                <span class="text-slate-300">Restantes: <strong id="fcContagemRestantes" class="text-white">0</strong></span>
-                <span class="text-slate-300">Tempo estimado: <strong id="fcContagemTempo" class="text-white">—</strong></span>
+                <span class="text-slate-300">Média: <strong id="fcContagemMedia" class="text-white">—</strong></span>
+                <span class="text-slate-300">Só as inéditas: <strong id="fcContagemTempoIneditos" class="text-white">—</strong></span>
+                <span class="text-slate-300">Para concluir tudo: <strong id="fcContagemTempo" class="text-white">—</strong></span>
               </div>
             </div>
 
@@ -9658,47 +9666,77 @@
         const seg = String(FC_SESSAO.segundosDecorridos % 60).padStart(2, '0');
         document.getElementById('fcTimerSessao').textContent = `${min}:${seg}`;
         const media = FC_SESSAO.respostasComputadas > 0
-          ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas).toFixed(1)
-          : FC_SESSAO.velocidadeHistoricaSeg.toFixed(1);
-        document.getElementById('fcTempoMedioCard').textContent = `${media}s`;
+          ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas)
+          : (FC_SESSAO.velocidadeHistoricaSeg || 0);
+        document.getElementById('fcTempoMedioCard').textContent = `${Math.round(media)}s`;
+        /* cronômetro do cartão atual (zera a cada cartão) */
+        const elCard = document.getElementById('fcTimerCardAtual');
+        if (elCard) {
+          const sc = Math.max(0, Math.floor((Date.now() - (FC_SESSAO.inicioCardTimestamp || Date.now())) / 1000));
+          elCard.textContent = sc < 60 ? `${sc}s` : `${Math.floor(sc / 60)}:${String(sc % 60).padStart(2, '0')}`;
+          elCard.style.color = sc >= 60 ? '#f43f5e' : (sc >= 30 ? '#f59e0b' : '');
+        }
         atualizarBarraProgressoETempoPreditivoFC_();
       }, 500);
     }
 
+    /* Situação de cada cartão do bloco: Inédito / Em dificuldade (visto, não dominado) / Dominado.
+       Inéditos + Dificuldade + Dominados = Total do bloco. */
+    function contarSituacaoBlocoFC_() {
+      const S = FC_SESSAO;
+      const B = S.refBlocoEstado;
+      const I = S.__ci || {};
+      let ids;
+      if (B && Array.isArray(B.cardsOriginais) && B.cardsOriginais.length) ids = B.cardsOriginais.map(c => String(c.id));
+      else {
+        if (!S.__idsSessaoFC) S.__idsSessaoFC = Array.from(new Set((S.filaAtiva || []).map(x => String(x.id))));
+        ids = S.__idsSessaoFC;
+      }
+      const domSessao = new Set((S.dominadosNaSessao || []).map(x => String(x && x.id != null ? x.id : x)));
+      let dominados = 0, dificuldade = 0, ineditos = 0;
+      ids.forEach(id => {
+        const dom = (B && B.dominadosSet && B.dominadosSet[id]) || domSessao.has(id);
+        const visto = (B && B.respondidosSet && B.respondidosSet[id]) || (I.vistos && I.vistos[id]);
+        if (dom) dominados++;
+        else if (visto) dificuldade++;
+        else ineditos++;
+      });
+      const total = ids.length || Math.max(0, S.totalCardsUnicos || 0);
+      return { total, ineditos, dificuldade, dominados, vistos: total - ineditos };
+    }
+
     function atualizarBarraProgressoETempoPreditivoFC_() {
       if (!FC_SESSAO) return;
-      const total = Math.max(1, FC_SESSAO.totalCardsUnicos);
-      const dominadosCount = FC_SESSAO.refBlocoEstado
-        ? Object.keys(FC_SESSAO.refBlocoEstado.dominadosSet).length
-        : FC_SESSAO.dominadosNaSessao.length;
-      const restantes = FC_SESSAO.filaAtiva.length;
+      const k = contarSituacaoBlocoFC_();
+      const total = Math.max(1, k.total);
+      const pct = (n) => Math.min(100, Math.round((n / total) * 100));
+      const pintar = (idBarra, idTxt, n) => {
+        const bEl = document.getElementById(idBarra);
+        const tEl = document.getElementById(idTxt);
+        if (bEl) bEl.style.width = `${pct(n)}%`;
+        if (tEl) tEl.textContent = `${n}/${k.total} • ${pct(n)}%`;
+      };
+      pintar('fcBarraVistos', 'fcTxtVistos', k.vistos);
+      pintar('fcBarraDificuldade', 'fcTxtDificuldade', k.dificuldade);
+      pintar('fcBarraProgressoDinamica', 'fcTxtDominados', k.dominados);
 
-      const perc = Math.min(100, Math.round((dominadosCount / total) * 100));
-      const barra = document.getElementById('fcBarraProgressoDinamica');
-      const txtPerc = document.getElementById('fcPercentualBarra');
       const txtBarra = document.getElementById('fcTextoProgressoBarra');
-      if (barra) barra.style.width = `${perc}%`;
-      if (txtPerc) txtPerc.textContent = `${perc}%`;
       if (txtBarra) {
-        if (FC_SESSAO.modoBlocoNovo) {
-          const feitos = Object.keys(FC_SESSAO.refBlocoEstado.respondidosSet || {}).length;
-          txtBarra.textContent = `Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos} • Feitos: ${Math.min(feitos, total)} de ${total} • Dominados: ${dominadosCount}`;
-        } else {
-          txtBarra.textContent = `Domínio do Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}: ${dominadosCount} de ${total} cartões dominados`;
-        }
+        txtBarra.textContent = k.vistos >= k.total && k.total > 0
+          ? `Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos} • ✓ 100% visto — todos os cartões já passaram`
+          : `Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos} • Vistos ${k.vistos} de ${k.total}`;
       }
+      const txtSoma = document.getElementById('fcPercentualBarra');
+      if (txtSoma) txtSoma.textContent = `Inéditos ${k.ineditos} + Dificuldade ${k.dificuldade} + Dominados ${k.dominados} = ${k.total}`;
 
-      const velSessao = FC_SESSAO.respostasComputadas >= 2
-        ? (FC_SESSAO.segundosDecorridos / FC_SESSAO.respostasComputadas)
-        : FC_SESSAO.velocidadeHistoricaSeg;
-      const segsRestantes = Math.max(0, Math.round(restantes * velSessao));
+      const segsRestantes = Math.max(0, Math.round((k.ineditos + k.dificuldade) * velocidadeEtapaFC_()));
       const minRestantes = Math.max(1, Math.ceil(segsRestantes / 60));
 
       const elTempoEst = document.getElementById('fcTempoRestanteEstimado');
       if (elTempoEst) {
         elTempoEst.textContent = segsRestantes <= 25 ? '< 1 min' : `~${minRestantes} min`;
       }
-      renderizarContagemEtapaFC_();
+      renderizarContagemEtapaFC_(k);
     }
 
     /* ===== Contagem do bloco / sessão ===== */
@@ -9718,18 +9756,23 @@
       if (S.respostasComputadas >= 2) return S.segundosDecorridos / S.respostasComputadas;
       return S.velocidadeHistoricaSeg || 20;
     }
-    function calcularContagemEtapaFC_() {
+    function calcularContagemEtapaFC_(sit) {
       const S = FC_SESSAO;
       if (!S || !S.etapa) return null;
-      const total = Math.max(0, S.etapa.total);
-      const restantes = Math.min(total, new Set(S.filaAtiva.map(x => x.id)).size);
-      const resolvidos = Math.max(0, total - restantes);
-      const segs = Math.round(S.filaAtiva.length * velocidadeEtapaFC_());
-      return { nome: S.etapa.nome, total, resolvidos, restantes, tempo: formatarTempoEstimadoFC_(segs) };
+      const k = sit || contarSituacaoBlocoFC_();
+      const vel = velocidadeEtapaFC_();
+      const faltam = k.ineditos + k.dificuldade;
+      return {
+        nome: S.etapa.nome,
+        total: k.total,
+        media: `${Math.round(vel)}s por cartão`,
+        tempoIneditos: `${formatarTempoEstimadoFC_(Math.round(k.ineditos * vel))} (${k.ineditos} cartões)`,
+        tempo: `${formatarTempoEstimadoFC_(Math.round(faltam * vel))} (${faltam} cartões)`
+      };
     }
-    function renderizarContagemEtapaFC_() {
+    function renderizarContagemEtapaFC_(sit) {
       const box = document.getElementById('fcContagemEtapa');
-      const k = calcularContagemEtapaFC_();
+      const k = calcularContagemEtapaFC_(sit);
       if (!box) return;
       if (!k) { box.classList.add('hidden'); return; }
       box.classList.remove('hidden');
@@ -9745,8 +9788,8 @@
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       set('fcContagemEtapaNome', (nomes[k.nome] || nomes.SESSAO) + (FC_SESSAO.totalBlocos > 1 ? ` • Bloco ${FC_SESSAO.numeroBloco}/${FC_SESSAO.totalBlocos}` : ''));
       set('fcContagemTotal', `${k.total} cartões`);
-      set('fcContagemResolvidos', `${k.resolvidos}/${k.total}`);
-      set('fcContagemRestantes', String(k.restantes));
+      set('fcContagemMedia', k.media);
+      set('fcContagemTempoIneditos', k.tempoIneditos);
       set('fcContagemTempo', k.tempo);
     }
 
@@ -20540,8 +20583,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
         t.style.display = 'none';
         const sep = t.nextElementSibling;
         if (sep) sep.style.display = 'none';
-        const rot = t.closest && t.closest('.text-right') && t.closest('.text-right').firstElementChild;
-        if (rot) rot.textContent = 'Média por card';
+        /* o rótulo agora é "Neste cartão" (cronômetro por cartão + média) */
       }
     } catch (e) { /* ignora */ }
   }
