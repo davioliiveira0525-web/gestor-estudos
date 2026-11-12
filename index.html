@@ -454,7 +454,7 @@
       return res;
     }
 
-    const PREFS_CHAVES = ['GR_CRON_CADENCIA_DIAS', 'GR_FC_LIMITE_PALAVRAS', 'GR_DEC_LIMITE_DIARIO', 'GR_FC_QTD_BLOCOS', 'GR_FC_INTERVALO_RETORNO', 'GR_FC_CRITERIO_DOMINIO', 'GR_FC_SPEED_GLOBAL'];
+    const PREFS_CHAVES = ['GR_CRON_CADENCIA_DIAS', 'GR_FC_LIMITE_PALAVRAS', 'GR_DEC_LIMITE_DIARIO', 'GR_FC_QTD_BLOCOS', 'GR_FC_INTERVALO_RETORNO', 'GR_FC_CRITERIO_DOMINIO', 'GR_FC_SPEED_GLOBAL', 'GR_DEC_QTD_BLOCOS'];
     function lerPrefsLocais() {
       const v = {};
       try {
@@ -498,7 +498,38 @@
       LS.set('GR_SYNC_DEC_OUTROS', outros);
     }
 
+    /* ciclo inteligente dos cartões: contadores por cartão (maior valor vence) e progresso por conjunto (mais recente vence) */
+    function mesclarCicloInteligente(local, nuvem) {
+      local = local || {}; nuvem = nuvem || {};
+      const res = { t: Math.max(Number(local.t || 0), Number(nuvem.t || 0)), cartoes: {}, ctx: {} };
+      const cl = local.cartoes || {}, cn = nuvem.cartoes || {};
+      new Set(Object.keys(cl).concat(Object.keys(cn))).forEach((id) => {
+        const a = cl[id], b = cn[id];
+        if (!a || !b) { res.cartoes[id] = a || b; return; }
+        const rec = Number(a.ts || 0) >= Number(b.ts || 0) ? a : b;
+        res.cartoes[id] = { v: Math.max(+a.v || 0, +b.v || 0), r: Math.max(+a.r || 0, +b.r || 0), d: Math.max(+a.d || 0, +b.d || 0), m: Math.max(+a.m || 0, +b.m || 0), u: rec.u, ts: Math.max(+a.ts || 0, +b.ts || 0) };
+      });
+      const xl = local.ctx || {}, xn = nuvem.ctx || {};
+      new Set(Object.keys(xl).concat(Object.keys(xn))).forEach((k) => {
+        const a = xl[k], b = xn[k];
+        if (!a || !b) { res.ctx[k] = a || b; return; }
+        const rec = (+a.ts || 0) >= (+b.ts || 0) ? a : b;
+        const zerado = Math.max(+a.reset || 0, +b.reset || 0);
+        const ca = a.c || {}, cb = b.c || {}, c = {};
+        new Set(Object.keys(ca).concat(Object.keys(cb))).forEach((id) => {
+          const x = ca[id], y = cb[id];
+          const v = !x ? y : !y ? x : ((+x.ts || 0) >= (+y.ts || 0) ? x : y);
+          if (v && (!zerado || (+v.ts || 0) > zerado)) c[id] = v;
+        });
+        res.ctx[k] = { c, migrado: Boolean(a.migrado || b.migrado), ts: Math.max(+a.ts || 0, +b.ts || 0) };
+        if (zerado) res.ctx[k].reset = zerado;
+        if (rec.ids || a.ids || b.ids) res.ctx[k].ids = rec.ids || a.ids || b.ids;
+      });
+      return res;
+    }
+
     const DEF_DOCS = {
+      GR_FC_CICLO_INTELIGENTE_JSON: { ler: () => LS.get('GR_FC_CICLO_INTELIGENTE_V1', null), gravar: (v) => LS.set('GR_FC_CICLO_INTELIGENTE_V1', v), mesclar: mesclarCicloInteligente },
       GR_FCX_CICLO_JSON: { ler: () => LS.get('GR_FCX_CICLO_V2', null), gravar: (v) => LS.set('GR_FCX_CICLO_V2', v), mesclar: mesclarSecoes, carimba: true },
       GR_FC_TELEMETRIA_JSON: { ler: () => LS.get('GR_FC_TELEMETRIA_V2', null), gravar: (v) => LS.set('GR_FC_TELEMETRIA_V2', v), mesclar: mesclarTelemetria },
       Cartoes_Pendentes_Registro: { ler: () => LS.get('GR_CARTOES_PENDENTES_REGISTRO', null), gravar: (v) => { LS.set('GR_CARTOES_PENDENTES_REGISTRO', v); try { if (typeof carregarRegistroCartoesPendentesLocal_ === 'function') carregarRegistroCartoesPendentesLocal_(); } catch (e) { /* ignora */ } }, mesclar: mesclarItens },
@@ -3590,6 +3621,17 @@
                   <span class="text-[10px] text-slate-400">Velocidade</span>
                 </div>
               </div>
+
+              <!-- DIVISÃO DA DECOREBA DE HOJE EM BLOCOS (os blocos só organizam; o progresso é do conjunto do dia) -->
+              <div id="fcDecBlocosPainel" class="space-y-2 pt-2 border-t border-purple-800/50">
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                  <label for="fcDecInputQtdBlocos" class="font-bold text-purple-300 text-[11px]">Dividir a decoreba de hoje em</label>
+                  <input type="number" id="fcDecInputQtdBlocos" min="1" max="50" value="1" onchange="fcDecDefinirQtdBlocos(this.value)" class="w-16 rounded border px-2 py-0.5 font-extrabold text-purple-400 text-[11px]">
+                  <span id="fcDecResumoBlocos" class="text-[11px] text-slate-400">bloco(s)</span>
+                </div>
+                <p class="text-[10px] text-slate-400">Mudar a quantidade de blocos não zera nada: inéditos, repetições, dificuldades e domínios continuam valendo.</p>
+                <div id="fcDecBlocosGrid" class="flex flex-wrap gap-1.5"></div>
+              </div>
             </div>
 
             <!-- RESUMO DAS 4 MODALIDADES -->
@@ -3788,12 +3830,12 @@
                         <span id="lblSubBtnErreiRetorno" class="block text-[10px] font-normal opacity-90">Volta depois de 3 cartões respondidos</span>
                       </button>
                       <button type="button" onclick="avaliarCardSessaoFC('DIFICIL')" class="py-2.5 px-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold transition">
-                        2. Tive dificuldades
-                        <span id="lblSubBtnDificilRetorno" class="block text-[10px] font-normal opacity-90">Vai para o final do bloco</span>
+                        2. Dificuldade
+                        <span id="lblSubBtnDificilRetorno" class="block text-[10px] font-normal opacity-90">Registra +1 dificuldade e sobe a prioridade</span>
                       </button>
                       <button type="button" onclick="avaliarCardSessaoFC('FACIL')" class="py-2.5 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold transition">
-                        3. Dominei
-                        <span id="lblSubBtnFacil" class="block text-[10px] font-normal opacity-90">Não se repete neste bloco</span>
+                        3. Dominado
+                        <span id="lblSubBtnFacil" class="block text-[10px] font-normal opacity-90">Registra o domínio e sai da fila</span>
                       </button>
                     </div>
                   </div>
@@ -9483,7 +9525,7 @@
           <div class="text-sm font-extrabold text-white">Bloco ${numBloco} já está concluído ✓</div>
           <div class="text-[11px] text-slate-300">Ele continua marcado como concluído (verde). O que você quer fazer?</div>
           <div class="text-[11px] text-slate-300">Dominados: <strong class="text-emerald-400">${total - qtdNaoDominados} de ${total}</strong> • Ainda não dominados: <strong class="text-amber-300">${qtdNaoDominados}</strong></div>
-          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">${qtdNaoDominados ? `Fazer os ${qtdNaoDominados} não dominados (dificuldades no final)` : 'Todos já estão dominados'}</button>
+          <button type="button" data-op="pendentes" ${qtdNaoDominados ? '' : 'disabled'} class="w-full py-2 px-3 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-slate-950 font-extrabold text-xs">${qtdNaoDominados ? `Fazer os ${qtdNaoDominados} não dominados (mais dificuldades primeiro)` : 'Todos já estão dominados'}</button>
           <button type="button" data-op="inteiro" class="w-full py-2 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">Revisar o bloco inteiro (${total} cartões)</button>
           <button type="button" data-op="cancelar" class="w-full py-1.5 px-3 rounded-lg border border-slate-700 text-slate-300 font-semibold text-[11px]">Cancelar</button>
         </div>`;
@@ -21118,6 +21160,485 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
 
   montarBotaoTema();
   garantirCabecalho();
+})();
+</script>
+
+<script>
+/* ==========================================================================
+ * CICLO INTELIGENTE UNIVERSAL DOS CARTÕES (2026-11-12)
+ * Vale para TODAS as modalidades (PDF-Base, Caderno de Erros, Lei Seca, Omissão, Seleção, Decoreba...).
+ *  • Histórico único por cartão: vezes visto, repetições, dificuldades e domínios (nenhum tipo tem contagem isolada).
+ *  • Fila dinâmica, refeita a cada resposta:
+ *      1º repetições vencidas ("Repetir após N")  2º inéditos (1ª passagem, na sequência)
+ *      3º revisão por prioridade (mais dificuldades → mais repetições → mais erros)  4º cartões recém-respondidos
+ *  • Blocos são só organização: o progresso pertence ao conjunto (contexto), não à quantidade de blocos.
+ *    Mudar a divisão não zera contadores, não torna cartão inédito de novo e não duplica cartões.
+ *  • Decoreba de hoje: mesmo ciclo + divisão livre em blocos.
+ * ========================================================================== */
+(function () {
+  'use strict';
+  const K = 'GR_FC_CICLO_INTELIGENTE_V1';
+  const K_NUVEM = 'GR_FC_CICLO_INTELIGENTE_JSON';
+  const K_DEC_QTD = 'GR_DEC_QTD_BLOCOS';
+  const $ = (id) => document.getElementById(id);
+  const sessao = () => (typeof FC_SESSAO !== 'undefined' ? FC_SESSAO : null);
+  const hoje = () => ((typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date()));
+  const avisar = (m, erro) => { try { notificar(m, Boolean(erro)); } catch (e) { console.log(m); } };
+
+  function envolver(nome, fn) {
+    const orig = window[nome];
+    if (typeof orig !== 'function') return;
+    window[nome] = function () {
+      return fn.apply(this, [orig.bind(this)].concat(Array.prototype.slice.call(arguments)));
+    };
+  }
+
+  /* ---------------- armazenamento (aparelho + nuvem via SYNC) ---------------- */
+  const normalizar = (v) => {
+    v = (v && typeof v === 'object') ? v : {};
+    if (!v.cartoes || typeof v.cartoes !== 'object') v.cartoes = {};
+    if (!v.ctx || typeof v.ctx !== 'object') v.ctx = {};
+    v.t = Number(v.t || 0);
+    return v;
+  };
+  const lerLocal = () => { try { return JSON.parse(localStorage.getItem(K)); } catch (e) { return null; } };
+  let db = normalizar(lerLocal());
+  let timerSync = null;
+  function salvar() {
+    db.t = Date.now();
+    try { localStorage.setItem(K, JSON.stringify(db)); } catch (e) { console.warn('[ciclo] sem espaço local', e); }
+    if (timerSync) clearTimeout(timerSync);
+    timerSync = setTimeout(() => { try { if (window.SYNC) window.SYNC.marcarDoc(K_NUVEM); } catch (e) { /* ignora */ } }, 800);
+  }
+  window.addEventListener('gr-doc-sincronizado', (ev) => {
+    if (ev.detail && ev.detail.chave === K_NUVEM) db = normalizar(lerLocal());
+  });
+  (function limparDiasAntigos() { /* conjuntos diários da decoreba: guarda só os últimos 7 dias */
+    try {
+      const lim = typeof somarDiasYMD_ === 'function' ? somarDiasYMD_(hoje(), -7) : '';
+      let mudou = false;
+      Object.keys(db.ctx).forEach((k) => { const m = k.match(/^DEC__(\d{4}-\d{2}-\d{2})$/); if (m && lim && m[1] < lim) { delete db.ctx[k]; mudou = true; } });
+      if (mudou) salvar();
+    } catch (e) { /* ignora */ }
+  })();
+
+  /* ---------------- histórico universal do cartão ---------------- */
+  const VAZIO = () => ({ v: 0, r: 0, d: 0, m: 0 });
+  function hist(id) { return db.cartoes[String(id)] || VAZIO(); }
+  function registrarHist(id, aval) {
+    const h = Object.assign(VAZIO(), db.cartoes[id]);
+    h.v += 1;
+    if (aval === 'ERREI') h.r += 1;
+    else if (aval === 'DIFICIL') h.d += 1;
+    else if (aval === 'FACIL') h.m += 1;
+    h.u = aval; h.ts = Date.now();
+    db.cartoes[id] = h;
+  }
+  /* prioridade de reapresentação: quanto mais dificuldades, antes volta */
+  function cmpPrioridade(a, b, seq) {
+    const ha = hist(a.id), hb = hist(b.id);
+    return (hb.d - ha.d) || (hb.r - ha.r) || ((b.totalErros || 0) - (a.totalErros || 0)) || (seq(a) - seq(b));
+  }
+  window.fcCicloHistorico_ = hist;
+
+  /* ---------------- progresso por conjunto (independe da divisão em blocos) ---------------- */
+  const ctxDe = (chave) => String(chave || '').replace(/__B\d+/g, '');
+  function ctxObj(ctx) {
+    if (!db.ctx[ctx]) db.ctx[ctx] = { c: {}, migrado: false, ts: Date.now() };
+    if (!db.ctx[ctx].c) db.ctx[ctx].c = {};
+    return db.ctx[ctx];
+  }
+  function statusDoBloco(b, id) {
+    if (!b) return null;
+    if (b.dominadosSet && b.dominadosSet[id]) return 'DOMINADO';
+    const st = b.statusPorCard && b.statusPorCard[id];
+    if (st === 'ERREI') return 'ERREI';
+    if (st && st !== 'DOMINADO' && typeof fcEhStatusDificil_ === 'function' && fcEhStatusDificil_(st)) return 'DIFICIL';
+    if (b.emReforcoSet && b.emReforcoSet[id]) return 'DIFICIL';
+    if (b.respondidosSet && b.respondidosSet[id]) return 'VISTO';
+    return null;
+  }
+  /* 1ª vez de um conjunto: aproveita o progresso que já existia (divisão atual + outras divisões salvas) */
+  function migrar(ctx, chave, blocos) {
+    const C = ctxObj(ctx);
+    if (C.migrado) return;
+    const put = (id, s) => { if (s && !C.c[id]) C.c[id] = { s, ts: 0 }; };
+    blocos.forEach((b) => (b.cardsOriginais || []).forEach((c) => put(c.id, statusDoBloco(b, c.id))));
+    try {
+      const salvo = (JSON.parse(localStorage.getItem('GR_FCX_CICLO_V2') || '{}') || {}).blocos || {};
+      const mem = (typeof FC_ESTADO_BLOCOS_MAP !== 'undefined' && FC_ESTADO_BLOCOS_MAP) || {};
+      [mem, salvo].forEach((fonte) => Object.keys(fonte).forEach((k) => {
+        if (k === chave || ctxDe(k) !== ctx) return;
+        (fonte[k] || []).forEach((b) => {
+          if (!b) return;
+          const ids = new Set([].concat(Object.keys(b.respondidosSet || {}), Object.keys(b.dominadosSet || {}), Object.keys(b.emReforcoSet || {}), Object.keys(b.statusPorCard || {})));
+          ids.forEach((id) => put(id, statusDoBloco(b, id)));
+        });
+      }));
+    } catch (e) { /* ignora */ }
+    C.migrado = true;
+    salvar();
+  }
+  const limparObj = (o) => { Object.keys(o).forEach((k) => delete o[k]); return o; };
+  /* o bloco é só uma "janela" sobre o conjunto: os marcadores vêm do conjunto */
+  function aplicarNoBloco(C, b) {
+    const crit = Math.max(1, Number(typeof FC_CRITERIO_DOMINIO !== 'undefined' ? FC_CRITERIO_DOMINIO : 1) || 1);
+    b.respondidosSet = limparObj(b.respondidosSet || {});
+    b.dominadosSet = limparObj(b.dominadosSet || {});
+    b.emReforcoSet = limparObj(b.emReforcoSet || {});
+    b.statusPorCard = limparObj(b.statusPorCard || {});
+    b.acertosPorCard = limparObj(b.acertosPorCard || {});
+    (b.cardsOriginais || []).forEach((c) => {
+      const e = C.c[c.id];
+      if (!e) return;
+      b.respondidosSet[c.id] = true;
+      if (e.s === 'DOMINADO') { b.dominadosSet[c.id] = true; b.statusPorCard[c.id] = 'DOMINADO'; b.acertosPorCard[c.id] = crit; }
+      else if (e.s === 'ERREI' || e.s === 'DIFICIL') { b.emReforcoSet[c.id] = true; b.statusPorCard[c.id] = e.s; b.acertosPorCard[c.id] = 0; }
+    });
+    b.concluido = (b.cardsOriginais || []).length > 0 && b.cardsOriginais.every((c) => b.respondidosSet[c.id]);
+  }
+  function gravarCtxDoCard(S, id) {
+    if (!S || !S.__ctx || !S.refBlocoEstado) return;
+    ctxObj(S.__ctx).c[id] = { s: statusDoBloco(S.refBlocoEstado, id) || 'VISTO', ts: Date.now() };
+  }
+  function zerarCtx(ctx) {
+    db.ctx[ctx] = { c: {}, migrado: true, ts: Date.now(), reset: Date.now() };
+    salvar();
+  }
+
+  envolver('construirEstruturaBlocosFiltroAtual_', (orig, cards) => {
+    const blocos = orig(cards);
+    try {
+      if (!blocos || !blocos.length) return blocos;
+      const chave = obterChaveFiltroAtualBlocos_();
+      const ctx = ctxDe(chave);
+      migrar(ctx, chave, blocos);
+      const C = ctxObj(ctx);
+      blocos.forEach((b) => aplicarNoBloco(C, b));
+    } catch (e) { console.warn('[ciclo] blocos', e); }
+    return blocos;
+  });
+
+  envolver('reiniciarProgressoBlocosFiltroAtual', (orig) => {
+    try { zerarCtx(ctxDe(obterChaveFiltroAtualBlocos_())); } catch (e) { /* ignora */ }
+    return orig();
+  });
+  envolver('fcxRevResetar', (orig, id) => {
+    try { zerarCtx('R__' + id); } catch (e) { /* ignora */ }
+    return orig(id);
+  });
+
+  /* ordem ao abrir um bloco: inéditos na sequência; depois os já vistos por prioridade (mais dificuldades primeiro) */
+  window.filaReorganizadaDoBlocoFC_ = function (bloco) {
+    try { if (typeof fcReclassificarIntermediariosBloco_ === 'function') fcReclassificarIntermediariosBloco_(bloco); } catch (e) { /* ignora */ }
+    const resp = bloco.respondidosSet || {}, dom = bloco.dominadosSet || {};
+    const idx = new Map((bloco.cardsOriginais || []).map((c, i) => [c.id, i]));
+    const seq = (c) => idx.get(c.id);
+    const nd = (bloco.cardsOriginais || []).filter((c) => !dom[c.id]);
+    return nd.filter((c) => !resp[c.id]).concat(nd.filter((c) => resp[c.id]).sort((a, b) => cmpPrioridade(a, b, seq)));
+  };
+
+  /* ---------------- sessão: fila dinâmica atualizada a cada resposta ---------------- */
+  function ci(S) {
+    if (!S.__ci) {
+      S.__ci = { rep: {}, ult: {}, vistos: {}, seq: {}, pend: null };
+      (S.filaAtiva || []).forEach((x, i) => { if (S.__ci.seq[x.id] == null) S.__ci.seq[x.id] = i; });
+    }
+    return S.__ci;
+  }
+  function reorganizarFila() {
+    const S = sessao();
+    if (!S || !Array.isArray(S.filaAtiva)) return;
+    const I = ci(S);
+    const n = Number(S.respostasComputadas || 0);
+    const N = Math.max(1, Number(S.intervaloRetornoConfigurado || 3));
+    if (I.pend) {
+      const p = I.pend; I.pend = null;
+      I.ult[p.id] = n; I.vistos[p.id] = true;
+      if (p.aval === 'ERREI') I.rep[p.id] = n + N; else delete I.rep[p.id];
+    }
+    if (S.filaAtiva.length <= 1) return;
+    const B = S.refBlocoEstado;
+    const visto = (id) => Boolean(I.vistos[id]) || Boolean(B && B.respondidosSet && B.respondidosSet[id]);
+    const seq = (c) => (I.seq[c.id] != null ? I.seq[c.id] : 1e6);
+    const espera = N + 2; /* um cartão recém-respondido não volta logo em seguida */
+    const g = { venc: [], ined: [], rev: [], rec: [], agu: [] };
+    const naFila = new Set();
+    S.filaAtiva.forEach((c) => {
+      if (!c || naFila.has(c.id)) return;
+      naFila.add(c.id);
+      if (I.seq[c.id] == null) I.seq[c.id] = Object.keys(I.seq).length;
+      const r = I.rep[c.id];
+      if (r != null) { (r <= n ? g.venc : g.agu).push(c); return; }
+      if (!visto(c.id)) { g.ined.push(c); return; }
+      if (I.ult[c.id] != null && n - I.ult[c.id] < espera) { g.rec.push(c); return; }
+      g.rev.push(c);
+    });
+    g.venc.sort((a, b) => (I.rep[a.id] - I.rep[b.id]) || (seq(a) - seq(b)));
+    g.ined.sort((a, b) => seq(a) - seq(b));
+    g.rev.sort((a, b) => cmpPrioridade(a, b, seq));
+    g.rec.sort((a, b) => (I.ult[a.id] - I.ult[b.id]) || cmpPrioridade(a, b, seq));
+    g.agu.sort((a, b) => (I.rep[a.id] - I.rep[b.id]) || (seq(a) - seq(b)));
+    S.filaAtiva = g.venc.concat(g.ined, g.rev, g.rec, g.agu);
+  }
+
+  envolver('carregarProximoCardSessaoFC_', (orig) => {
+    try { reorganizarFila(); } catch (e) { console.warn('[ciclo] fila', e); }
+    return orig();
+  });
+
+  envolver('iniciarPlayerBlocoEspecifico_', (orig, lista, titulo, nb, tb, ref, isDec, fase) => {
+    let ctx = null;
+    try { ctx = ref ? (window.__fcCicloCtxForcado || ctxDe(obterChaveFiltroAtualBlocos_())) : null; } catch (e) { ctx = null; }
+    window.__fcCicloCtxForcado = null;
+    const r = orig(lista, titulo, nb, tb, ref, isDec, fase);
+    const S = sessao();
+    if (S) S.__ctx = ctx;
+    return r;
+  });
+
+  envolver('avaliarCardSessaoFC', (orig, aval) => {
+    const S = sessao();
+    const c = S && S.cardAtual;
+    const legado = { BOM: 'DIFICIL', ENTENDI: 'DIFICIL', NAO_ENTENDI: 'ERREI' };
+    const a = legado[aval] || aval;
+    if (!S || !c || ['ERREI', 'DIFICIL', 'FACIL'].indexOf(a) < 0) return orig(aval);
+    const id = String(c.id);
+    const segs = Math.max(1, Math.round((Date.now() - (S.inicioCardTimestamp || Date.now())) / 1000));
+    const acertou = (typeof fcEhTipoEstudo_ === 'function' && fcEhTipoEstudo_(c.tipo))
+      ? (S.escolhaUsuarioCE === c.gabaritoCE && a !== 'ERREI') : (a === 'FACIL');
+    registrarHist(id, a);
+    ci(S).pend = { id, aval: a };
+    let r;
+    try { r = orig(aval); }
+    finally {
+      try {
+        gravarCtxDoCard(S, id);
+        if (S.__decDiaria && S.modoBlocoNovo && fcEhDecoreba_(c)) {
+          registrarResultadoDiarioDecoreba_(acertou, segs);
+          if (a !== 'ERREI') marcarDecorebaFeitaHoje_(id);
+        }
+        salvar();
+      } catch (e) { console.warn('[ciclo] registro', e); }
+    }
+    return r;
+  });
+
+  envolver('mostrarBarraAvaliacaoFC_', (orig) => {
+    orig();
+    const sD = $('lblSubBtnDificilRetorno');
+    if (sD) sD.textContent = 'Registra +1 dificuldade e sobe a prioridade';
+    const sF = $('lblSubBtnFacil');
+    if (sF) sF.textContent = 'Registra o domínio e sai da fila';
+  });
+
+  /* selo no player: em que etapa o cartão está e o histórico dele */
+  function pintarHistorico() {
+    const S = sessao();
+    const c = S && S.cardAtual;
+    const badge = $('fcBadgeFaseAtual');
+    if (!c || !badge) return;
+    if (S.__decDiaria) badge.textContent = `DECOREBA • BLOCO ${S.numeroBloco} / ${S.totalBlocos}`;
+    let el = $('fcxCicloHist');
+    if (!el) { el = document.createElement('span'); el.id = 'fcxCicloHist'; badge.insertAdjacentElement('afterend', el); }
+    const h = hist(c.id);
+    const I = S.__ci || {};
+    const inedito = !((I.vistos && I.vistos[c.id]) || (S.refBlocoEstado && S.refBlocoEstado.respondidosSet && S.refBlocoEstado.respondidosSet[c.id]));
+    const etapa = (I.rep && I.rep[c.id] != null) ? 'Repetição' : (inedito ? (h.v ? '1ª passagem' : 'Inédito') : 'Revisão');
+    el.className = 'ml-1 px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-[10px] font-bold text-slate-300 whitespace-nowrap';
+    el.title = 'Histórico do cartão em todas as sessões e modalidades';
+    el.textContent = `${etapa} • ⚠ ${h.d} dificuldade(s) • 🔁 ${h.r} repetição(ões) • ✓ ${h.m} domínio(s)`;
+  }
+  envolver('renderizarCardAtualNoPlayerFC_', (orig) => {
+    const r = orig();
+    try { pintarHistorico(); } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  /* indicadores do ciclo nos retângulos dos blocos */
+  function anotarGradeBlocos() {
+    const grid = $('fcGridBlocosAquecimento');
+    if (!grid || typeof FC_ESTADO_BLOCOS_MAP === 'undefined') return;
+    const blocos = FC_ESTADO_BLOCOS_MAP[obterChaveFiltroAtualBlocos_()] || [];
+    Array.prototype.forEach.call(grid.children, (tile, i) => {
+      const b = blocos[i];
+      if (!b || tile.querySelector('[data-fcx-ci]')) return;
+      const ined = b.cardsOriginais.filter((c) => !b.respondidosSet[c.id]).length;
+      const dif = b.cardsOriginais.reduce((s, c) => s + hist(c.id).d, 0);
+      const crit = b.cardsOriginais.filter((c) => hist(c.id).d > 0 && !b.dominadosSet[c.id]).length;
+      tile.insertAdjacentHTML('beforeend',
+        '<div data-fcx-ci="1" class="flex items-center justify-between gap-2 text-[10px] pt-1 border-t border-slate-800/80">' +
+        '<span class="text-slate-400">Inéditos: <strong class="text-sky-300">' + ined + '</strong></span>' +
+        '<span class="text-slate-400">Dificuldades: <strong class="text-amber-300">' + dif + '</strong> (' + crit + ' cartão(ões))</span></div>');
+    });
+  }
+
+  /* ---------------- DECOREBA DE HOJE: mesmo ciclo + divisão livre em blocos ---------------- */
+  const ctxDec = () => 'DEC__' + hoje();
+  const qtdBlocosDec = () => Math.max(1, Math.min(50, Number(localStorage.getItem(K_DEC_QTD) || 1) || 1));
+  function prioridadeDec(a, b) {
+    const ha = hist(a.id), hb = hist(b.id);
+    return (hb.d - ha.d) || (hb.r - ha.r) || ((b.totalErros || 0) - (a.totalErros || 0)) ||
+      ((ha.v ? 1 : 0) - (hb.v ? 1 : 0)) || ((ha.ts || 0) - (hb.ts || 0)) || (a.ordemCriacao - b.ordemCriacao);
+  }
+  /* o conjunto do dia é fixado na 1ª montagem: mudar blocos não muda quais cartões são de hoje */
+  function membrosDecHoje() {
+    const todos = (typeof FC_DECK !== 'undefined' ? FC_DECK : []).filter(fcEhDecoreba_);
+    if (!todos.length) return [];
+    const porId = new Map(todos.map((c) => [c.id, c]));
+    const C = ctxObj(ctxDec());
+    C.migrado = true;
+    const antes = JSON.stringify(C.ids || []);
+    let ids = (C.ids || []).filter((id) => porId.has(id));
+    const lim = (Number(DEC_LIMITE_DIARIO) >= 999) ? Infinity : Math.max(1, Number(DEC_LIMITE_DIARIO) || 30);
+    if (ids.length < lim) {
+      const ja = new Set(ids);
+      const resto = todos.filter((c) => !ja.has(c.id)).sort(prioridadeDec);
+      for (let i = 0; i < resto.length && ids.length < lim; i++) ids.push(resto[i].id);
+    } else if (ids.length > lim) {
+      for (let i = ids.length - 1; i >= 0 && ids.length > lim; i--) if (!C.c[ids[i]]) ids.splice(i, 1);
+    }
+    if (JSON.stringify(ids) !== antes) { C.ids = ids; C.ts = Date.now(); salvar(); }
+    return ids.map((id) => porId.get(id));
+  }
+  let cacheDec = { chave: '', blocos: [] };
+  function blocosDecHoje() {
+    const membros = membrosDecHoje();
+    if (!membros.length) return [];
+    const C = ctxObj(ctxDec());
+    const n = Math.min(qtdBlocosDec(), membros.length);
+    const base = Math.floor(membros.length / n), sobra = membros.length % n;
+    const fatias = [];
+    let cur = 0;
+    for (let i = 0; i < n; i++) { const q = base + (i < sobra ? 1 : 0); fatias.push(membros.slice(cur, cur + q)); cur += q; }
+    const chave = ctxDec() + '__B' + n;
+    if (cacheDec.chave !== chave || cacheDec.blocos.length !== n) {
+      cacheDec = { chave, blocos: fatias.map((f, i) => ({ numeroBloco: i + 1, totalBloco: f.length, cardsOriginais: f, respondidosSet: {}, acertosPorCard: {}, emReforcoSet: {}, dominadosSet: {}, statusPorCard: {}, concluido: false })) };
+    } else {
+      cacheDec.blocos.forEach((b, i) => { b.cardsOriginais = fatias[i]; b.totalBloco = fatias[i].length; });
+    }
+    cacheDec.blocos.forEach((b) => aplicarNoBloco(C, b));
+    return cacheDec.blocos;
+  }
+
+  window.fcDecIniciarBloco = function (i, modo) {
+    const blocos = blocosDecHoje();
+    const b = blocos[i];
+    if (!b) { avisar('Cadastre ou importe cartões do tipo Decoreba primeiro.', true); return; }
+    const iniciar = (lista, ref, sufixo) => {
+      window.__fcCicloCtxForcado = ctxDec();
+      iniciarPlayerBlocoEspecifico_(lista, `Decoreba de Hoje — Bloco ${b.numeroBloco}/${blocos.length}${sufixo}`, b.numeroBloco, blocos.length, ref, false, 2);
+      const S = sessao();
+      if (S) {
+        S.__decDiaria = true;
+        S.isModoDecoreba = true; /* rótulos de "fila" e fim de sessão próprios da decoreba */
+        try { mostrarBarraAvaliacaoFC_(); $('fcBarraAvaliacaoCard').classList.toggle('hidden', !S.versoRevelado); pintarHistorico(); } catch (e) { /* ignora */ }
+      }
+    };
+    if (b.concluido && !modo) {
+      const nd = filaReorganizadaDoBlocoFC_(b);
+      abrirEscolhaBlocoConcluido_(b.numeroBloco, b.totalBloco, nd.length, () => window.fcDecIniciarBloco(i, 'inteiro'), () => window.fcDecIniciarBloco(i, 'pendentes'));
+      return;
+    }
+    if (modo === 'inteiro') {
+      const copia = { numeroBloco: b.numeroBloco, totalBloco: b.totalBloco, cardsOriginais: b.cardsOriginais, respondidosSet: {}, acertosPorCard: {}, emReforcoSet: {}, dominadosSet: {}, statusPorCard: {}, concluido: false, ehRevisaoDeBlocoConcluido: true };
+      iniciar(b.cardsOriginais, copia, ' (revisão do bloco inteiro)');
+      return;
+    }
+    const lista = filaReorganizadaDoBlocoFC_(b);
+    if (!lista.length) { avisar('Todos os cartões deste bloco já estão dominados hoje.'); renderizarBlocosDecoreba(); return; }
+    iniciar(lista, b, modo === 'pendentes' ? ' (não dominados)' : '');
+  };
+
+  window.fcDecDefinirQtdBlocos = function (v) {
+    const n = Math.max(1, Math.min(50, parseInt(v, 10) || 1));
+    try { localStorage.setItem(K_DEC_QTD, String(n)); } catch (e) { /* ignora */ }
+    try { if (window.SYNC) window.SYNC.marcarDoc('GR_PREFS_JSON'); } catch (e) { /* ignora */ }
+    renderizarBlocosDecoreba();
+  };
+
+  function renderizarBlocosDecoreba() {
+    const grid = $('fcDecBlocosGrid');
+    if (!grid) return;
+    const blocos = blocosDecHoje();
+    const total = blocos.reduce((s, b) => s + b.totalBloco, 0);
+    const inp = $('fcDecInputQtdBlocos');
+    if (inp && document.activeElement !== inp) inp.value = qtdBlocosDec();
+    const res = $('fcDecResumoBlocos');
+    if (res) res.textContent = blocos.length
+      ? `bloco(s) • ~${Math.ceil(total / blocos.length)} cartões/bloco de ${total} no conjunto de hoje`
+      : 'bloco(s) • nenhum cartão de decoreba cadastrado';
+    const proximo = blocos.findIndex((b) => !b.concluido);
+    grid.innerHTML = blocos.map((b, i) => {
+      const feitos = b.cardsOriginais.filter((c) => b.respondidosSet[c.id]).length;
+      const dom = b.cardsOriginais.filter((c) => b.dominadosSet[c.id]).length;
+      const dif = b.cardsOriginais.reduce((s, c) => s + hist(c.id).d, 0);
+      const cor = b.concluido ? 'bg-emerald-900/60 border-emerald-600 text-emerald-200'
+        : (i === proximo ? 'bg-purple-900/60 border-purple-400 text-white ring-1 ring-purple-400/60' : 'bg-slate-950 border-slate-700 text-slate-200');
+      return '<button type="button" onclick="fcDecIniciarBloco(' + i + ')" class="px-2.5 py-1.5 rounded-lg border text-[10px] font-bold text-left ' + cor + '">' +
+        (b.concluido ? '✓ ' : '') + 'Bloco ' + (i + 1) + ' • ' + b.totalBloco + ' cartões' +
+        '<span class="block font-normal opacity-90">Passados ' + feitos + '/' + b.totalBloco + ' • Dominados ' + dom + ' • ⚠ ' + dif + '</span></button>';
+    }).join('');
+  }
+  window.renderizarBlocosDecoreba_ = renderizarBlocosDecoreba;
+
+  /* "Zerar Decorebas de Hoje" passa a usar os blocos (abre o próximo bloco não concluído) */
+  window.iniciarSessaoZerarDecorebaHoje = function () {
+    const blocos = blocosDecHoje();
+    if (!blocos.length) { avisar('Cadastre ou importe cartões do tipo Decoreba primeiro.', true); return; }
+    let i = blocos.findIndex((b) => !b.concluido);
+    if (i < 0) { i = blocos.findIndex((b) => filaReorganizadaDoBlocoFC_(b).length > 0); if (i < 0) i = 0; }
+    window.fcDecIniciarBloco(i);
+  };
+
+  envolver('obterFilaInteligenteDecorebaHoje_', (orig) => {
+    const info = orig();
+    try {
+      const membros = membrosDecHoje();
+      if (membros.length) {
+        const C = ctxObj(ctxDec());
+        info.filaHoje = membros.filter((c) => !(C.c[c.id] && C.c[c.id].s === 'DOMINADO'));
+        info.vencidosTotal = membros.length;
+      }
+      info.criticosCount = (info.todosDecoreba || []).filter((c) => hist(c.id).d > 0 || c.totalErros > 0 || /^(ERREI|DIFICIL)/i.test(c.ultimaAvaliacao || '')).length;
+    } catch (e) { /* ignora */ }
+    return info;
+  });
+
+  envolver('renderizarPainelDecorebaInteligente_', (orig) => {
+    const r = orig();
+    try { renderizarBlocosDecoreba(); } catch (e) { console.warn('[ciclo] decoreba', e); }
+    return r;
+  });
+
+  envolver('renderizarVisaoDeckFC', (orig, ...args) => {
+    const r = orig(...args);
+    try { anotarGradeBlocos(); } catch (e) { /* ignora */ }
+    try { renderizarBlocosDecoreba(); } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  /* fim de um bloco da decoreba: botão para o próximo bloco */
+  envolver('finalizarSessaoEPersistirSupabase_', (orig, ...args) => {
+    const S = sessao();
+    const dec = Boolean(S && S.__decDiaria);
+    const nb = S ? S.numeroBloco : 0, tb = S ? S.totalBlocos : 0;
+    const r = orig(...args);
+    try {
+      if (dec) {
+        const btn = $('fcBtnAvancarProximoBloco');
+        if (btn && nb < tb) {
+          btn.classList.remove('hidden');
+          btn.textContent = `Avançar para o Bloco ${nb + 1} de ${tb} da Decoreba →`;
+          btn.onclick = () => window.fcDecIniciarBloco(nb);
+        }
+        renderizarBlocosDecoreba();
+      }
+    } catch (e) { /* ignora */ }
+    return r;
+  });
+
+  try { renderizarBlocosDecoreba(); } catch (e) { /* ignora */ }
 })();
 </script>
 
