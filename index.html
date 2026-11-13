@@ -2483,6 +2483,11 @@
               </div>
 
               <div>
+                <label class="block font-bold text-slate-300 mb-1">Páginas da Lei Seca</label>
+                <input type="number" min="0" step="1" id="editCronLeiSecaPaginas" placeholder="Deixe vazio se ainda não souber" class="w-full rounded-lg border px-2.5 py-1.5">
+              </div>
+
+              <div>
                 <label class="block font-bold text-slate-300 mb-1">Súmulas e Observações</label>
                 <input type="text" id="editCronSumulas" placeholder="Ex: Leitura das 7 súmulas na pág. 4" class="w-full rounded-lg border px-2.5 py-1.5">
               </div>
@@ -5602,7 +5607,7 @@
           materia: nomeMateria,
           ordemMateria: matObj ? matObj.ordem : 999,
           minQuestoesMateria: matObj ? matObj.minQuestoes : minQuestoesMateria,
-          materiaAtiva: (matObj ? matObj.status === 'Ativo' : true) && !(window.__FCX_FORA_BATERIA__ && window.__FCX_FORA_BATERIA__(idTopico, nomeTopico, resolvidasTotalHistorico)),
+          materiaAtiva: (matObj ? matObj.status === 'Ativo' : true) && !(typeof ehMateriaLeiSeca_ === 'function' && ehMateriaLeiSeca_(nomeMateria)) && !(window.__FCX_FORA_BATERIA__ && window.__FCX_FORA_BATERIA__(idTopico, nomeTopico, resolvidasTotalHistorico)),
           topico: nomeTopico,
           status: statusTopico,
           rodadaAtual,
@@ -12186,7 +12191,8 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         paginasTotal: m.paginasTotal || 0,
         subtopicos: m.subtopicos || [],
         detalhesPartes: m.detalhesPartes || [],
-        integradoRevisao: Boolean(m.integradoRevisao)
+        integradoRevisao: Boolean(m.integradoRevisao),
+        paginasLeiSeca: lerPaginasLeiSeca_(m.paginasLeiSeca)
       });
 
       return {
@@ -12215,6 +12221,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       let partesArr = [];
       let subtopicosArr = [];
       let integradoRev = Boolean(r.integrado_revisao);
+      let pagLeiSeca = null;
 
       if (r.detalhes_doutrina && typeof r.detalhes_doutrina === 'string') {
         try {
@@ -12224,6 +12231,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
             if (Array.isArray(parsed.detalhesPartes)) partesArr = parsed.detalhesPartes;
             if (Array.isArray(parsed.subtopicos)) subtopicosArr = parsed.subtopicos;
             if (parsed.integradoRevisao !== undefined) integradoRev = Boolean(parsed.integradoRevisao);
+            if (parsed.paginasLeiSeca !== undefined) pagLeiSeca = lerPaginasLeiSeca_(parsed.paginasLeiSeca);
           }
         } catch (e) {}
       } else if (Array.isArray(r.detalhes_partes)) {
@@ -12271,6 +12279,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         partesConcluidas: concluidasCount,
         detalhesPartes: partesArr,
         leiSeca: String(r.detalhes_lei_seca !== undefined ? (r.detalhes_lei_seca || '') : (r.lei_seca || '')),
+        paginasLeiSeca: pagLeiSeca,
         sumulas: String(r.detalhes_sumulas !== undefined ? (r.detalhes_sumulas || '') : (r.sumulas || '')),
         status: statusReal,
         dataPrevista: String(r.data_planejada !== undefined ? (r.data_planejada || '') : (r.data_prevista || '')),
@@ -12278,6 +12287,22 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         integradoRevisao: integradoRev,
         ordemGlobal: Number(r.ordem_global || 1)
       };
+    }
+
+    /* Páginas da Lei Seca da meta: número > 0 ou null (campo vazio, a preencher) */
+    /* Matéria "Lei Seca": área organizacional (um tópico por lei). Fica fora da bateria de questões,
+       das revisões automáticas, da trilha e da padronização — não é confundida com "Leis Extravagantes". */
+    function ehMateriaLeiSeca_(nome) {
+      return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() === 'lei seca';
+    }
+    function lerPaginasLeiSeca_(v) {
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    }
+    function rotuloPaginasLeiSeca_(m) {
+      if (!m || !m.leiSeca) return '';
+      const n = lerPaginasLeiSeca_(m.paginasLeiSeca);
+      return n ? `${n} pág.` : 'pág. a preencher';
     }
 
     function gerarDivisaoPadraoPartes_(paginasTotal, totalPartes, partesConcluidas) {
@@ -12326,6 +12351,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           partesConcluidas: concluidas,
           detalhesPartes: detalhes,
           leiSeca: leiSeca || '',
+          paginasLeiSeca: lerPaginasLeiSeca_(PAGINAS_LEI_SECA_SEED[`CRON_S${String(semana).padStart(2, '0')}_M${String(meta).padStart(2, '0')}`]),
           sumulas: sumulas || '',
           status: isConc ? 'Concluído' : (concluidas > 0 ? 'Em Andamento' : 'Pendente'),
           dataPrevista: hojeYMD,
@@ -12560,7 +12586,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       }
 
       const elLeiDia = document.getElementById('cronDiaLeiSecaTexto');
-      if (elLeiDia) elLeiDia.textContent = metaAtual.leiSeca || 'Leitura focada no PDF da meta.';
+      if (elLeiDia) elLeiDia.textContent = metaAtual.leiSeca ? `${metaAtual.leiSeca} (${rotuloPaginasLeiSeca_(metaAtual)})` : 'Leitura focada no PDF da meta.';
 
       const elSumDia = document.getElementById('cronDiaSumulasTexto');
       if (elSumDia) elSumDia.textContent = metaAtual.sumulas || 'Consulte os destaques jurisprudenciais do material.';
@@ -12919,7 +12945,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
                           `).join('')}
                         </div>
 
-                        ${m.leiSeca ? `<div class="text-[11px] text-indigo-300 font-medium"><strong>Lei Seca do Dia:</strong> ${esc(m.leiSeca)}</div>` : ''}
+                        ${m.leiSeca ? `<div class="text-[11px] text-indigo-300 font-medium"><strong>Lei Seca do Dia:</strong> ${esc(m.leiSeca)} <span class="text-slate-400">(${esc(rotuloPaginasLeiSeca_(m))})</span></div>` : ''}
                         ${m.sumulas ? `<div class="text-[11px] text-slate-400"><strong>Súmulas / Obs:</strong> ${esc(m.sumulas)}</div>` : ''}
                       </div>
 
@@ -13262,6 +13288,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       document.getElementById('editCronTopico').value = m.topico;
       document.getElementById('editCronSubtopicosPaginas').value = formatarArraySubtopicosParaTexto_(m.subtopicos);
       document.getElementById('editCronLeiSeca').value = m.leiSeca || '';
+      document.getElementById('editCronLeiSecaPaginas').value = lerPaginasLeiSeca_(m.paginasLeiSeca) || '';
       document.getElementById('editCronSumulas').value = m.sumulas || '';
 
       gerarPreviaDivisaoPartesModal(m.detalhesPartes);
@@ -13283,6 +13310,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       document.getElementById('editCronTopico').value = '';
       document.getElementById('editCronSubtopicosPaginas').value = '';
       document.getElementById('editCronLeiSeca').value = '';
+      document.getElementById('editCronLeiSecaPaginas').value = '';
       document.getElementById('editCronSumulas').value = '';
 
       gerarPreviaDivisaoPartesModal();
@@ -13325,6 +13353,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       const topico = document.getElementById('editCronTopico').value.trim();
       const rawSubtopicos = document.getElementById('editCronSubtopicosPaginas').value.trim();
       const leiSeca = document.getElementById('editCronLeiSeca').value.trim();
+      const paginasLeiSeca = lerPaginasLeiSeca_(document.getElementById('editCronLeiSecaPaginas').value);
       const sumulas = document.getElementById('editCronSumulas').value.trim();
 
       const subtopicosParsed = parseTextoSubtopicosParaArray_(rawSubtopicos, topico, paginasTotal);
@@ -13373,6 +13402,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         metaAlvo.topico = topico;
         metaAlvo.subtopicos = subtopicosParsed;
         metaAlvo.leiSeca = leiSeca;
+        metaAlvo.paginasLeiSeca = paginasLeiSeca;
         metaAlvo.sumulas = sumulas;
         metaAlvo.status = status;
         recalcularStatusMetaCronograma_(metaAlvo);
@@ -13390,6 +13420,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
           partesConcluidas: 0,
           detalhesPartes: novasPartes,
           leiSeca,
+          paginasLeiSeca,
           sumulas,
           status: 'Pendente',
           dataPrevista: (typeof ESTADO !== 'undefined' && ESTADO) ? ESTADO.hojeYMD : formatarDataYMD_(new Date()),
@@ -13425,6 +13456,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
         'Partes Concluídas': `${m.partesConcluidas}/${m.totalPartes}`,
         'Divisão por Dia': m.detalhesPartes.map(p => `[META ${m.numeroMeta} - PARTE ${p.parte}: ${p.descricao}]`).join(' | '),
         'Lei Seca': m.leiSeca || '—',
+        'Páginas Lei Seca': m.leiSeca ? (lerPaginasLeiSeca_(m.paginasLeiSeca) || '') : '',
         'Súmulas / Obs': m.sumulas || '—',
         'Status': m.status,
         'Data Prevista': formatarDataBR(m.dataPrevista),
@@ -13443,81 +13475,86 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
     /* ==========================================================================
      * 10. MATRIZ DAS 50 SEMANAS COM PÁGINAS INDIVIDUAIS POR TÓPICO
      * ========================================================================== */
+    /* Páginas da Lei Seca já conhecidas (as demais ficam vazias para preenchimento posterior) */
+    const PAGINAS_LEI_SECA_SEED = {
+      CRON_S01_M02: 31, CRON_S01_M03: 20, CRON_S02_M01: 26, CRON_S03_M01: 27, CRON_S03_M05: 31
+    };
+
     const CRONOGRAMA_50_SEMANAS_SEED = [
       [1, 1, "Direito Penal", "Noções Iniciais e Princípios", 56, 2, 2, "Código Penal - Artigos 1º ao 12º", "Leitura das 4 súmulas na Doutrina (Pág. 3)", [{ nome: "Noções Iniciais de Direito Penal", paginas: 26 }, { nome: "Princípios Penais Constitucionais e Legais", paginas: 30 }]],
-      [1, 2, "Direito Processual Penal", "Noções Iniciais e Princípios", 48, 2, 2, "CPP - Artigos 1º a 13º (31 pág.)", "Sem súmulas pertinentes", [{ nome: "Sistemas Processuais e Aplicação da Lei Processual", paginas: 24 }, { nome: "Princípios do Processo Penal", paginas: 24 }]],
-      [1, 3, "Direito Constitucional", "Direitos e Garantias Fundamentais", 72, 2, 2, "CF/88 - Artigos 1º a 4º (20 pág.)", "Leitura das 8 súmulas na Doutrina (Pág. 4)", [{ nome: "Teoria Geral dos Direitos Fundamentais", paginas: 32 }, { nome: "Direitos e Deveres Individuais e Coletivos (Art. 5º)", paginas: 40 }]],
+      [1, 2, "Direito Processual Penal", "Noções Iniciais e Princípios", 48, 2, 2, "CPP - Artigos 1º a 13º", "Sem súmulas pertinentes", [{ nome: "Sistemas Processuais e Aplicação da Lei Processual", paginas: 24 }, { nome: "Princípios do Processo Penal", paginas: 24 }]],
+      [1, 3, "Direito Constitucional", "Direitos e Garantias Fundamentais", 72, 2, 2, "CF/88 - Artigos 1º a 4º", "Leitura das 8 súmulas na Doutrina (Pág. 4)", [{ nome: "Teoria Geral dos Direitos Fundamentais", paginas: 32 }, { nome: "Direitos e Deveres Individuais e Coletivos (Art. 5º)", paginas: 40 }]],
       [1, 4, "Leis Extravagantes", "Maria da Penha | Lei nº 11.340/06", 70, 2, 2, "CF/88 - Art. 5º (Dividir 1/3 e 2/3)", "Leitura das 5 súmulas na Doutrina (Pág. 4)", [{ nome: "Lei Maria da Penha (Disposições Gerais e Medidas Protetivas)", paginas: 38 }, { nome: "Procedimentos Policiais e Judiciais na Lei 11.340/06", paginas: 32 }]],
       [1, 5, "Direito Administrativo", "Noções Iniciais e Princípios Administrativos", 42, 2, 2, "Lei nº 11.340/2006 - Art. 1º a 7º, 10 a 12-C e 18 a 24-A", "Leitura das 7 súmulas na Doutrina (Pág. 4)", [{ nome: "Regime Jurídico Administrativo", paginas: 20 }, { nome: "Princípios Expressos e Implícitos da Administração", paginas: 22 }]],
-      [2, 1, "Direito Constitucional", "Teoria Constitucional", 63, 2, 2, "Lei nº 12.016/2009 (Mandado de Segurança - 26 pág.)", "", [{ nome: "Constitucionalismo e Classificação das Constituições", paginas: 31 }, { nome: "Poder Constituinte e Eficácia das Normas", paginas: 32 }]],
+      [2, 1, "Direito Constitucional", "Teoria Constitucional", 63, 2, 2, "Lei nº 12.016/2009 (Mandado de Segurança)", "", [{ nome: "Constitucionalismo e Classificação das Constituições", paginas: 31 }, { nome: "Poder Constituinte e Eficácia das Normas", paginas: 32 }]],
       [2, 2, "Direito Processual Penal", "Inquérito Policial", 65, 2, 2, "CPP - Artigos 13-A a 23", "", [{ nome: "Inquérito Policial: Conceito, Características e Instauração", paginas: 35 }, { nome: "Diligências, Prazos, Arquivamento e Acordo de Não Persecução", paginas: 30 }]],
       [2, 3, "Direito Constitucional", "Remédios Constitucionais", 60, 2, 2, "Lei nº 4.717/1965 (Ação Popular) e Lei nº 7.347/1985 (ACP)", "", [{ nome: "Habeas Corpus, Habeas Data e Mandado de Segurança", paginas: 34 }, { nome: "Mandado de Injunção e Ação Popular", paginas: 26 }]],
       [2, 4, "Direito Penal", "Lei Penal e sua Aplicação + Teoria do Crime (Parte I)", 76, 2, 2, "Código Penal - Artigos 13 a 28", "", [{ nome: "Lei Penal no Tempo e no Espaço", paginas: 36 }, { nome: "Teoria do Crime (Parte I): Conduta, Resultado e Nexo", paginas: 40 }]],
       [2, 5, "Direito Penal", "Teoria do Crime (Parte II)", 62, 2, 2, "Lei nº 13.300/2016 (Mandado de Injunção)", "", [{ nome: "Tipicidade, Consumação, Tentativa e Desistência Voluntária", paginas: 34 }, { nome: "Erro de Tipo e Ilícito Penal", paginas: 28 }]],
-      [3, 1, "Direito Administrativo", "Entes da Administração", 68, 2, 2, "Lei nº 13.848/2019 (Agências Reguladoras - 27 pág.)", "", [{ nome: "Administração Direta, Desconcentração e Descentralização", paginas: 30 }, { nome: "Autarquias, Fundações, Empresas Públicas e Soc. Economia Mista", paginas: 38 }]],
+      [3, 1, "Direito Administrativo", "Entes da Administração", 68, 2, 2, "Lei nº 13.848/2019 (Agências Reguladoras)", "", [{ nome: "Administração Direta, Desconcentração e Descentralização", paginas: 30 }, { nome: "Autarquias, Fundações, Empresas Públicas e Soc. Economia Mista", paginas: 38 }]],
       [3, 2, "Direito Processual Penal", "Ação Penal", 72, 2, 2, "CPP - Artigos 24 a 62", "", [{ nome: "Ação Penal Pública Incondicionada e Condicionada", paginas: 38 }, { nome: "Ação Penal Privada e Ação Civil Ex Delicto", paginas: 34 }]],
       [3, 3, "Direito Penal", "Teoria do Crime (Parte III)", 64, 3, 3, "Lei nº 13.934/2019 + Lei nº 10.741/2003 (Art. 93 a 108)", "", [{ nome: "Ilicitude e Causas Excludentes da Ilicitude", paginas: 32 }, { nome: "Culpabilidade e Dirimentes Penais", paginas: 32 }]],
       [3, 4, "Leis Extravagantes", "Lei de Crimes Hediondos (Lei nº 8.072/1990)", 50, 2, 2, "CF/88 Art. 6º a 17 + Lei nº 8.072/1990 (21 pág.)", "", [{ nome: "Crimes Hediondos e Equiparados: Rol Taxativo", paginas: 26 }, { nome: "Regime de Cumprimento de Pena e Vedação de Benefícios", paginas: 24 }]],
-      [3, 5, "Direito Constitucional", "Direitos Políticos + Nacionalidade + Estatuto do Desarmamento", 75, 3, 3, "Lei nº 10.826/2003 (Estatuto do Desarmamento - 31 pág.)", "", [{ nome: "Nacionalidade (Art. 12 e 13 da CF/88)", paginas: 22 }, { nome: "Direitos Políticos e Partidos Políticos", paginas: 25 }, { nome: "Estatuto do Desarmamento (Lei nº 10.826/2003)", paginas: 28 }]],
+      [3, 5, "Direito Constitucional", "Direitos Políticos + Nacionalidade + Estatuto do Desarmamento", 75, 3, 3, "Lei nº 10.826/2003 (Estatuto do Desarmamento)", "", [{ nome: "Nacionalidade (Art. 12 e 13 da CF/88)", paginas: 22 }, { nome: "Direitos Políticos e Partidos Políticos", paginas: 25 }, { nome: "Estatuto do Desarmamento (Lei nº 10.826/2003)", paginas: 28 }]],
       [4, 1, "Direito Penal", "Concurso de Pessoas e Concurso de Crimes + Crimes no CDC", 64, 3, 3, "CP Art. 29 a 31 + Lei nº 8.078/1990 (Art. 61 a 80)", "Tempo total estimado: 2h38 por parte", [{ nome: "Concurso de Pessoas (Autoria e Participação)", paginas: 24 }, { nome: "Concurso de Crimes (Material, Formal e Continuado)", paginas: 22 }, { nome: "Crimes contra as Relações de Consumo (CDC)", paginas: 18 }]],
-      [4, 2, "Direito Constitucional", "Organização do Estado + Lei Antiterrorismo", 74, 3, 3, "CF/88 Art. 18 a 33 + Lei nº 13.260/2016 (Art. 1º a 19)", "Tempo total estimado: 3h05 por parte", [{ nome: "Organização Político-Administrativa e Repartição de Competências", paginas: 48 }, { nome: "Lei Antiterrorismo (Lei nº 13.260/2016)", paginas: 26 }]],
-      [4, 3, "Direito Administrativo", "Serviços Públicos + Estatuto da Pessoa Idosa", 61, 3, 0, "Lei nº 8.987/1995 (Art. 1º a 40) + Lei nº 10.741/2003 (Art. 93 a 110)", "Tempo total: 2h31 por parte", [{ nome: "Serviços Públicos", paginas: 39 }, { nome: "Estatuto da Pessoa Idosa", paginas: 22 }]],
+      [4, 2, "Direito Constitucional", "Organização do Estado + Lei Antiterrorismo", 74, 3, 3, "CF/88 - Artigos 18 a 33", "Tempo total estimado: 3h05 por parte", [{ nome: "Organização Político-Administrativa e Repartição de Competências", paginas: 48 }, { nome: "Lei Antiterrorismo (Lei nº 13.260/2016)", paginas: 26 }]],
+      [4, 3, "Direito Administrativo", "Serviços Públicos + Estatuto da Pessoa Idosa", 61, 3, 0, "Lei nº 8.987/1995 (Serviços Públicos) - Artigos 1º a 6º, 14 a 28-A e 32 a 40", "Tempo total: 2h31 por parte", [{ nome: "Serviços Públicos", paginas: 39 }, { nome: "Estatuto da Pessoa Idosa", paginas: 22 }]],
       [4, 4, "Leis Extravagantes", "Crimes do ECA (Lei nº 8.069/1990)", 65, 3, 0, "Lei nº 8.069/1990 - Art. 103 a 105, 171 a 190-E, 225 a 244-C", "Tempo total: 2h45 por parte", [{ nome: "Ato Infracional e Apuração de Ato Infracional no ECA", paginas: 32 }, { nome: "Crimes em Espécie no Estatuto da Criança e do Adolescente", paginas: 33 }]],
-      [4, 5, "Leis Extravagantes", "Lei das Organizações Criminosas (Lei nº 12.850/2013)", 60, 3, 0, "Lei nº 12.850/2013 - Artigos 1º a 24", "Tempo total: 2h30 por parte", [{ nome: "Conceito de Organização Criminosa e Meios de Obtenção de Prova", paginas: 32 }, { nome: "Colaboração Premiada, Ação Controlada e Infiltração de Agentes", paginas: 28 }]],
+      [4, 5, "Leis Extravagantes", "Lei das Organizações Criminosas (Lei nº 12.850/2013)", 60, 3, 0, "Lei nº 12.850/2013 (Organizações Criminosas)", "Tempo total: 2h30 por parte", [{ nome: "Conceito de Organização Criminosa e Meios de Obtenção de Prova", paginas: 32 }, { nome: "Colaboração Premiada, Ação Controlada e Infiltração de Agentes", paginas: 28 }]],
       [5, 1, "Revisão Bloco 1", "Penal e Proc. Penal: Princípios, Lei Penal, Teoria do Crime (1 a 3), IP, Ação Penal e Concurso", 30, 1, 0, "Revisão TOPIF + Caderno de Erros", "", [{ nome: "Revisão Direito Penal (Semanas 01 a 04)", paginas: 15 }, { nome: "Revisão Direito Processual Penal (Semanas 01 a 04)", paginas: 15 }]],
       [5, 2, "Revisão Bloco 1", "Constitucional e Administrativo: Direitos Fundamentais, Teoria, Remédios, Nac/Pol, Org. Estado, Entes e Serviços", 30, 1, 0, "Revisão TOPIF + Caderno de Erros", "", [{ nome: "Revisão Direito Constitucional (Semanas 01 a 04)", paginas: 15 }, { nome: "Revisão Direito Administrativo (Semanas 01 a 04)", paginas: 15 }]],
       [5, 3, "Revisão Bloco 1", "Leis Penais Especiais: Maria da Penha, Hediondos, Desarmamento, CDC, Antiterrorismo, Idoso, ECA e ORCRIM", 30, 1, 0, "Revisão TOPIF + Caderno de Erros", "", [{ nome: "Revisão Legislação Penal Especial (Semanas 01 a 04)", paginas: 30 }]],
-      [6, 1, "Direito Processual Penal", "Jurisdição e Competência", 58, 3, 0, "CPP - Artigos 69 a 91", "", [{ nome: "Jurisdição e Competência no Processo Penal", paginas: 58 }]],
-      [6, 2, "Direito Constitucional", "Administração Pública - Aspectos Constitucionais", 52, 3, 0, "CF/88 - Artigos 37 a 41", "", [{ nome: "Disposições Constitucionais da Administração Pública", paginas: 52 }]],
-      [6, 3, "Direito Administrativo", "Poderes da Administração", 54, 3, 0, "Doutrina + Jurisprudência STF/STJ", "", [{ nome: "Poderes Vinculado, Discricionário, Hierárquico, Disciplinar e de Polícia", paginas: 54 }]],
-      [6, 4, "Leis Extravagantes", "Lei de Tortura - Lei nº 9.455/1997", 36, 3, 0, "Lei nº 9.455/1997 Integral", "", [{ nome: "Lei de Tortura (Lei nº 9.455/1997)", paginas: 36 }]],
-      [6, 5, "Criminologia", "Conceito, Objeto, Classificação e Estatística Criminal", 45, 3, 0, "Resumo Doutrinário", "", [{ nome: "Conceito, Método e Objeto da Criminologia", paginas: 25 }, { nome: "Cifras da Criminalidade e Estatística Criminal", paginas: 20 }]],
-      [6, 6, "Direito Constitucional", "Poder e Processo Legislativo", 60, 3, 0, "CF/88 - Artigos 44 a 69", "", [{ nome: "Organização do Poder Legislativo e CPI", paginas: 30 }, { nome: "Processo Legislativo Constitucional", paginas: 30 }]],
-      [6, 7, "Leis Extravagantes", "Lei de Crimes Ambientais - Lei nº 9.605/1998", 55, 3, 0, "Lei nº 9.605/1998 Integral", "", [{ nome: "Responsabilidade Penal Ambiental e Crimes em Espécie", paginas: 55 }]],
-      [7, 1, "Direito Penal", "Teoria Geral da Pena", 68, 3, 0, "CP - Artigos 32 a 95", "", [{ nome: "Espécies de Pena e Dosimetria Trifásica", paginas: 38 }, { nome: "Sursis, Livramento Condicional e Efeitos da Condenação", paginas: 30 }]],
-      [7, 2, "Leis Extravagantes", "Lei nº 14.540/2023 (Prevenção ao Assédio)", 25, 2, 0, "Lei nº 14.540/2023", "", [{ nome: "Programa de Prevenção e Enfrentamento ao Assédio", paginas: 25 }]],
-      [7, 3, "Direito Administrativo", "Atos Administrativos", 62, 3, 0, "Lei nº 9.784/1999", "", [{ nome: "Requisitos, Atributos e Classificação dos Atos Administrativos", paginas: 34 }, { nome: "Extinção, Anulação, Revogação e Convalidação", paginas: 28 }]],
-      [7, 4, "Direito Administrativo", "Processo Administrativo Disciplinar (PAD)", 48, 3, 0, "Lei nº 8.112/1990 (Regime Disciplinar)", "", [{ nome: "Sindicância e Processo Administrativo Disciplinar", paginas: 48 }]],
-      [7, 5, "Direito Processual Penal", "Questões Prejudiciais, Processos Incidentes, Sujeitos, Comunicação, Emendatio e Mutatio Libelli", 64, 3, 0, "CPP - Artigos 92 a 154 e 251 a 393", "", [{ nome: "Questões e Processos Incidentes", paginas: 32 }, { nome: "Sujeitos do Processo, Citações, Intimações e Sentença", paginas: 32 }]],
-      [7, 6, "Leis Extravagantes", "Lei de Drogas - Lei nº 11.343/2006", 70, 3, 0, "Lei nº 11.343/2006 Integral", "", [{ nome: "Porte para Consumo Pessoal vs. Tráfico de Drogas", paginas: 38 }, { nome: "Procedimento Penal e Apreensão de Bens na Lei de Drogas", paginas: 32 }]],
-      [7, 7, "Medicina Legal", "Traumatologia Forense", 56, 3, 0, "Manual de Medicina Legal", "", [{ nome: "Energias de Ordem Mecânica e Lesões Corporais", paginas: 56 }]],
+      [6, 1, "Direito Processual Penal", "Jurisdição e Competência", 58, 3, 0, "CPP - Artigos 63 a 91", "", [{ nome: "Jurisdição e Competência no Processo Penal", paginas: 58 }]],
+      [6, 2, "Direito Constitucional", "Administração Pública - Aspectos Constitucionais", 52, 3, 0, "Lei nº 9.507/1997 (Habeas Data) + Lei nº 11.417/2006 (Súmula Vinculante)", "", [{ nome: "Disposições Constitucionais da Administração Pública", paginas: 52 }]],
+      [6, 3, "Direito Administrativo", "Poderes da Administração", 54, 3, 0, "", "", [{ nome: "Poderes Vinculado, Discricionário, Hierárquico, Disciplinar e de Polícia", paginas: 54 }]],
+      [6, 4, "Leis Extravagantes", "Lei de Tortura - Lei nº 9.455/1997", 36, 3, 0, "Lei nº 9.455/1997 (Tortura) + Lei nº 13.260/2016 (Antiterrorismo)", "", [{ nome: "Lei de Tortura (Lei nº 9.455/1997)", paginas: 36 }]],
+      [6, 5, "Criminologia", "Conceito, Objeto, Classificação e Estatística Criminal", 45, 3, 0, "", "", [{ nome: "Conceito, Método e Objeto da Criminologia", paginas: 25 }, { nome: "Cifras da Criminalidade e Estatística Criminal", paginas: 20 }]],
+      [6, 6, "Direito Constitucional", "Poder e Processo Legislativo", 60, 3, 0, "CF/88 - Artigos 44 a 75", "", [{ nome: "Organização do Poder Legislativo e CPI", paginas: 30 }, { nome: "Processo Legislativo Constitucional", paginas: 30 }]],
+      [6, 7, "Leis Extravagantes", "Lei de Crimes Ambientais - Lei nº 9.605/1998", 55, 3, 0, "Lei nº 9.605/1998 (Crimes Ambientais)", "", [{ nome: "Responsabilidade Penal Ambiental e Crimes em Espécie", paginas: 55 }]],
+      [7, 1, "Direito Penal", "Teoria Geral da Pena", 68, 3, 0, "CP - Artigos 32 a 99", "", [{ nome: "Espécies de Pena e Dosimetria Trifásica", paginas: 38 }, { nome: "Sursis, Livramento Condicional e Efeitos da Condenação", paginas: 30 }]],
+      [7, 2, "Leis Extravagantes", "Lei nº 14.540/2023 (Prevenção ao Assédio)", 25, 2, 0, "", "", [{ nome: "Programa de Prevenção e Enfrentamento ao Assédio", paginas: 25 }]],
+      [7, 3, "Direito Administrativo", "Atos Administrativos", 62, 3, 0, "Lei nº 9.784/1999 (Processo Administrativo) - Artigos 1º a 2º, 9º a 25 e 38 a 70", "", [{ nome: "Requisitos, Atributos e Classificação dos Atos Administrativos", paginas: 34 }, { nome: "Extinção, Anulação, Revogação e Convalidação", paginas: 28 }]],
+      [7, 4, "Direito Administrativo", "Processo Administrativo Disciplinar (PAD)", 48, 3, 0, "", "", [{ nome: "Sindicância e Processo Administrativo Disciplinar", paginas: 48 }]],
+      [7, 5, "Direito Processual Penal", "Questões Prejudiciais, Processos Incidentes, Sujeitos, Comunicação, Emendatio e Mutatio Libelli", 64, 3, 0, "CPP - Artigos 92 a 154", "", [{ nome: "Questões e Processos Incidentes", paginas: 32 }, { nome: "Sujeitos do Processo, Citações, Intimações e Sentença", paginas: 32 }]],
+      [7, 6, "Leis Extravagantes", "Lei de Drogas - Lei nº 11.343/2006", 70, 3, 0, "Lei nº 11.343/2006 (Lei de Drogas)", "", [{ nome: "Porte para Consumo Pessoal vs. Tráfico de Drogas", paginas: 38 }, { nome: "Procedimento Penal e Apreensão de Bens na Lei de Drogas", paginas: 32 }]],
+      [7, 7, "Medicina Legal", "Traumatologia Forense", 56, 3, 0, "Lei nº 14.540/2023 (Prevenção e Enfrentamento ao Assédio Sexual e Violência Sexual na Adm. Pública)", "", [{ nome: "Energias de Ordem Mecânica e Lesões Corporais", paginas: 56 }]],
       [8, 1, "Direito Processual Penal", "Provas", 75, 3, 0, "CPP - Artigos 155 a 250", "", [{ nome: "Teoria Geral da Prova e Cadeia de Custódia", paginas: 38 }, { nome: "Meios de Prova em Espécie no CPP", paginas: 37 }]],
       [8, 2, "Direito Constitucional", "Poder Executivo", 45, 3, 0, "CF/88 - Artigos 76 a 91", "", [{ nome: "Atribuições e Responsabilização do Presidente da República", paginas: 45 }]],
-      [8, 3, "Direito Constitucional", "Poder Judiciário", 58, 3, 0, "CF/88 - Artigos 92 a 126", "", [{ nome: "Garantias, Vedações, CNJ e Competências do STF/STJ", paginas: 58 }]],
-      [8, 4, "Direito Penal", "Ação Penal e Causas de Extinção da Punibilidade", 60, 3, 0, "CP - Artigos 100 a 120", "", [{ nome: "Causas Extintivas da Punibilidade e Prescrição Penal", paginas: 60 }]],
-      [8, 5, "Medicina Legal", "Tanatologia Forense", 50, 3, 0, "Manual de Medicina Legal", "", [{ nome: "Fenômenos Cadavéricos e Cronotanatognose", paginas: 50 }]],
-      [8, 6, "Leis Extravagantes", "Lei dos Crimes de Preconceito Racial (Lei nº 7.716/1989)", 40, 3, 0, "Lei nº 7.716/1989 (Atualizada pela Lei 14.532/23)", "", [{ nome: "Crimes de Racismo e Injúria Racial", paginas: 40 }]],
-      [9, 1, "Direito Administrativo", "Licitações (Lei nº 14.133/2021)", 78, 3, 0, "Lei nº 14.133/2021", "", [{ nome: "Modalidades, Fases e Critérios de Julgamento", paginas: 42 }, { nome: "Contratação Direta (Dispensa e Inexigibilidade)", paginas: 36 }]],
-      [9, 2, "Leis Extravagantes", "Lei das Contravenções Penais - Decreto-Lei nº 3.688/1941", 35, 3, 0, "Decreto-Lei nº 3.688/1941", "", [{ nome: "Lei das Contravenções Penais", paginas: 35 }]],
-      [9, 3, "Direito Constitucional", "Controle de Constitucionalidade", 72, 3, 0, "Lei nº 9.868/1999 e Lei nº 9.882/1999", "", [{ nome: "Controle Difuso e Concentrado de Constitucionalidade", paginas: 38 }, { nome: "ADI, ADC, ADPF e ADI por Omissão", paginas: 34 }]],
-      [9, 4, "Leis Extravagantes", "Código de Trânsito Brasileiro (CTB) - Lei nº 9.503/1997", 52, 3, 0, "CTB - Artigos 291 a 312-B", "", [{ nome: "Disposições Gerais e Crimes de Trânsito em Espécie", paginas: 52 }]],
-      [9, 5, "Leis Extravagantes", "Lei de Abuso de Autoridade - Lei nº 13.869/2019", 48, 3, 0, "Lei nº 13.869/2019 Integral", "", [{ nome: "Elemento Subjetivo Especial e Crimes de Abuso de Autoridade", paginas: 48 }]],
+      [8, 3, "Direito Constitucional", "Poder Judiciário", 58, 3, 0, "", "", [{ nome: "Garantias, Vedações, CNJ e Competências do STF/STJ", paginas: 58 }]],
+      [8, 4, "Direito Penal", "Ação Penal e Causas de Extinção da Punibilidade", 60, 3, 0, "CF/88 - Artigos 92 a 110", "", [{ nome: "Causas Extintivas da Punibilidade e Prescrição Penal", paginas: 60 }]],
+      [8, 5, "Medicina Legal", "Tanatologia Forense", 50, 3, 0, "CP - Artigos 100 a 120 + Lei nº 7.716/1989 (Lei de Racismo)", "", [{ nome: "Fenômenos Cadavéricos e Cronotanatognose", paginas: 50 }]],
+      [8, 6, "Leis Extravagantes", "Lei dos Crimes de Preconceito Racial (Lei nº 7.716/1989)", 40, 3, 0, "", "", [{ nome: "Crimes de Racismo e Injúria Racial", paginas: 40 }]],
+      [9, 1, "Direito Administrativo", "Licitações (Lei nº 14.133/2021)", 78, 3, 0, "Lei nº 14.133/2021 (Licitações e Contratos) - Artigos 1º a 88 (Parte I) e 89 a 194 (Parte II)", "", [{ nome: "Modalidades, Fases e Critérios de Julgamento", paginas: 42 }, { nome: "Contratação Direta (Dispensa e Inexigibilidade)", paginas: 36 }]],
+      [9, 2, "Leis Extravagantes", "Lei das Contravenções Penais - Decreto-Lei nº 3.688/1941", 35, 3, 0, "", "", [{ nome: "Lei das Contravenções Penais", paginas: 35 }]],
+      [9, 3, "Direito Constitucional", "Controle de Constitucionalidade", 72, 3, 0, "Lei nº 9.868/1999 (ADI e ADC) + Lei nº 9.882/1999 (ADPF) + Decreto-Lei nº 3.688/1941 (Contravenções Penais)", "", [{ nome: "Controle Difuso e Concentrado de Constitucionalidade", paginas: 38 }, { nome: "ADI, ADC, ADPF e ADI por Omissão", paginas: 34 }]],
+      [9, 4, "Leis Extravagantes", "Código de Trânsito Brasileiro (CTB) - Lei nº 9.503/1997", 52, 3, 0, "", "", [{ nome: "Disposições Gerais e Crimes de Trânsito em Espécie", paginas: 52 }]],
+      [9, 5, "Leis Extravagantes", "Lei de Abuso de Autoridade - Lei nº 13.869/2019", 48, 3, 0, "Lei nº 13.869/2019 (Abuso de Autoridade) + Lei nº 9.503/1997 (CTB) - Artigos 291 a 312-B", "", [{ nome: "Elemento Subjetivo Especial e Crimes de Abuso de Autoridade", paginas: 48 }]],
       [10, 1, "Revisão Bloco 2", "Penal, Processo Penal, Criminologia e Medicina Legal (Semanas 06 a 09)", 30, 1, 0, "Revisão TOPIF", "", []],
       [10, 2, "Revisão Bloco 2", "Constitucional e Administrativo: Adm. Pública, Poderes, Atos, PAD, Licitações e Controle", 30, 1, 0, "Revisão TOPIF", "", []],
       [10, 3, "Revisão Bloco 2", "Leis Especiais: Tortura, Ambientais, Drogas, Racismo, LCP, CTB e Abuso de Autoridade", 30, 1, 0, "Revisão TOPIF", "", []],
-      [11, 1, "Direito Constitucional", "Funções Essenciais à Justiça", 48, 3, 0, "CF/88 - Artigos 127 a 135", "", []],
-      [11, 2, "Direito Constitucional", "Estado de Defesa, Estado de Sítio e Segurança Pública", 44, 3, 0, "CF/88 - Artigos 136 a 144", "", []],
-      [11, 3, "Direito Processual Penal", "Prisões", 68, 3, 0, "CPP - Artigos 282 a 318-B + Lei 7.960/89", "", []],
-      [11, 4, "Leis Extravagantes", "Reestruturação do COAF (Lei nº 13.974/2020)", 25, 2, 0, "Lei nº 13.974/2020", "", []],
+      [11, 1, "Direito Constitucional", "Funções Essenciais à Justiça", 48, 3, 0, "CF/88 - Artigos 127 a 144", "", []],
+      [11, 2, "Direito Constitucional", "Estado de Defesa, Estado de Sítio e Segurança Pública", 44, 3, 0, "", "", []],
+      [11, 3, "Direito Processual Penal", "Prisões", 68, 3, 0, "CPP - Artigos 155 a 200 e 201 a 250", "", []],
+      [11, 4, "Leis Extravagantes", "Reestruturação do COAF (Lei nº 13.974/2020)", 25, 2, 0, "", "", []],
       [11, 5, "Direito Penal", "Crimes contra a Pessoa", 72, 3, 0, "CP - Artigos 121 a 154-B", "", []],
-      [12, 1, "Direito Processual Penal", "Liberdade Provisória, Medidas Cautelares e Fiança", 55, 3, 0, "CPP - Artigos 319 a 350", "", []],
-      [12, 2, "Direito Administrativo", "Contratos Administrativos", 58, 3, 0, "Lei nº 14.133/2021 - Art. 89 a 154", "", []],
-      [12, 3, "Leis Extravagantes", "Lei Geral do Esporte (Lei nº 14.597/2023)", 35, 3, 0, "Lei nº 14.597/2023", "", []],
-      [12, 4, "Leis Extravagantes", "Lei de Interceptação Telefônica - Lei nº 9.296/1996", 45, 3, 0, "Lei nº 9.296/1996 Integral", "", []],
+      [12, 1, "Direito Processual Penal", "Liberdade Provisória, Medidas Cautelares e Fiança", 55, 3, 0, "Lei nº 13.974/2020 (Reestruturação do COAF)", "", []],
+      [12, 2, "Direito Administrativo", "Contratos Administrativos", 58, 3, 0, "Lei nº 14.597/2023 (Lei Geral do Esporte) - Artigos 1º a 4º, 165 a 172 e 198 a 201", "", []],
+      [12, 3, "Leis Extravagantes", "Lei Geral do Esporte (Lei nº 14.597/2023)", 35, 3, 0, "", "", []],
+      [12, 4, "Leis Extravagantes", "Lei de Interceptação Telefônica - Lei nº 9.296/1996", 45, 3, 0, "Lei nº 9.296/1996 (Interceptação Telefônica)", "", []],
       [12, 5, "Criminologia", "História da Criminologia, Escola Clássica e Positivista", 42, 3, 0, "", "", []],
-      [12, 6, "Direito Penal", "Crimes contra o Patrimônio", 78, 3, 0, "CP - Artigos 155 a 183", "", []],
-      [13, 1, "Direito Administrativo", "Intervenção do Estado no Domínio Econômico e na Propriedade", 54, 3, 0, "Decreto-Lei nº 3.365/1941", "", []],
-      [13, 2, "Leis Extravagantes", "Estatuto da Pessoa com Deficiência - Lei nº 13.146/2015", 40, 3, 0, "Lei nº 13.146/2015", "", []],
-      [13, 3, "Direito Penal", "Crimes contra a Propriedade Imaterial, Organização do Trabalho e Sentimento Religioso", 45, 3, 0, "CP - Artigos 184 a 212", "", []],
-      [13, 4, "Leis Extravagantes", "Lei da Propriedade Industrial e Lei de Crimes Falimentares (Lei nº 11.101/2005)", 48, 3, 0, "Lei nº 11.101/2005 - Art. 168 a 188", "", []],
-      [13, 5, "Direito Processual Penal", "Tribunal do Júri", 62, 3, 0, "CPP - Artigos 406 a 497", "", []],
+      [12, 6, "Direito Penal", "Crimes contra o Patrimônio", 78, 3, 0, "CP - Artigos 155 a 183-A", "", []],
+      [13, 1, "Direito Administrativo", "Intervenção do Estado no Domínio Econômico e na Propriedade", 54, 3, 0, "Lei nº 13.146/2015 (Estatuto da Pessoa com Deficiência) - Artigos 1º a 9º e 88 a 91", "", []],
+      [13, 2, "Leis Extravagantes", "Estatuto da Pessoa com Deficiência - Lei nº 13.146/2015", 40, 3, 0, "", "", []],
+      [13, 3, "Direito Penal", "Crimes contra a Propriedade Imaterial, Organização do Trabalho e Sentimento Religioso", 45, 3, 0, "CP - Artigos 184 e 197 a 212 + Lei nº 9.279/1996 (Propriedade Industrial)", "", []],
+      [13, 4, "Leis Extravagantes", "Lei da Propriedade Industrial e Lei de Crimes Falimentares (Lei nº 11.101/2005)", 48, 3, 0, "", "", []],
+      [13, 5, "Direito Processual Penal", "Tribunal do Júri", 62, 3, 0, "CPP - Artigos 406 a 428 + Lei nº 11.101/2005 (Falência e Recuperação Judicial) - Artigos 168 a 178", "", []],
       [13, 6, "Criminologia", "Sociologia Criminal", 46, 3, 0, "", "", []],
-      [13, 7, "Direito Constitucional", "Ordem Social e Ordem Econômica e Financeira", 55, 3, 0, "CF/88 - Artigos 170 a 232", "", []],
-      [14, 1, "Direito Penal", "Crimes contra a Dignidade Sexual", 58, 3, 0, "CP - Artigos 213 a 234-C", "", []],
-      [14, 2, "Direito Processual Penal", "Procedimentos", 54, 3, 0, "CPP - Artigos 394 a 405 e 513 a 540", "", []],
+      [13, 7, "Direito Constitucional", "Ordem Social e Ordem Econômica e Financeira", 55, 3, 0, "CF/88 - Artigos 193 a 232", "", []],
+      [14, 1, "Direito Penal", "Crimes contra a Dignidade Sexual", 58, 3, 0, "CP - Artigos 213 a 234-B", "", []],
+      [14, 2, "Direito Processual Penal", "Procedimentos", 54, 3, 0, "CPP - Artigos 513 a 540", "", []],
       [14, 3, "Medicina Legal", "Sexologia Forense", 44, 3, 0, "", "", []],
-      [14, 4, "Direito Constitucional", "Sistema Tributário Nacional, Ciência, Tecnologia, Família, Criança e Idoso", 52, 3, 0, "CF/88 - Artigos 145 a 169", "", []],
-      [14, 5, "Leis Extravagantes", "Código Eleitoral (Lei nº 4.737/1965) e JECRIM (Lei nº 9.099/1995)", 64, 3, 0, "Lei nº 9.099/1995 Integral", "", []],
+      [14, 4, "Direito Constitucional", "Sistema Tributário Nacional, Ciência, Tecnologia, Família, Criança e Idoso", 52, 3, 0, "CF/88 - Artigos 145 a 169 + Lei nº 4.737/1965 (Código Eleitoral) - Artigos 289 a 364 + Lei nº 9.099/1995 (JECRIM) - Artigos 71 a 92", "", []],
+      [14, 5, "Leis Extravagantes", "Código Eleitoral (Lei nº 4.737/1965) e JECRIM (Lei nº 9.099/1995)", 64, 3, 0, "Lei nº 9.099/1995 (JECRIM) - Artigos 1º a 2º e 60 a 70", "", []],
       [15, 1, "Revisão Bloco 3", "Penal e Processo Penal: Crimes contra a Pessoa, Patrimônio, Dignidade Sexual, Prisões, Cautelares e Júri", 30, 1, 0, "Revisão TOPIF", "", []],
       [15, 2, "Revisão Bloco 3", "Constitucional, Administrativo, Criminologia e Medicina Legal (Semanas 11 a 14)", 30, 1, 0, "Revisão TOPIF", "", []],
       [15, 3, "Revisão Bloco 3", "Leis Especiais: COAF, Esporte, Interceptação, PCD, Falimentares, Eleitoral e JECRIM", 30, 1, 0, "Revisão TOPIF", "", []],
@@ -17614,7 +17651,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
       set('cronDiaIntervaloPaginas', 'Pendências anteriores: ' + pagPend + ' pág. • Meta: ' + prog.l + ' de ' + prog.t + ' pág. concluídas');
       set('cronTextoTopicoMetaAtual', meta.materia);
       set('cronTextoSemanaEMetaAtual', 'Semana ' + String(meta.numeroSemana).padStart(2, '0') + ' de 50 • Meta ' + meta.numeroMeta + ' (' + meta.partesConcluidas + '/' + meta.totalPartes + ' partes concluídas)');
-      set('cronDiaLeiSecaTexto', meta.leiSeca || 'Leitura focada no PDF da meta.');
+      set('cronDiaLeiSecaTexto', meta.leiSeca ? meta.leiSeca + (typeof rotuloPaginasLeiSeca_ === 'function' ? ' (' + rotuloPaginasLeiSeca_(meta) + ')' : '') : 'Leitura focada no PDF da meta.');
       set('cronDiaSumulasTexto', meta.sumulas || 'Consulte os destaques jurisprudenciais do material.');
       const ed = $('btnEditarMetaDoDiaAtalho');
       if (ed) ed.onclick = () => abrirModalEditarMetaCronograma(meta.id);
@@ -17723,7 +17760,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
             '<span class="px-2 py-0.5 rounded font-bold text-[10px] ' + (isConc ? 'bg-emerald-600 text-white' : (andamento ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-400')) + '">' + esc(m.status) + ' (' + m.partesConcluidas + '/' + m.totalPartes + ' partes)</span>' +
             '<span class="px-2 py-0.5 rounded bg-slate-900 text-emerald-400 border border-slate-800 font-extrabold text-[10px]">Soma da Meta: ' + (m.paginasTotal || 0) + ' páginas</span></div>' +
             '<div class="flex flex-wrap gap-1">' + resumoPdf + '</div>' +
-            (m.leiSeca ? '<div class="text-[11px] text-indigo-300 font-medium"><strong>Lei Seca do Dia:</strong> ' + esc(m.leiSeca) + '</div>' : '') +
+            (m.leiSeca ? '<div class="text-[11px] text-indigo-300 font-medium"><strong>Lei Seca do Dia:</strong> ' + esc(m.leiSeca) + (typeof rotuloPaginasLeiSeca_ === 'function' ? ' <span class="text-slate-400">(' + esc(rotuloPaginasLeiSeca_(m)) + ')</span>' : '') + '</div>' : '') +
             (m.sumulas ? '<div class="text-[11px] text-slate-400"><strong>Súmulas / Obs:</strong> ' + esc(m.sumulas) + '</div>' : '') + '</div>' +
             '<div class="text-right space-y-1.5 shrink-0"><div class="text-[11px] font-bold ' + (isConc ? 'text-emerald-400' : 'text-indigo-300') + '">' + (isConc ? 'Concluída: ' + fmtData(m.dataConclusao || m.dataPrevista) : 'Prevista: ' + fmtData(m.dataPrevista)) + '</div>' +
             '<div class="flex flex-wrap items-center justify-end gap-1.5">' +
@@ -19162,7 +19199,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
       } else if (e.topico && !e.grupo) futuros.push(e);
     });
     const protegido = (t) => temProgresso(t) && conteudo.some((m) => metaVista(m) && nomesDaMeta(m).some((c) => casa(c, t.topico)));
-    const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo') && !protegido(t));
+    const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo') && !protegido(t) && !(typeof ehMateriaLeiSeca_ === 'function' && ehMateriaLeiSeca_(t.materia)));
     const reativar = entradas.filter((e) => e.estudada && e.topico && (e.topico.status !== 'Ativo' || regT[e.topico.id]));
     const reativarIds = topicos.filter((t) => !usadosT.has(t.id) && protegido(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id);
     return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar, reativarIds, grupos, renomearGeral, criarGeral, mesclarGeral };
@@ -20200,6 +20237,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     return CURSO.map((row) => {
       const cand = topicos.filter((t) => {
         if (usados.has(t.id)) return false;
+        if (typeof ehMateriaLeiSeca_ === 'function' && ehMateriaLeiSeca_(t.materia)) return false;
         const matOk = row.mat ? mesmaMateria(t.materia, row.mat) : true;
         return matOk && row.re.test(nn(t.topico));
       });
