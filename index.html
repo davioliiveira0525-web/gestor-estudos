@@ -3724,6 +3724,12 @@
               <button type="button" class="fc-mob-btn-stats" onclick="fcMobAbrirEstatisticas()" aria-label="Estatísticas">
                 <span aria-hidden="true">📊</span><span class="fc-mob-btn-stats-txt">Estatísticas</span>
               </button>
+              <!-- (MOBILE) Navegação livre depois de virar o cartão: Frente • Verso rápido • Verso detalhado -->
+              <div id="fcmAbas" class="fcm-abas" hidden role="tablist" aria-label="Ver frente ou verso">
+                <button type="button" data-fcm-aba="frente" onclick="fcmMostrar('frente')">Frente</button>
+                <button type="button" data-fcm-aba="rapido" onclick="fcmMostrar('rapido')">Verso</button>
+                <button type="button" data-fcm-aba="detalhado" onclick="fcmMostrar('detalhado')">Detalhado</button>
+              </div>
             </div>
 
             <!-- Barra Superior do Player -->
@@ -21855,11 +21861,45 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     #fcBarraCertoErradoPdfBase button, #fcBarraVirarCard button { padding-top: 0.8rem !important; padding-bottom: 0.8rem !important; }
     #fcBarraVirarCard button { min-width: 0 !important; width: 100%; }
 
-    /* ---------- barra mínima: cronômetro + estatísticas ---------- */
+    /* ---------- barra mínima: cronômetro + estatísticas (fixa no topo ao rolar) ---------- */
     #fcSessaoPlayer .fc-mob-barra {
-      display: flex !important; align-items: center; gap: 0.5rem; width: 100%; max-width: 62rem; margin: 0 auto;
+      display: flex !important; flex-wrap: wrap; align-items: center; gap: 0.5rem; width: 100%; max-width: 62rem; margin: 0 auto;
       flex-shrink: 0; min-height: 2.4rem;
+      position: sticky; top: 0; z-index: 30;
+      background: #020617; padding: 0.3rem 0.1rem 0.4rem;
+      margin-top: -0.4rem;
     }
+    #fcSessaoPlayer .fc-mob-barra { box-shadow: 0 -1rem 0 #020617; }
+    html:not(.dark) #fcSessaoPlayer .fc-mob-barra { background: #f3f2ee; box-shadow: 0 -1rem 0 #f3f2ee; }
+
+    /* abas Frente / Verso / Detalhado (só depois de virar o cartão) */
+    .fcm-abas { display: flex; width: 100%; gap: 0.25rem; padding: 0.2rem; border-radius: 0.7rem; background: rgba(30,41,59,.7); }
+    .fcm-abas[hidden] { display: none; }
+    .fcm-abas button { flex: 1 1 0; padding: 0.45rem 0.3rem; border-radius: 0.55rem; font-size: 0.75rem; font-weight: 800; color: #94a3b8; background: transparent; }
+    .fcm-abas button.fcm-on { background: #4f46e5; color: #fff; }
+    .fcm-abas button[hidden] { display: none; }
+    html:not(.dark) .fcm-abas { background: #e2e8f0; }
+    html:not(.dark) .fcm-abas button { color: #475569; }
+    html:not(.dark) .fcm-abas button.fcm-on { background: #4f46e5; color: #fff; }
+    /* as abas substituem os botões ① Rápido / ② Detalhado dentro do verso */
+    #fcSessaoPlayer .fc-faces-barra { display: none !important; }
+
+    /* aba "Frente" no verso: mostra só a pergunta, em destaque */
+    #fcCardShell.fc-mode-back.fcm-vfrente #fcBackLessonContainer,
+    #fcCardShell.fc-mode-back.fcm-vfrente ~ #fcPainelTermos { display: none !important; }
+    #fcCardShell.fc-mode-back.fcm-vfrente #fcFrontBodyWrapper { min-height: 38dvh; display: flex; flex-direction: column; justify-content: center; }
+    #fcCardShell.fc-mode-back.fcm-vfrente #fcCardFrente:not(.fcx-int) {
+      font-size: 1.08rem !important; line-height: 1.6; font-weight: 700; text-align: center !important;
+      background: transparent !important; border: 0 !important; padding: 0 !important; color: inherit;
+    }
+
+    /* conteúdo nunca fica cortado: sem centralização que empurra o topo para fora da tela */
+    #fcSessaoPlayer .fc-stage-wrapper { justify-content: flex-start !important; align-items: stretch !important; }
+    #fcSessaoPlayer .fc-palco-grid { margin-top: auto; margin-bottom: auto; }
+    #fcCardShell { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+    #fcCardShell * { min-width: 0; }
+    #fcSessaoPlayer .fc-face, #fcSessaoPlayer .fc-face-grid-rapida, #fcSessaoPlayer .fc-face-grid-detalhe { min-height: 0 !important; }
+    #fcSessaoPlayer .fc-palco-termos { max-height: none; }
     .fc-mob-timer { display: flex; align-items: baseline; gap: 0.35rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; color: #e2e8f0; }
     .fc-mob-timer-ico { font-size: 0.85rem; opacity: 0.7; }
     #fcMobTimerSessao { font-size: 1.05rem; letter-spacing: 0.02em; }
@@ -22386,11 +22426,74 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     });
   }
 
+  /* =====================================================================
+   * 4) NAVEGAÇÃO LIVRE NO CELULAR: Frente • Verso (rápido) • Detalhado
+   *    Depois de virar o cartão, as abas ficam fixas no topo; dá para voltar
+   *    à frente e trocar de modo quantas vezes quiser, sem perder nada.
+   * ===================================================================== */
+  function abaAtual_() {
+    const shell = $('fcCardShell');
+    if (shell && shell.classList.contains('fcm-vfrente')) return 'frente';
+    const f2 = $('fcFaceDetalhada');
+    return (f2 && !f2.classList.contains('hidden')) ? 'detalhado' : 'rapido';
+  }
+  function atualizarAbas_() {
+    const abas = $('fcmAbas'), shell = $('fcCardShell');
+    if (!abas || !shell) return;
+    const S = sessao();
+    const noVerso = Boolean(S && S.versoRevelado && shell.classList.contains('fc-mode-back'));
+    if (abas.hidden === noVerso) abas.hidden = !noVerso;
+    if (!noVerso) { if (shell.classList.contains('fcm-vfrente')) shell.classList.remove('fcm-vfrente'); return; }
+    const temDet = Boolean($('fcFaceDetalhada'));
+    const atual = abaAtual_();
+    abas.querySelectorAll('button[data-fcm-aba]').forEach(b => {
+      const k = b.getAttribute('data-fcm-aba');
+      const esconder = k === 'detalhado' && !temDet;
+      if (b.hidden !== esconder) b.hidden = esconder;
+      const on = k === atual;
+      if (b.classList.contains('fcm-on') !== on) b.classList.toggle('fcm-on', on);
+      if (b.getAttribute('aria-selected') !== String(on)) b.setAttribute('aria-selected', String(on));
+    });
+  }
+  window.fcmMostrar = function (aba) {
+    const shell = $('fcCardShell');
+    if (!shell) return;
+    if (aba === 'frente') {
+      shell.classList.add('fcm-vfrente');
+    } else {
+      shell.classList.remove('fcm-vfrente');
+      if ($('fcFaceDetalhada') && typeof alternarVersoCompletoFC === 'function') alternarVersoCompletoFC(aba === 'detalhado');
+    }
+    const player = $('fcSessaoPlayer');
+    if (player) player.scrollTop = 0;
+    atualizarAbas_();
+  };
+  let abasAgendado = false;
+  const agendarAbas = () => { if (abasAgendado) return; abasAgendado = true; requestAnimationFrame(() => { abasAgendado = false; try { atualizarAbas_(); } catch (e) { /* ignora */ } }); };
+  const obsAbas = new MutationObserver(agendarAbas);
+  if ($('fcCardShell')) obsAbas.observe($('fcCardShell'), { attributes: true, subtree: true, attributeFilter: ['class'] });
+
   /* troca de cartão / saída do bloco: para o áudio e fecha o painel */
   envolver('renderizarCardAtualNoPlayerFC_', (orig, ...args) => {
     fcaParar();
     limparMarcasAntigas_();
-    return orig(...args);
+    const shell = $('fcCardShell');
+    if (shell) shell.classList.remove('fcm-vfrente');
+    const r = orig(...args);
+    const player = $('fcSessaoPlayer');
+    if (player) player.scrollTop = 0;
+    atualizarAbas_();
+    return r;
+  });
+  /* ao virar o cartão, começa no verso rápido e no topo */
+  ['revelarVersoCardAtualFC', 'julgarCardCertoErradoFC'].forEach(nome => {
+    envolver(nome, (orig, ...args) => {
+      const r = orig(...args);
+      const player = $('fcSessaoPlayer');
+      if (player && ehMobile()) player.scrollTop = 0;
+      atualizarAbas_();
+      return r;
+    });
   });
   ['encerrarSessaoFCManual', 'voltarParaDeckFC', 'finalizarSessaoEPersistirSupabase_'].forEach(nome => {
     envolver(nome, (orig, ...args) => { fcaParar(); window.fcMobFecharEstatisticas(); return orig(...args); });
