@@ -3902,6 +3902,8 @@
                     <option value="0.85">0,85x</option><option value="1">1x</option><option value="1.15">1,15x</option><option value="1.3">1,3x</option><option value="1.5">1,5x</option>
                   </select>
                 </label>
+                <button type="button" class="fca-testar" onclick="fcaTestarAudio()">🔊 Testar áudio</button>
+                <div id="fcaDiag" class="fca-diag"></div>
               </div>
             </div>
           </div>
@@ -21930,6 +21932,9 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     .fc-mob-stats-audio { margin-top: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
     .fc-mob-stats-audio .fc-mob-stats-sub { grid-column: 1 / -1; }
     .fc-mob-stats-lbl { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.68rem; font-weight: 700; color: #94a3b8; }
+    .fca-testar { grid-column: 1 / -1; padding: 0.55rem; border-radius: 0.6rem; background: #4f46e5; color: #fff; font-weight: 800; font-size: 0.78rem; }
+    .fca-diag { grid-column: 1 / -1; font-size: 0.68rem; color: #94a3b8; }
+    .fca-diag:empty { display: none; }
     .fc-mob-stats-lbl select { width: 100%; border-radius: 0.5rem; padding: 0.35rem 0.4rem; font-size: 0.75rem; }
 
     /* ---------- celular deitado (paisagem): aproveita a largura ---------- */
@@ -22061,7 +22066,8 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     if (/natural|neural|online|premium|enhanced|aprimorad/i.test(v.name)) p += 4;
     if (/google/i.test(v.name)) p += 3;
     if (/luciana|francisca|thalita|antonio|ant[oô]nio|daniel|felipe|fernanda|vitória|vitoria/i.test(v.name)) p += 2;
-    if (v.localService === false) p += 1;
+    if (v.localService !== false) p += 3; /* voz instalada no aparelho: não depende de internet */
+    if (v.default) p += 1;
     return p;
   }
   function escolherVoz_() {
@@ -22085,7 +22091,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     escolherVoz_();
     if ('onvoiceschanged' in TTS) TTS.onvoiceschanged = () => { escolherVoz_(); };
   }
-  window.fcaEscolherVoz = function (uri) { gravarLS('GR_FC_AUDIO_VOZ', uri || ''); escolherVoz_(); if (FCA.estado === 'tocando') reiniciarTrecho_(); };
+  window.fcaEscolherVoz = function (uri) { gravarLS('GR_FC_AUDIO_VOZ', uri || ''); FCA.semVoz = false; escolherVoz_(); if (FCA.estado === 'tocando') reiniciarTrecho_(); };
   window.fcaDefinirVelocidade = function (v) {
     RATE = parseFloat(v) || 1; gravarLS('GR_FC_AUDIO_RATE', String(RATE));
     atualizarUI_(); if (FCA.estado === 'tocando') reiniciarTrecho_();
@@ -22156,44 +22162,108 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     return out;
   }
 
+  function avisar_(msg, erro) { try { notificar(msg, Boolean(erro)); } catch (e) { console.warn(msg); } }
+  function ocupado_() { try { return Boolean(TTS && (TTS.speaking || TTS.pending)); } catch (e) { return false; } }
+
   function falarTrechoAtual_() {
     if (!TTS) return;
     if (FCA.idx >= FCA.fila.length) { finalizar_(); return; }
     const g = FCA.geracao;
     const u = new SpeechSynthesisUtterance(FCA.fila[FCA.idx]);
-    u.lang = (FCA.voz && FCA.voz.lang) || 'pt-BR';
-    if (FCA.voz) { try { u.voice = FCA.voz; } catch (e) { /* voz indisponível: usa a padrão pt-BR */ } }
+    u.lang = 'pt-BR';
+    if (FCA.voz && !FCA.semVoz) {
+      try { u.voice = FCA.voz; u.lang = FCA.voz.lang || 'pt-BR'; } catch (e) { /* usa a voz padrão pt-BR */ }
+    }
     u.rate = RATE; u.pitch = 1; u.volume = 1;
+    FCA.uAtual = u;            /* mantém referência (no Chrome, sem isso o fim da fala pode se perder) */
+    FCA.iniciou = false;
     const seguir = () => {
       if (g !== FCA.geracao || FCA.estado !== 'tocando') return;
       FCA.idx += 1; falarTrechoAtual_();
     };
+    u.onstart = () => { if (g === FCA.geracao) { FCA.iniciou = true; FCA.ultimoErro = ''; } };
     u.onend = seguir;
-    u.onerror = (ev) => { if (ev && (ev.error === 'interrupted' || ev.error === 'canceled')) return; seguir(); };
-    TTS.speak(u);
-    if (TTS.paused) TTS.resume();
+    u.onerror = (ev) => {
+      const er = (ev && ev.error) || 'erro';
+      if (er === 'interrupted' || er === 'canceled' || g !== FCA.geracao) return;
+      FCA.ultimoErro = er;
+      if (er === 'not-allowed') {
+        FCA.estado = 'pausado'; atualizarUI_();
+        avisar_('O navegador bloqueou o áudio. Toque de novo no ▶ para liberar a voz.', true);
+        return;
+      }
+      if (FCA.voz && !FCA.semVoz) { FCA.semVoz = true; falarTrechoAtual_(); return; } /* tenta o mesmo trecho com a voz padrão */
+      seguir();
+    };
+    try {
+      if (TTS.paused) TTS.resume();
+      TTS.speak(u);
+    } catch (e) { FCA.ultimoErro = String(e && e.message || e); }
+    /* vigia: se o aparelho não começar a falar, avisa em vez de ficar em silêncio */
+    clearTimeout(FCA.vigia);
+    FCA.vigia = setTimeout(() => {
+      if (g !== FCA.geracao || FCA.estado !== 'tocando' || FCA.iniciou || ocupado_()) return;
+      if (FCA.voz && !FCA.semVoz) { FCA.semVoz = true; FCA.geracao += 1; try { TTS.cancel(); } catch (e) {} falarTrechoAtual_(); return; }
+      FCA.estado = 'pausado'; atualizarUI_();
+      avisar_('O aparelho não reproduziu a voz. Confira o volume de MÍDIA, o modo silencioso e se há voz em português instalada (Configurações › Texto para fala). Use "Testar áudio" em Estatísticas.', true);
+    }, 3000);
   }
 
-  function cancelarFala_() { FCA.geracao += 1; try { TTS && TTS.cancel(); } catch (e) { /* ignora */ } }
-  function reiniciarTrecho_() { cancelarFala_(); setTimeout(falarTrechoAtual_, 60); }
+  /* Para a fala atual. Retorna true se havia algo falando (aí o próximo início espera um instante). */
+  function cancelarFala_() {
+    FCA.geracao += 1;
+    clearTimeout(FCA.vigia);
+    const estava = ocupado_();
+    if (estava) { try { TTS.cancel(); } catch (e) { /* ignora */ } }
+    return estava;
+  }
+  /* Começa a falar: se nada estava tocando, fala NA HORA (dentro do toque — exigência do iPhone/Android);
+     se estava tocando, espera o cancelamento terminar. */
+  function comecar_(estavaFalando) {
+    if (estavaFalando) setTimeout(falarTrechoAtual_, 120);
+    else falarTrechoAtual_();
+  }
+  function reiniciarTrecho_() { comecar_(cancelarFala_()); }
 
   function finalizar_() {
+    clearTimeout(FCA.vigia);
     FCA.estado = 'parado';
     atualizarUI_();
   }
 
   function iniciar_(origem, rotulo, texto, fonteEl) {
-    if (!TTS) { try { notificar('Este navegador não oferece leitura em voz alta.', true); } catch (e) { /* ignora */ } return; }
-    cancelarFala_();
+    if (!TTS || typeof window.SpeechSynthesisUtterance !== 'function') { avisar_('Este navegador não oferece leitura em voz alta. Use o Chrome (Android) ou o Safari (iPhone).', true); return; }
+    const estava = cancelarFala_();
     FCA.fila = dividirTrechos_(texto);
     FCA.idx = 0;
     FCA.origem = origem; FCA.rotulo = rotulo; FCA.fonte = fonteEl || null;
-    if (!FCA.fila.length) { FCA.estado = 'parado'; atualizarUI_(); return; }
+    if (!FCA.fila.length) { FCA.estado = 'parado'; atualizarUI_(); avisar_('Este bloco não tem texto para ler.', true); return; }
     if (!FCA.voz) escolherVoz_();
     FCA.estado = 'tocando';
     atualizarUI_();
-    setTimeout(falarTrechoAtual_, 60);
+    comecar_(estava);
   }
+
+  /* Teste rápido do áudio (painel de Estatísticas) com diagnóstico */
+  window.fcaTestarAudio = function () {
+    escolherVoz_();
+    const diag = $('fcaDiag');
+    const nVozes = TTS ? TTS.getVoices().length : 0;
+    const nPt = vozesPt_().length;
+    iniciar_('teste', 'Teste', 'Teste de áudio. Se você está ouvindo esta frase, a leitura dos cartões está funcionando.', null);
+    setTimeout(() => {
+      if (!diag) return;
+      diag.textContent = !TTS ? 'Navegador sem leitura em voz alta.'
+        : `Vozes no aparelho: ${nVozes} (português: ${nPt}) • Voz usada: ${FCA.semVoz || !FCA.voz ? 'padrão pt-BR' : FCA.voz.name}` +
+          ` • ${FCA.iniciou || ocupado_() ? 'Falando ✓' : 'Não começou a falar'}${FCA.ultimoErro ? ' • erro: ' + FCA.ultimoErro : ''}`;
+    }, 1500);
+  };
+
+  /* No primeiro toque na tela de estudo, carrega a lista de vozes (alguns aparelhos só liberam depois de um toque) */
+  document.addEventListener('pointerdown', function preparar() {
+    try { if (TTS) { TTS.getVoices(); escolherVoz_(); } } catch (e) { /* ignora */ }
+    document.removeEventListener('pointerdown', preparar, true);
+  }, true);
 
   window.fcaPausar = function () { if (FCA.estado !== 'tocando') return; FCA.estado = 'pausado'; cancelarFala_(); atualizarUI_(); };
   window.fcaRetomar = function () { if (FCA.estado !== 'pausado') return; FCA.estado = 'tocando'; atualizarUI_(); reiniciarTrecho_(); };
@@ -22202,7 +22272,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     if (!FCA.fila.length) return;
     FCA.idx = 0; FCA.estado = 'tocando'; atualizarUI_(); reiniciarTrecho_();
   };
-  function fcaParar() { cancelarFala_(); FCA.estado = 'parado'; FCA.fila = []; FCA.idx = 0; FCA.origem = null; FCA.fonte = null; atualizarUI_(); }
+  function fcaParar() { cancelarFala_(); clearTimeout(FCA.vigia); FCA.estado = 'parado'; FCA.fila = []; FCA.idx = 0; FCA.origem = null; FCA.fonte = null; atualizarUI_(); }
   window.fcaParar = fcaParar;
 
   function atualizarUI_() {
