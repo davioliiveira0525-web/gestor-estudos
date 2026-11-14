@@ -3707,8 +3707,27 @@
 
           <!-- PLAYER DE CARTÕES CENTRALIZADO -->
           <div id="fcSessaoPlayer" class="hidden p-3 md:p-5 bg-slate-950 flex flex-col items-center justify-between">
+            <!-- (MOBILE) Barra mínima: só o cronômetro + botão discreto de Estatísticas + controles do áudio quando ativo -->
+            <div id="fcMobBarra" class="fc-mob-barra" aria-label="Barra de estudo (celular)">
+              <div class="fc-mob-timer" title="Tempo de estudo (sessão) • tempo neste cartão">
+                <span class="fc-mob-timer-ico" aria-hidden="true">⏱</span>
+                <span id="fcMobTimerSessao">00:00</span>
+                <span id="fcMobTimerCard" class="fc-mob-timer-card">0s</span>
+              </div>
+              <div id="fcaPlayer" class="fca-player" hidden>
+                <span id="fcaPlayerRotulo" class="fca-player-rotulo">Áudio</span>
+                <button type="button" id="fcaBtnPlayPause" class="fca-ctl" onclick="fcaAlternarPlayPause()" aria-label="Pausar ou retomar">⏸</button>
+                <button type="button" class="fca-ctl" onclick="fcaRepetir()" aria-label="Repetir">↺</button>
+                <button type="button" id="fcaBtnVelocidade" class="fca-ctl fca-ctl-txt" onclick="fcaCiclarVelocidade()" aria-label="Velocidade">1x</button>
+                <button type="button" class="fca-ctl" onclick="fcaParar()" aria-label="Parar">■</button>
+              </div>
+              <button type="button" class="fc-mob-btn-stats" onclick="fcMobAbrirEstatisticas()" aria-label="Estatísticas">
+                <span aria-hidden="true">📊</span><span class="fc-mob-btn-stats-txt">Estatísticas</span>
+              </button>
+            </div>
+
             <!-- Barra Superior do Player -->
-            <div class="max-w-5xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm space-y-2 shrink-0">
+            <div id="fcBarraSuperiorPlayer" class="max-w-5xl mx-auto w-full bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-sm space-y-2 shrink-0">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2.5">
                   <span id="fcBadgeFaseAtual" class="px-2.5 py-1 rounded bg-indigo-600 text-white text-[11px] font-extrabold uppercase">
@@ -3784,7 +3803,7 @@
               <div id="fcCardShell" class="fc-card-shell fc-mode-front bg-slate-900 border border-slate-800 rounded-2xl shadow-xl p-5 md:p-6 space-y-4">
 
                 <!-- Topo do Cartão -->
-                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5 shrink-0">
+                <div id="fcCardTopo" class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5 shrink-0">
                   <div class="flex flex-wrap items-center gap-1.5">
                     <span id="fcCardBadgeTipo" class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-extrabold text-[10px]">
                       1. PDF-BASE (CERTO / ERRADO)
@@ -3796,6 +3815,13 @@
                     <span id="fcCardHistoricoBadge" class="text-[10px] text-slate-400 font-mono"></span>
                     <span id="fcCardTags" class="text-[10px] text-slate-400 font-medium"></span>
                   </div>
+                </div>
+
+                <!-- (MOBILE) Áudio da pergunta -->
+                <div class="fca-linha-frente">
+                  <button type="button" class="fca-btn fca-btn-txt" data-fca-id="frente" data-fca-rotulo="Pergunta" onclick="fcaClicar(this)" aria-label="Ouvir a pergunta">
+                    <span class="fca-ico">🔊</span><span>Ouvir pergunta</span>
+                  </button>
                 </div>
 
                 <!-- CORPO DA FRENTE -->
@@ -3812,7 +3838,7 @@
                 </div>
 
                 <!-- RODAPÉ DE CONTROLES DO CARTÃO -->
-                <div class="pt-3 border-t border-slate-800 space-y-2.5 shrink-0">
+                <div id="fcCardRodape" class="pt-3 border-t border-slate-800 space-y-2.5 shrink-0">
                   <!-- Botão Virar (Lei Seca / Decoreba) -->
                   <div id="fcBarraVirarCard" class="hidden flex justify-center">
                     <button type="button" onclick="revelarVersoCardAtualFC()" class="w-full md:w-auto min-w-[260px] py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow transition">
@@ -3854,6 +3880,29 @@
               </div>
               <aside id="fcPainelTermos" class="fc-palco-termos hidden"></aside>
              </div>
+            </div>
+
+            <!-- (MOBILE) Estatísticas sob demanda: a barra superior completa é exibida aqui só quando solicitada -->
+            <div id="fcMobStatsFundo" class="fc-mob-stats-fundo" hidden onclick="fcMobFecharEstatisticas()"></div>
+            <div id="fcMobStatsSheet" class="fc-mob-stats-sheet" hidden role="dialog" aria-label="Estatísticas do estudo">
+              <div class="fc-mob-stats-cab">
+                <span class="fc-mob-stats-titulo">Estatísticas</span>
+                <button type="button" class="fc-mob-stats-fechar" onclick="fcMobFecharEstatisticas()" aria-label="Fechar">✕</button>
+              </div>
+              <div id="fcMobStatsResumo" class="fc-mob-stats-resumo"></div>
+              <div id="fcMobStatsSlot"></div>
+              <div id="fcMobStatsCartao" class="fc-mob-stats-cartao"></div>
+              <div class="fc-mob-stats-audio">
+                <div class="fc-mob-stats-sub">Áudio (leitura em voz alta)</div>
+                <label class="fc-mob-stats-lbl">Voz
+                  <select id="fcaSelVoz" onchange="fcaEscolherVoz(this.value)"></select>
+                </label>
+                <label class="fc-mob-stats-lbl">Velocidade
+                  <select id="fcaSelVelocidade" onchange="fcaDefinirVelocidade(this.value)">
+                    <option value="0.85">0,85x</option><option value="1">1x</option><option value="1.15">1,15x</option><option value="1.3">1,3x</option><option value="1.5">1,5x</option>
+                  </select>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -21753,6 +21802,533 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   });
 
   try { renderizarBlocosDecoreba(); } catch (e) { /* ignora */ }
+})();
+</script>
+
+<!-- ==========================================================================
+     CARTÕES — EXPERIÊNCIA MOBILE (2026-11-14)
+     Tudo abaixo vale SOMENTE para celular (largura até 767px, ou celular deitado
+     com tela touch e altura até 560px). No desktop, os elementos novos ficam ocultos
+     e nenhuma regra existente é alterada.
+     1) Minimalismo: na tela de estudo, só o cartão e o cronômetro.
+     2) Estatísticas sob demanda: a barra superior completa abre num painel.
+     3) Estudo por áudio: pergunta, verso inteiro e cada retângulo do verso.
+     ========================================================================== -->
+<style>
+  /* Fora do celular: nada novo aparece */
+  .fc-mob-barra, .fca-linha-frente, .fca-btn, .fca-barra-verso,
+  .fc-mob-stats-sheet, .fc-mob-stats-fundo { display: none !important; }
+
+  @media (max-width: 767px), (hover: none) and (pointer: coarse) and (max-height: 560px) {
+    /* ---------- palco em tela inteira, sem distrações ---------- */
+    #fcSessaoPlayer:not(.hidden) { justify-content: flex-start !important; }
+    #fcSessaoPlayer.fc-pseudo-fullscreen {
+      height: 100dvh !important;
+      padding: max(env(safe-area-inset-top), 0.4rem) max(env(safe-area-inset-right), 0.5rem) max(env(safe-area-inset-bottom), 0.4rem) max(env(safe-area-inset-left), 0.5rem) !important;
+      justify-content: flex-start !important;
+    }
+    #fcSessaoPlayer { padding: 0.5rem !important; }
+    #fcBarraSuperiorPlayer { display: none !important; }
+    #fcCardTopo { display: none !important; }
+    #fcSessaoPlayer .fc-faces-dica { display: none !important; }
+    #fcSessaoPlayer .fc-stage-wrapper { min-height: 0 !important; flex: 1 1 auto; justify-content: center; padding: 0.25rem 0 0; margin: 0 !important; }
+    #fcSessaoPlayer .fc-palco-grid { row-gap: 0.6rem; }
+    #fcCardShell { padding: 0.9rem 0.9rem 0 !important; border-radius: 1rem !important; }
+    #fcCardShell > * + * { margin-top: 0.7rem !important; }
+    #fcCardShell.fc-mode-front { max-width: 40rem; min-height: min(58dvh, 520px); }
+    #fcCardShell.fc-mode-front #fcFrontBodyWrapper { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; }
+    #fcCardShell.fc-mode-front #fcCardFrente:not(.fcx-int) { font-size: 1.08rem; line-height: 1.6; }
+    #fcSessaoPlayer .fc-back-lesson-body { max-height: none !important; overflow: visible !important; padding-right: 0 !important; }
+
+    /* rodapé de respostas sempre ao alcance do polegar */
+    #fcCardRodape {
+      position: sticky; bottom: 0; z-index: 5;
+      background-color: inherit;
+      margin-left: -0.9rem; margin-right: -0.9rem; padding: 0.6rem 0.9rem calc(0.6rem + env(safe-area-inset-bottom)) !important;
+      border-bottom-left-radius: 1rem; border-bottom-right-radius: 1rem;
+    }
+    #fcBarraAvaliacaoCard > div { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 0.4rem !important; }
+    #fcBarraAvaliacaoCard button { padding: 0.65rem 0.3rem !important; font-size: 0.72rem; line-height: 1.15; }
+    #fcBarraAvaliacaoCard button > span.block { display: none !important; }
+    #fcBarraCertoErradoPdfBase button, #fcBarraVirarCard button { padding-top: 0.8rem !important; padding-bottom: 0.8rem !important; }
+    #fcBarraVirarCard button { min-width: 0 !important; width: 100%; }
+
+    /* ---------- barra mínima: cronômetro + estatísticas ---------- */
+    #fcSessaoPlayer .fc-mob-barra {
+      display: flex !important; align-items: center; gap: 0.5rem; width: 100%; max-width: 62rem; margin: 0 auto;
+      flex-shrink: 0; min-height: 2.4rem;
+    }
+    .fc-mob-timer { display: flex; align-items: baseline; gap: 0.35rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; color: #e2e8f0; }
+    .fc-mob-timer-ico { font-size: 0.85rem; opacity: 0.7; }
+    #fcMobTimerSessao { font-size: 1.05rem; letter-spacing: 0.02em; }
+    .fc-mob-timer-card { font-size: 0.72rem; color: #94a3b8; }
+    .fc-mob-btn-stats {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 0.3rem;
+      padding: 0.35rem 0.6rem; border-radius: 999px; border: 1px solid rgba(100,116,139,.45);
+      background: transparent; color: #94a3b8; font-size: 0.72rem; font-weight: 700;
+    }
+    html:not(.dark) .fc-mob-timer { color: #1e293b; }
+    html:not(.dark) .fc-mob-btn-stats { color: #475569; border-color: #cbd5e1; }
+
+    /* mini-player de áudio (aparece só enquanto há áudio) */
+    .fca-player { display: flex; align-items: center; gap: 0.25rem; min-width: 0; padding: 0.15rem 0.3rem; border-radius: 999px; background: rgba(79,70,229,.18); border: 1px solid rgba(99,102,241,.5); }
+    .fca-player[hidden] { display: none; }
+    .fca-player-rotulo { font-size: 0.66rem; font-weight: 800; color: #a5b4fc; max-width: 6.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 0.2rem; }
+    .fca-ctl { width: 1.9rem; height: 1.9rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; color: #e0e7ff; background: rgba(15,23,42,.6); }
+    .fca-ctl-txt { font-size: 0.66rem; font-weight: 800; width: auto; padding: 0 0.45rem; }
+    html:not(.dark) .fca-player-rotulo { color: #4338ca; }
+    html:not(.dark) .fca-ctl { color: #312e81; background: #e0e7ff; }
+
+    /* ---------- botões de áudio no cartão ---------- */
+    #fcSessaoPlayer .fca-linha-frente { display: flex !important; justify-content: flex-end; margin-bottom: -0.3rem; }
+    #fcSessaoPlayer .fca-btn {
+      display: inline-flex !important; align-items: center; justify-content: center; gap: 0.3rem;
+      min-width: 2rem; height: 2rem; padding: 0 0.45rem; border-radius: 999px;
+      border: 1px solid rgba(100,116,139,.45); background: rgba(15,23,42,.55); color: #cbd5e1;
+      font-size: 0.7rem; font-weight: 700; line-height: 1; flex-shrink: 0;
+    }
+    #fcSessaoPlayer .fca-btn .fca-ico { font-size: 0.9rem; }
+    #fcSessaoPlayer .fca-btn.fca-tocando { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+    #fcSessaoPlayer .fca-btn.fca-pausado { background: rgba(245,158,11,.2); border-color: #f59e0b; color: #fde68a; }
+    html:not(.dark) #fcSessaoPlayer .fca-btn { background: #fff; color: #334155; border-color: #cbd5e1; }
+    html:not(.dark) #fcSessaoPlayer .fca-btn.fca-tocando { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+    html:not(.dark) #fcSessaoPlayer .fca-btn.fca-pausado { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+
+    #fcSessaoPlayer .fca-barra-verso { display: flex !important; flex-wrap: wrap; gap: 0.4rem; justify-content: flex-end; }
+    #fcSessaoPlayer .fca-alvo { position: relative; padding-right: 2.7rem !important; }
+    #fcSessaoPlayer .fca-alvo > .fca-btn-bloco { position: absolute; top: 0.45rem; right: 0.45rem; }
+    #fcSessaoPlayer .fca-alvo.fca-lendo { outline: 2px solid #6366f1; outline-offset: 2px; }
+
+    /* ---------- painel de Estatísticas ---------- */
+    #fcSessaoPlayer .fc-mob-stats-fundo:not([hidden]) { display: block !important; position: fixed; inset: 0; background: rgba(2,6,23,.6); z-index: 100000; }
+    #fcSessaoPlayer .fc-mob-stats-sheet:not([hidden]) {
+      display: block !important; position: fixed; left: 0; right: 0; bottom: 0; z-index: 100001;
+      max-height: 85dvh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+      background: #0f172a; color: #e2e8f0; border-top: 1px solid #334155; border-radius: 1rem 1rem 0 0;
+      padding: 0.8rem 0.8rem calc(1rem + env(safe-area-inset-bottom));
+      box-shadow: 0 -10px 30px rgba(0,0,0,.45);
+    }
+    html:not(.dark) #fcSessaoPlayer .fc-mob-stats-sheet:not([hidden]) { background: #fff; color: #1e293b; border-top-color: #e2e8f0; }
+    .fc-mob-stats-cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+    .fc-mob-stats-titulo { font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #a5b4fc; }
+    html:not(.dark) .fc-mob-stats-titulo { color: #4338ca; }
+    .fc-mob-stats-fechar { width: 2rem; height: 2rem; border-radius: 999px; border: 1px solid #334155; font-weight: 800; }
+    .fc-mob-stats-resumo { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 0.4rem; margin-bottom: 0.6rem; }
+    .fc-mob-stats-kpi { border: 1px solid #334155; border-radius: 0.6rem; padding: 0.4rem 0.5rem; }
+    .fc-mob-stats-kpi b { display: block; font-size: 0.95rem; font-family: ui-monospace, monospace; }
+    .fc-mob-stats-kpi span { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: #94a3b8; }
+    html:not(.dark) .fc-mob-stats-kpi, html:not(.dark) .fc-mob-stats-fechar { border-color: #e2e8f0; }
+    #fcMobStatsSlot #fcBarraSuperiorPlayer { display: block !important; max-width: none; }
+    #fcMobStatsSlot #fcBarraSuperiorPlayer .hidden.sm\:block { display: block !important; }
+    #fcMobStatsSlot #fcBarraSuperiorPlayer > div:first-child { gap: 0.5rem; }
+    #fcMobStatsSlot #fcBarraSuperiorPlayer > div:first-child > div { flex-wrap: wrap; max-width: 100%; }
+    #fcMobStatsSlot #fcBarraSuperiorPlayer > div:first-child > div > * { min-width: 0; max-width: 100%; white-space: normal; }
+    #fcMobStatsSlot #fcBarraSuperiorPlayer > div:first-child > div > div:not([class]) { flex: 1 1 12rem; }
+    .fc-mob-stats-cartao { margin-top: 0.6rem; font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.3rem; }
+    .fc-mob-stats-cartao:empty { display: none; }
+    .fc-mob-stats-sub { font-size: 0.65rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; margin-bottom: 0.2rem; }
+    .fc-mob-stats-audio { margin-top: 0.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .fc-mob-stats-audio .fc-mob-stats-sub { grid-column: 1 / -1; }
+    .fc-mob-stats-lbl { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.68rem; font-weight: 700; color: #94a3b8; }
+    .fc-mob-stats-lbl select { width: 100%; border-radius: 0.5rem; padding: 0.35rem 0.4rem; font-size: 0.75rem; }
+
+    /* ---------- celular deitado (paisagem): aproveita a largura ---------- */
+    @media (orientation: landscape) {
+      #fcCardShell.fc-mode-front { max-width: 52rem; min-height: calc(100dvh - 4.2rem); }
+      #fcCardShell.fc-mode-back { max-width: none; }
+      #fcSessaoPlayer .fc-face-grid-rapida:not(.fc-face-grid-1),
+      #fcSessaoPlayer .fc-face-grid-detalhe:not(.fc-face-grid-1) { grid-template-columns: 1fr 1fr !important; }
+      #fcBarraCertoErradoPdfBase { max-width: 32rem !important; }
+      #fcBarraCertoErradoPdfBase button, #fcBarraVirarCard button, #fcBarraAvaliacaoCard button { padding-top: 0.55rem !important; padding-bottom: 0.55rem !important; }
+      #fcSessaoPlayer .fc-mob-stats-sheet:not([hidden]) { left: 10%; right: 10%; max-height: 92dvh; }
+    }
+  }
+</style>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const MQ = window.matchMedia('(max-width: 767px), (hover: none) and (pointer: coarse) and (max-height: 560px)');
+  const ehMobile = () => MQ.matches;
+  const sessao = () => (typeof FC_SESSAO !== 'undefined' ? FC_SESSAO : null);
+  const lerLS = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } };
+  const gravarLS = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sem storage */ } };
+  function envolver(nome, fn) {
+    const orig = window[nome];
+    if (typeof orig !== 'function') return;
+    window[nome] = function () { return fn.apply(this, [orig.bind(this)].concat(Array.prototype.slice.call(arguments))); };
+  }
+
+  /* =====================================================================
+   * 1) CRONÔMETRO DA BARRA MÍNIMA (espelha os cronômetros existentes)
+   * ===================================================================== */
+  setInterval(() => {
+    const player = $('fcSessaoPlayer');
+    if (!player || player.classList.contains('hidden') || !ehMobile()) return;
+    const sess = $('fcTimerSessao'), card = $('fcTimerCardAtual');
+    const ms = $('fcMobTimerSessao'), mc = $('fcMobTimerCard');
+    if (ms && sess) ms.textContent = sess.textContent || '00:00';
+    if (mc && card) { mc.textContent = card.textContent || '0s'; mc.style.color = card.style.color || ''; }
+    if (!$('fcMobStatsSheet').hidden) preencherResumoStats_();
+  }, 500);
+
+  /* =====================================================================
+   * 2) ESTATÍSTICAS SOB DEMANDA
+   *    A barra superior completa (progresso, dominados, dificuldade, tempos,
+   *    Tela Cheia, Sair do Bloco) é movida para o painel enquanto ele está
+   *    aberto e devolvida ao lugar original ao fechar. Nada é apagado.
+   * ===================================================================== */
+  let barraOrigemPai = null, barraOrigemProx = null;
+
+  function preencherResumoStats_() {
+    const S = sessao();
+    const el = $('fcMobStatsResumo');
+    if (!el) return;
+    const resp = S ? (S.respostasComputadas || 0) : 0;
+    const ac = S ? (S.acertosSessao || 0) : 0, er = S ? (S.errosSessao || 0) : 0;
+    const pct = (ac + er) > 0 ? Math.round(ac * 100 / (ac + er)) : 0;
+    el.innerHTML =
+      `<div class="fc-mob-stats-kpi"><span>Tempo de estudo</span><b>${($('fcTimerSessao') || {}).textContent || '00:00'}</b></div>` +
+      `<div class="fc-mob-stats-kpi"><span>Respondidos</span><b>${resp}</b></div>` +
+      `<div class="fc-mob-stats-kpi"><span>Acertos C/E</span><b>${ac}C/${er}E${(ac + er) ? ' · ' + pct + '%' : ''}</b></div>`;
+  }
+
+  function preencherCartaoStats_() {
+    const el = $('fcMobStatsCartao');
+    if (!el) return;
+    const txt = (id) => { const n = $(id); return n && !n.classList.contains('hidden') ? (n.textContent || '').trim() : ''; };
+    const linhas = [
+      ['Tipo', txt('fcCardBadgeTipo')],
+      ['Matéria • Tópico', txt('fcCardMateriaTopicoLabel')],
+      ['Cartão', txt('fcCardHistoricoBadge')],
+      ['Situação', txt('fcCardBadgeReincidencia')],
+      ['', txt('fcCardTags')]
+    ].filter(l => l[1]);
+    el.innerHTML = linhas.length
+      ? `<div class="fc-mob-stats-sub">Cartão atual</div>` + linhas.map(l => `<div>${l[0] ? `<b>${l[0]}:</b> ` : ''}${escHtml(l[1])}</div>`).join('')
+      : '';
+  }
+
+  function escHtml(t) { return String(t || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch])); }
+
+  window.fcMobAbrirEstatisticas = function () {
+    const barra = $('fcBarraSuperiorPlayer'), slot = $('fcMobStatsSlot');
+    if (barra && slot && barra.parentNode !== slot) {
+      barraOrigemPai = barra.parentNode; barraOrigemProx = barra.nextSibling;
+      slot.appendChild(barra);
+    }
+    preencherResumoStats_();
+    preencherCartaoStats_();
+    preencherVozes_();
+    $('fcMobStatsFundo').hidden = false;
+    $('fcMobStatsSheet').hidden = false;
+    $('fcMobStatsSheet').scrollTop = 0;
+  };
+
+  window.fcMobFecharEstatisticas = function () {
+    const barra = $('fcBarraSuperiorPlayer');
+    if (barra && barraOrigemPai && barra.parentNode !== barraOrigemPai) {
+      barraOrigemPai.insertBefore(barra, barraOrigemProx && barraOrigemProx.parentNode === barraOrigemPai ? barraOrigemProx : null);
+    }
+    const f = $('fcMobStatsFundo'), s = $('fcMobStatsSheet');
+    if (f) f.hidden = true;
+    if (s) s.hidden = true;
+  };
+
+  /* se a tela deixar de ser "celular" (ex.: girar um tablet), devolve tudo ao normal */
+  const aoMudarMQ = () => { if (!ehMobile()) { window.fcMobFecharEstatisticas(); fcaParar(); } };
+  if (MQ.addEventListener) MQ.addEventListener('change', aoMudarMQ); else if (MQ.addListener) MQ.addListener(aoMudarMQ);
+
+  /* =====================================================================
+   * 3) ESTUDO POR ÁUDIO (Web Speech API, pt-BR)
+   *    - A fala é dividida em frases curtas: pausar/retomar funciona no
+   *      Android, iPhone e desktop (retoma da frase onde parou).
+   *    - Cada bloco tem reprodução independente.
+   * ===================================================================== */
+  const TTS = window.speechSynthesis || null;
+  const FCA = { fila: [], idx: 0, origem: null, rotulo: '', estado: 'parado', geracao: 0, voz: null, fonte: null };
+  let RATE = parseFloat(lerLS('GR_FC_AUDIO_RATE', '1')) || 1;
+  const VELOCIDADES = [0.85, 1, 1.15, 1.3, 1.5];
+
+  function vozesPt_() {
+    if (!TTS) return [];
+    return TTS.getVoices().filter(v => /^pt([-_]|$)/i.test(v.lang || ''));
+  }
+  function pontuarVoz_(v) {
+    let p = 0;
+    if (/pt[-_]BR/i.test(v.lang)) p += 5;
+    if (/natural|neural|online|premium|enhanced|aprimorad/i.test(v.name)) p += 4;
+    if (/google/i.test(v.name)) p += 3;
+    if (/luciana|francisca|thalita|antonio|ant[oô]nio|daniel|felipe|fernanda|vitória|vitoria/i.test(v.name)) p += 2;
+    if (v.localService === false) p += 1;
+    return p;
+  }
+  function escolherVoz_() {
+    const lista = vozesPt_();
+    if (!lista.length) { FCA.voz = null; return; }
+    const salva = lerLS('GR_FC_AUDIO_VOZ', '');
+    FCA.voz = lista.find(v => v.voiceURI === salva) || lista.slice().sort((a, b) => pontuarVoz_(b) - pontuarVoz_(a))[0];
+  }
+  function preencherVozes_() {
+    const sel = $('fcaSelVoz');
+    if (!sel) return;
+    escolherVoz_();
+    const lista = vozesPt_();
+    sel.innerHTML = lista.length
+      ? lista.map(v => `<option value="${escHtml(v.voiceURI)}"${FCA.voz && v.voiceURI === FCA.voz.voiceURI ? ' selected' : ''}>${escHtml(v.name)} (${escHtml(v.lang)})</option>`).join('')
+      : '<option value="">Voz padrão do aparelho</option>';
+    const sv = $('fcaSelVelocidade');
+    if (sv) sv.value = String(VELOCIDADES.reduce((a, b) => Math.abs(b - RATE) < Math.abs(a - RATE) ? b : a, 1));
+  }
+  if (TTS) {
+    escolherVoz_();
+    if ('onvoiceschanged' in TTS) TTS.onvoiceschanged = () => { escolherVoz_(); };
+  }
+  window.fcaEscolherVoz = function (uri) { gravarLS('GR_FC_AUDIO_VOZ', uri || ''); escolherVoz_(); if (FCA.estado === 'tocando') reiniciarTrecho_(); };
+  window.fcaDefinirVelocidade = function (v) {
+    RATE = parseFloat(v) || 1; gravarLS('GR_FC_AUDIO_RATE', String(RATE));
+    atualizarUI_(); if (FCA.estado === 'tocando') reiniciarTrecho_();
+  };
+  window.fcaCiclarVelocidade = function () {
+    const i = VELOCIDADES.findIndex(x => Math.abs(x - RATE) < 0.01);
+    window.fcaDefinirVelocidade(VELOCIDADES[(i + 1) % VELOCIDADES.length]);
+  };
+
+  /* --- texto falável: rótulo + conteúdo, com símbolos convertidos --- */
+  function textoFalavel_(el) {
+    if (!el) return '';
+    const c = el.cloneNode(true);
+    c.querySelectorAll('.fca-btn, .fca-barra-verso, .fca-linha-frente, script, style, .fcx-conferir, .fc-faces-barra').forEach(n => n.remove());
+    c.querySelectorAll('br').forEach(b => b.replaceWith('\n'));
+    c.querySelectorAll('.fcx-num').forEach(n => n.append(') '));
+    c.querySelectorAll('.fcx-lac').forEach(n => { if (!(n.textContent || '').replace(/[()\d\s]/g, '')) n.textContent = ' lacuna '; });
+    c.querySelectorAll('.fc-box-lbl, summary').forEach(n => n.append('.\n'));
+    c.querySelectorAll('.fc-analise-tag').forEach(n => n.append(': '));
+    c.querySelectorAll('div, p, li, ul, ol, h1, h2, h3, h4, h5, h6, tr, details, button, .fcx-alt').forEach(n => n.append('\n'));
+    let t = c.textContent || '';
+    t = t
+      .replace(/\{\{c\d+::(.*?)(::.*?)?\}\}/gi, '$1')
+      .replace(/\*\*|==|__|~~/g, '')
+      .replace(/[✔✓]\s*CERTO/g, 'Certo').replace(/[✘✗✖]\s*ERRADO/g, 'Errado')
+      .replace(/[✔✓]/g, 'certo: ').replace(/[✘✗✖]/g, 'errado: ')
+      .replace(/\s*(→|->|⇒|=>)\s*/g, ', ')
+      .replace(/[①②③④⑤⑥⑦⑧⑨]/g, '')
+      .replace(/[•▪◦·]/g, '\n')
+      .replace(/\bC\/E\b/g, 'certo ou errado')
+      .replace(/\bCF\/88\b/gi, 'Constituição Federal de 1988')
+      .replace(/\bCF\b/g, 'Constituição Federal')
+      .replace(/\bCPP\b/g, 'Código de Processo Penal')
+      .replace(/\bCP\b/g, 'Código Penal')
+      .replace(/\barts?\.\s*/gi, (m) => /s\./i.test(m) ? 'artigos ' : 'artigo ')
+      .replace(/\binc\.\s*/gi, 'inciso ')
+      .replace(/\bal\.\s*/gi, 'alínea ')
+      .replace(/§§\s*/g, 'parágrafos ').replace(/§\s*/g, 'parágrafo ')
+      .replace(/\bp\.\s*ex\./gi, 'por exemplo')
+      .replace(/\bex\.:\s*/gi, 'exemplo: ')
+      .replace(/\s\/\s/g, '. ')
+      .replace(/[\[\]{}<>|#*_]/g, ' ');
+    return t.split(/\n+/).map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean)
+      .map(l => /[.!?;:,]$/.test(l) ? l : l + '.')
+      .join(' ')
+      .replace(/\s+([.,;:!?])/g, '$1')
+      .replace(/([.,;:!?])\1+/g, '$1');
+  }
+
+  function dividirTrechos_(texto) {
+    const frases = String(texto || '').match(/[^.!?;:]+[.!?;:]*\s*/g) || [];
+    const out = [];
+    let buf = '';
+    const empurrar = (s) => { s = s.trim(); if (s) out.push(s); };
+    frases.forEach(f => {
+      if (f.length > 220) {
+        empurrar(buf); buf = '';
+        let resto = f;
+        while (resto.length > 220) {
+          let k = resto.lastIndexOf(',', 220); if (k < 80) k = resto.lastIndexOf(' ', 220); if (k < 40) k = 220;
+          empurrar(resto.slice(0, k + 1)); resto = resto.slice(k + 1);
+        }
+        buf = resto;
+      } else if ((buf + f).length > 220) { empurrar(buf); buf = f; }
+      else buf += f;
+    });
+    empurrar(buf);
+    return out;
+  }
+
+  function falarTrechoAtual_() {
+    if (!TTS) return;
+    if (FCA.idx >= FCA.fila.length) { finalizar_(); return; }
+    const g = FCA.geracao;
+    const u = new SpeechSynthesisUtterance(FCA.fila[FCA.idx]);
+    u.lang = (FCA.voz && FCA.voz.lang) || 'pt-BR';
+    if (FCA.voz) { try { u.voice = FCA.voz; } catch (e) { /* voz indisponível: usa a padrão pt-BR */ } }
+    u.rate = RATE; u.pitch = 1; u.volume = 1;
+    const seguir = () => {
+      if (g !== FCA.geracao || FCA.estado !== 'tocando') return;
+      FCA.idx += 1; falarTrechoAtual_();
+    };
+    u.onend = seguir;
+    u.onerror = (ev) => { if (ev && (ev.error === 'interrupted' || ev.error === 'canceled')) return; seguir(); };
+    TTS.speak(u);
+    if (TTS.paused) TTS.resume();
+  }
+
+  function cancelarFala_() { FCA.geracao += 1; try { TTS && TTS.cancel(); } catch (e) { /* ignora */ } }
+  function reiniciarTrecho_() { cancelarFala_(); setTimeout(falarTrechoAtual_, 60); }
+
+  function finalizar_() {
+    FCA.estado = 'parado';
+    atualizarUI_();
+  }
+
+  function iniciar_(origem, rotulo, texto, fonteEl) {
+    if (!TTS) { try { notificar('Este navegador não oferece leitura em voz alta.', true); } catch (e) { /* ignora */ } return; }
+    cancelarFala_();
+    FCA.fila = dividirTrechos_(texto);
+    FCA.idx = 0;
+    FCA.origem = origem; FCA.rotulo = rotulo; FCA.fonte = fonteEl || null;
+    if (!FCA.fila.length) { FCA.estado = 'parado'; atualizarUI_(); return; }
+    if (!FCA.voz) escolherVoz_();
+    FCA.estado = 'tocando';
+    atualizarUI_();
+    setTimeout(falarTrechoAtual_, 60);
+  }
+
+  window.fcaPausar = function () { if (FCA.estado !== 'tocando') return; FCA.estado = 'pausado'; cancelarFala_(); atualizarUI_(); };
+  window.fcaRetomar = function () { if (FCA.estado !== 'pausado') return; FCA.estado = 'tocando'; atualizarUI_(); reiniciarTrecho_(); };
+  window.fcaAlternarPlayPause = function () { if (FCA.estado === 'tocando') window.fcaPausar(); else if (FCA.estado === 'pausado') window.fcaRetomar(); else window.fcaRepetir(); };
+  window.fcaRepetir = function () {
+    if (!FCA.fila.length) return;
+    FCA.idx = 0; FCA.estado = 'tocando'; atualizarUI_(); reiniciarTrecho_();
+  };
+  function fcaParar() { cancelarFala_(); FCA.estado = 'parado'; FCA.fila = []; FCA.idx = 0; FCA.origem = null; FCA.fonte = null; atualizarUI_(); }
+  window.fcaParar = fcaParar;
+
+  function atualizarUI_() {
+    const p = $('fcaPlayer');
+    if (p) p.hidden = FCA.estado === 'parado';
+    const pp = $('fcaBtnPlayPause');
+    if (pp && pp.textContent !== (FCA.estado === 'tocando' ? '⏸' : '▶')) pp.textContent = FCA.estado === 'tocando' ? '⏸' : '▶';
+    const rot = $('fcaPlayerRotulo');
+    if (rot && rot.textContent !== (FCA.rotulo || 'Áudio')) rot.textContent = FCA.rotulo || 'Áudio';
+    const vel = $('fcaBtnVelocidade');
+    const velTxt = String(RATE).replace('.', ',') + 'x';
+    if (vel && vel.textContent !== velTxt) vel.textContent = velTxt;
+    /* só mexe no DOM quando algo muda (evita laço com o observador do verso) */
+    const setTxt = (n, t) => { if (n && n.textContent !== t) n.textContent = t; };
+    const setCls = (n, c, on) => { if (n && n.classList.contains(c) !== on) n.classList.toggle(c, on); };
+    document.querySelectorAll('#fcSessaoPlayer .fca-btn').forEach(b => {
+      const meu = FCA.estado !== 'parado' && b.getAttribute('data-fca-id') === FCA.origem;
+      setCls(b, 'fca-tocando', meu && FCA.estado === 'tocando');
+      setCls(b, 'fca-pausado', meu && FCA.estado === 'pausado');
+      setTxt(b.querySelector('.fca-ico'), meu ? (FCA.estado === 'tocando' ? '⏸' : '▶') : '🔊');
+    });
+    const lendo = (FCA.estado !== 'parado' && FCA.fonte && FCA.fonte.classList && FCA.fonte.classList.contains('fca-alvo')) ? FCA.fonte : null;
+    document.querySelectorAll('#fcSessaoPlayer .fca-alvo').forEach(n => setCls(n, 'fca-lendo', n === lendo));
+  }
+
+  /* --- o que cada botão lê --- */
+  function blocosDoVerso_() {
+    const lista = [];
+    const fb = $('fcBoxFeedbackEstruturado');
+    if (fb && (fb.textContent || '').trim()) lista.push(fb);
+    const verso = $('fcCardVersoTexto');
+    if (verso) {
+      const boxes = verso.querySelectorAll('.fc-box');
+      if (boxes.length) boxes.forEach(b => lista.push(b));
+      else Array.prototype.forEach.call(verso.children, ch => { if ((ch.textContent || '').trim() && !ch.classList.contains('fca-barra-verso')) lista.push(ch); });
+    }
+    return lista;
+  }
+  function rotuloDoBloco_(el) {
+    if (el.id === 'fcBoxFeedbackEstruturado') return 'Resultado';
+    if (el.id === 'fcPainelTermos') return 'Termos jurídicos';
+    const lbl = el.querySelector('.fc-box-lbl');
+    const t = lbl ? Array.prototype.filter.call(lbl.childNodes, n => !(n.classList && (n.classList.contains('fca-btn') || n.classList.contains('fc-chip-peg')))).map(n => n.textContent).join(' ') : '';
+    return (t || 'Trecho').replace(/\s+/g, ' ').trim().split('—')[0].trim().slice(0, 40);
+  }
+
+  window.fcaClicar = function (btn) {
+    const id = btn.getAttribute('data-fca-id');
+    if (FCA.origem === id && FCA.estado === 'tocando') { window.fcaPausar(); return; }
+    if (FCA.origem === id && FCA.estado === 'pausado') { window.fcaRetomar(); return; }
+    if (id === 'frente') {
+      iniciar_('frente', 'Pergunta', textoFalavel_($('fcFrontBodyWrapper')), null);
+    } else if (id === 'verso-inteiro') {
+      const partes = blocosDoVerso_().map(b => textoFalavel_(b)).filter(Boolean);
+      iniciar_('verso-inteiro', 'Verso inteiro', partes.join(' '), null);
+    } else {
+      const alvo = document.querySelector(`#fcSessaoPlayer [data-fca-bloco="${id}"]`);
+      if (!alvo) return;
+      iniciar_(id, btn.getAttribute('data-fca-rotulo') || 'Trecho', textoFalavel_(alvo), alvo);
+    }
+  };
+
+  /* --- injeta os botões de áudio no verso (um por retângulo) --- */
+  let contadorBlocos = 0;
+  function novoBotao_(id, rotulo, comTexto) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'fca-btn' + (comTexto ? ' fca-btn-txt' : ' fca-btn-bloco');
+    b.setAttribute('data-fca-id', id);
+    b.setAttribute('data-fca-rotulo', rotulo);
+    b.setAttribute('aria-label', 'Ouvir: ' + rotulo);
+    b.setAttribute('onclick', 'fcaClicar(this)');
+    b.innerHTML = '<span class="fca-ico">🔊</span>' + (comTexto ? `<span>${escHtml(comTexto)}</span>` : '');
+    return b;
+  }
+  function marcarBloco_(el) {
+    if (!el) return;
+    let id = el.getAttribute('data-fca-bloco');
+    if (id && el.querySelector(':scope > .fca-btn') && el.classList.contains('fca-alvo')) return;
+    if (!id) { id = 'bloco-' + (++contadorBlocos); el.setAttribute('data-fca-bloco', id); }
+    if (!el.classList.contains('fca-alvo')) el.classList.add('fca-alvo');
+    if (!el.querySelector(':scope > .fca-btn')) el.appendChild(novoBotao_(id, rotuloDoBloco_(el)));
+  }
+  function injetarAudioVerso_() {
+    const corpo = $('fcBackLessonContainer');
+    if (!corpo || corpo.classList.contains('hidden')) return;
+    if (!corpo.querySelector(':scope > .fca-barra-verso')) {
+      const barra = document.createElement('div');
+      barra.className = 'fca-barra-verso';
+      barra.appendChild(novoBotao_('verso-inteiro', 'Verso inteiro', 'Ouvir verso inteiro'));
+      corpo.insertBefore(barra, corpo.firstChild);
+    }
+    blocosDoVerso_().forEach(marcarBloco_);
+    const termos = $('fcPainelTermos');
+    if (termos && !termos.classList.contains('hidden') && (termos.textContent || '').trim()) marcarBloco_(termos);
+    atualizarUI_();
+  }
+  let agendado = false;
+  const agendarInjecao = () => { if (agendado) return; agendado = true; requestAnimationFrame(() => { agendado = false; try { injetarAudioVerso_(); } catch (e) { console.warn('Áudio do verso:', e); } }); };
+  const obs = new MutationObserver(agendarInjecao);
+  ['fcBackLessonContainer', 'fcPainelTermos'].forEach(id => { const n = $(id); if (n) obs.observe(n, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] }); });
+
+  /* o feedback é recriado a cada cartão: limpa a marcação antiga para receber o botão de novo */
+  function limparMarcasAntigas_() {
+    ['fcBoxFeedbackEstruturado', 'fcPainelTermos'].forEach(id => {
+      const n = $(id);
+      if (!n) return;
+      n.removeAttribute('data-fca-bloco');
+      n.classList.remove('fca-alvo', 'fca-lendo');
+      n.querySelectorAll(':scope > .fca-btn').forEach(b => b.remove());
+    });
+  }
+
+  /* troca de cartão / saída do bloco: para o áudio e fecha o painel */
+  envolver('renderizarCardAtualNoPlayerFC_', (orig, ...args) => {
+    fcaParar();
+    limparMarcasAntigas_();
+    return orig(...args);
+  });
+  ['encerrarSessaoFCManual', 'voltarParaDeckFC', 'finalizarSessaoEPersistirSupabase_'].forEach(nome => {
+    envolver(nome, (orig, ...args) => { fcaParar(); window.fcMobFecharEstatisticas(); return orig(...args); });
+  });
+
+  /* ao sair da página, não deixa a voz falando sozinha */
+  window.addEventListener('pagehide', () => { try { TTS && TTS.cancel(); } catch (e) { /* ignora */ } });
+  atualizarUI_();
 })();
 </script>
 
