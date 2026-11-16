@@ -3486,6 +3486,9 @@
                     <option value="PDF_BASE">PDF Base</option>
                     <option value="CADERNO_ERROS">Caderno de Erros</option>
                     <option value="DECOREBA">Decoreba</option>
+                    <option value="ASSOCIACAO">Associação</option>
+                    <option value="OMISSAO">Omissão</option>
+                    <option value="SELECAO">Seleção</option>
                     <option value="PDF_BASE,CADERNO_ERROS">PDF Base + Caderno de Erros</option>
                     <option value="PDF_BASE,DECOREBA">PDF Base + Decoreba</option>
                     <option value="CADERNO_ERROS,DECOREBA">Caderno de Erros + Decoreba</option>
@@ -3636,8 +3639,8 @@
               </div>
             </div>
 
-            <!-- RESUMO DAS 4 MODALIDADES -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            <!-- RESUMO DAS MODALIDADES (2026-11-16: Lei Seca saiu; entraram Associação, Omissão e Seleção) -->
+            <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5 text-xs">
               <div onclick="filtrarDeckPorModalidadeRapida('PDF_BASE')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-emerald-800/60 hover:border-emerald-500 transition">
                 <div class="flex items-center justify-between">
                   <span class="font-extrabold text-emerald-400 uppercase text-[10px]">1. PDF-Base (C/E)</span>
@@ -3645,7 +3648,6 @@
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Compreensão lógica dos PDFs estudados</p>
               </div>
-
               <div onclick="filtrarDeckPorModalidadeRapida('CADERNO_ERROS')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-rose-800/60 hover:border-rose-500 transition">
                 <div class="flex items-center justify-between">
                   <span class="font-extrabold text-rose-400 uppercase text-[10px]">2. Caderno de Erros (C/E)</span>
@@ -3653,21 +3655,33 @@
                 </div>
                 <p class="text-[11px] text-slate-400 mt-1">Alternativas difíceis convertidas em C/E</p>
               </div>
-
-              <div onclick="filtrarDeckPorModalidadeRapida('LEI_SECA')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-indigo-800/60 hover:border-indigo-500 transition">
-                <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-indigo-400 uppercase text-[10px]">3. Lei Seca</span>
-                  <span id="fcCountLeiSeca" class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px]">0</span>
-                </div>
-                <p class="text-[11px] text-slate-400 mt-1">Memorização literal de dispositivos</p>
-              </div>
-
               <div onclick="filtrarDeckPorModalidadeRapida('DECOREBA')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-purple-800/60 hover:border-purple-500 transition">
                 <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-purple-400 uppercase text-[10px]">4. Decoreba</span>
+                  <span class="font-extrabold text-purple-400 uppercase text-[10px]">3. Decoreba</span>
                   <span id="fcCountDecoreba" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold text-[10px]">0</span>
                 </div>
-                <p class="text-[11px] text-slate-400 mt-1">Conjunto diário de todas as matérias (tag decoreba-diaria)</p>
+                <p class="text-[11px] text-slate-400 mt-1">Conjunto diário (tipo Decoreba ou tag decoreba-diaria)</p>
+              </div>
+              <div onclick="filtrarDeckPorModalidadeRapida('ASSOCIACAO')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-indigo-800/60 hover:border-indigo-500 transition">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-indigo-400 uppercase text-[10px]">4. Associação</span>
+                  <span id="fcCountAssociacao" class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold text-[10px]">0</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Ligar cada item à sua definição/consequência</p>
+              </div>
+              <div onclick="filtrarDeckPorModalidadeRapida('OMISSAO')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-amber-800/60 hover:border-amber-500 transition">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-amber-400 uppercase text-[10px]">5. Omissão</span>
+                  <span id="fcCountOmissao" class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold text-[10px]">0</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Completar lacunas com as alternativas</p>
+              </div>
+              <div onclick="filtrarDeckPorModalidadeRapida('SELECAO')" class="cursor-pointer p-3 rounded-xl bg-slate-950/80 border border-cyan-800/60 hover:border-cyan-500 transition">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-cyan-400 uppercase text-[10px]">6. Seleção</span>
+                  <span id="fcCountSelecao" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold text-[10px]">0</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1">Marcar todas as opções corretas</p>
               </div>
             </div>
 
@@ -3693,8 +3707,10 @@
                     <option value="TODOS">Exportar: [ Todos do Filtro ]</option>
                     <option value="PDF_BASE">Exportar: [ PDF-Base ]</option>
                     <option value="CADERNO_ERROS">Exportar: [ Caderno de Erros ]</option>
-                    <option value="LEI_SECA">Exportar: [ Lei Seca ]</option>
                     <option value="DECOREBA">Exportar: [ Decoreba ]</option>
+                    <option value="ASSOCIACAO">Exportar: [ Associação ]</option>
+                    <option value="OMISSAO">Exportar: [ Omissão ]</option>
+                    <option value="SELECAO">Exportar: [ Seleção ]</option>
                   </select>
                   <button type="button" onclick="exportarCSVCirurgicoFlashcards()" class="px-2.5 py-1 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-bold text-[11px] transition">
                     Baixar CSV
@@ -4031,8 +4047,10 @@
                 <option value="">Todos os Tipos</option>
                 <option value="PDF_BASE">1. PDF-Base (C/E)</option>
                 <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
-                <option value="LEI_SECA">3. Lei Seca</option>
-                <option value="DECOREBA">4. Decoreba</option>
+                <option value="DECOREBA">3. Decoreba</option>
+                <option value="ASSOCIACAO">4. Associação</option>
+                <option value="OMISSAO">5. Omissão</option>
+                <option value="SELECAO">6. Seleção</option>
               </select>
             </div>
             <div class="lg:col-span-2">
@@ -4095,11 +4113,13 @@
           <div>
             <label class="block font-semibold text-slate-300 mb-1">Modalidade</label>
             <select id="fcEstTipo" onchange="renderizarEstatisticasFlashcards()" class="w-full rounded-lg border px-2.5 py-1.5">
-              <option value="">Todas as 4 Modalidades</option>
+              <option value="">Todas as Modalidades</option>
               <option value="PDF_BASE">1. PDF-Base (C/E)</option>
               <option value="CADERNO_ERROS">2. Caderno de Erros (C/E)</option>
-              <option value="LEI_SECA">3. Lei Seca</option>
-              <option value="DECOREBA">4. Decoreba</option>
+              <option value="DECOREBA">3. Decoreba</option>
+              <option value="ASSOCIACAO">4. Associação</option>
+              <option value="OMISSAO">5. Omissão</option>
+              <option value="SELECAO">6. Seleção</option>
             </select>
           </div>
           <div>
@@ -8645,8 +8665,46 @@
     const FC_MODALIDADES_BASE = [
       { id: 'PDF_BASE', label: 'PDF Base', cor: 'emerald' },
       { id: 'CADERNO_ERROS', label: 'Caderno de Erros', cor: 'rose' },
-      { id: 'DECOREBA', label: 'Decoreba', cor: 'purple' }
+      { id: 'DECOREBA', label: 'Decoreba', cor: 'purple' },
+      { id: 'ASSOCIACAO', label: 'Associação', cor: 'indigo' },
+      { id: 'OMISSAO', label: 'Omissão', cor: 'amber' },
+      { id: 'SELECAO', label: 'Seleção', cor: 'cyan' }
     ];
+    /* (2026-11-16) Associação = cartão OMISSAO marcado como associação (tag mod-associacao / frente-associacao, ou várias linhas ¶).
+       Omissão = OMISSAO que não é associação. Decoreba = tipo DECOREBA ou tag decoreba-diaria (pode coincidir com outra modalidade). */
+    function fcEhAssociacao_(c) {
+      if (!c || c.tipo !== 'OMISSAO') return false;
+      const tags = String(c.tags || '');
+      return /(^|[,\s])(mod-associacao|frente-associacao)(?=[,\s]|$)/i.test(tags) || String(c.frente || '').indexOf('¶') >= 0;
+    }
+    function fcCardEhModalidade_(c, m) {
+      if (!c || !m) return true;
+      if (m === 'DECOREBA') return fcEhDecoreba_(c);
+      if (m === 'ASSOCIACAO') return fcEhAssociacao_(c);
+      if (m === 'OMISSAO') return c.tipo === 'OMISSAO' && !fcEhAssociacao_(c);
+      return c.tipo === m;
+    }
+    /* O select oculto #fcFiltroTipo recebe combinações livres ("PDF_BASE,SELECAO"...): cria a <option> que faltar,
+       para o valor nunca "sumir" ao ser atribuído. */
+    function fcInstalarSelectTipoLivre_() {
+      const sel = document.getElementById('fcFiltroTipo');
+      if (!sel || sel.__tipoLivre) return;
+      const d = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+      Object.defineProperty(sel, 'value', {
+        configurable: true,
+        get() { return d.get.call(this); },
+        set(v) {
+          const val = v == null ? '' : String(v);
+          if (val && !Array.from(this.options).some(o => o.value === val)) {
+            const o = document.createElement('option'); o.value = val; o.textContent = val; this.appendChild(o);
+          }
+          d.set.call(this, val);
+        }
+      });
+      sel.__tipoLivre = true;
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fcInstalarSelectTipoLivre_);
+    else fcInstalarSelectTipoLivre_();
     function fcModalidadesSelecionadas_(valor) {
       const ids = FC_MODALIDADES_BASE.map(m => m.id);
       const lista = String(valor || '').split(',').map(s => s.trim()).filter(s => ids.indexOf(s) >= 0);
@@ -8655,11 +8713,12 @@
     function fcCardPassaModalidades_(c, valor) {
       const sel = fcModalidadesSelecionadas_(valor);
       if (!sel.length || sel.length === FC_MODALIDADES_BASE.length) return true;
-      return sel.some(m => m === 'DECOREBA' ? fcEhDecoreba_(c) : c.tipo === m);
+      return sel.some(m => fcCardEhModalidade_(c, m));
     }
     function fcAplicarModalidades_(lista) {
       const sel = document.getElementById('fcFiltroTipo');
       if (!sel) return;
+      fcInstalarSelectTipoLivre_();
       const ordem = FC_MODALIDADES_BASE.map(m => m.id).filter(id => lista.indexOf(id) >= 0);
       const valor = (ordem.length === 0 || ordem.length === FC_MODALIDADES_BASE.length) ? '' : ordem.join(',');
       sel.value = valor;
@@ -8685,7 +8744,10 @@
         emerald: 'bg-emerald-600 border-emerald-400 text-white',
         rose: 'bg-rose-600 border-rose-400 text-white',
         purple: 'bg-purple-600 border-purple-400 text-white',
-        indigo: 'bg-indigo-600 border-indigo-400 text-white'
+        indigo: 'bg-indigo-600 border-indigo-400 text-white',
+        sky: 'bg-sky-600 border-sky-400 text-white',
+        amber: 'bg-amber-600 border-amber-400 text-white',
+        cyan: 'bg-cyan-600 border-cyan-400 text-white'
       };
       const off = 'bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-500';
       const chip = (id, label, ativo, cor) =>
@@ -9229,8 +9291,7 @@
     function filtrarDeckPorModalidadeRapida(tipoAlvo) {
       const selTipo = document.getElementById('fcFiltroTipo');
       if (selTipo) {
-        selTipo.value = selTipo.value === tipoAlvo ? '' : tipoAlvo;
-        renderizarVisaoDeckFC();
+        fcAplicarModalidades_(selTipo.value === tipoAlvo ? [] : [tipoAlvo]);
       }
     }
 
@@ -9248,8 +9309,10 @@
         const cardsTopico = FC_DECK.filter(c => c.idTopico === at.idTopico);
         const qtdPdf = cardsTopico.filter(c => c.tipo === 'PDF_BASE').length;
         const qtdErros = cardsTopico.filter(c => c.tipo === 'CADERNO_ERROS').length;
-        const qtdLei = cardsTopico.filter(c => c.tipo === 'LEI_SECA').length;
         const qtdDec = cardsTopico.filter(fcEhDecoreba_).length;
+        const qtdAss = cardsTopico.filter(fcEhAssociacao_).length;
+        const qtdOmi = cardsTopico.filter(c => fcCardEhModalidade_(c, 'OMISSAO')).length;
+        const qtdSel = cardsTopico.filter(c => c.tipo === 'SELECAO').length;
 
         return `
           <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between gap-2">
@@ -9262,7 +9325,7 @@
               </div>
               <div class="text-xs font-extrabold text-white mt-0.5">${esc(at.topico)}</div>
               <div class="text-[10px] text-slate-400 mt-0.5">
-                PDF: <strong>${qtdPdf}</strong> | Erros: <strong>${qtdErros}</strong> | Lei: <strong>${qtdLei}</strong> | Dec: <strong>${qtdDec}</strong>
+                PDF: <strong>${qtdPdf}</strong> | Erros: <strong>${qtdErros}</strong> | Dec: <strong>${qtdDec}</strong> | Assoc: <strong>${qtdAss}</strong> | Omis: <strong>${qtdOmi}</strong> | Sel: <strong>${qtdSel}</strong>
               </div>
             </div>
             <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-800">
@@ -9368,12 +9431,14 @@
 
       const elPdf = document.getElementById('fcCountPdfBase');
       const elErros = document.getElementById('fcCountCadernoErros');
-      const elLei = document.getElementById('fcCountLeiSeca');
       const elDec = document.getElementById('fcCountDecoreba');
       if (elPdf) elPdf.textContent = baseTopico.filter(c => c.tipo === 'PDF_BASE').length;
       if (elErros) elErros.textContent = baseTopico.filter(c => c.tipo === 'CADERNO_ERROS').length;
-      if (elLei) elLei.textContent = baseTopico.filter(c => c.tipo === 'LEI_SECA').length;
       if (elDec) elDec.textContent = baseTopico.filter(fcEhDecoreba_).length;
+      [['fcCountAssociacao', 'ASSOCIACAO'], ['fcCountOmissao', 'OMISSAO'], ['fcCountSelecao', 'SELECAO']].forEach(([idEl, m]) => {
+        const el = document.getElementById(idEl);
+        if (el) el.textContent = baseTopico.filter(c => fcCardEhModalidade_(c, m)).length;
+      });
 
       const filtrados = obterCardsFiltradosFC();
       const blocos = construirEstruturaBlocosFiltroAtual_(filtrados);
@@ -10994,7 +11059,7 @@
       return FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
-        if (tipo && c.tipo !== tipo) return false;
+        if (tipo && !fcCardEhModalidade_(c, tipo)) return false;
 
         if (sit === 'NAO_ESTUDADO' && (!c.isNovo && c.totalRevisoes > 0)) return false;
         if (sit === 'JA_ESTUDADO' && (c.isNovo || c.totalRevisoes === 0)) return false;
@@ -11255,7 +11320,7 @@
       const baseFiltrada = FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
-        if (tipo && c.tipo !== tipo) return false;
+        if (tipo && !fcCardEhModalidade_(c, tipo)) return false;
         if (stEstudo === 'ESTUDADOS' && (c.isNovo || c.totalRevisoes === 0)) return false;
         if (stEstudo === 'INEDITOS' && (!c.isNovo && c.totalRevisoes > 0)) return false;
         if (stEstudo === 'DIFICULDADE' && c.totalErros === 0) return false;
@@ -11887,7 +11952,7 @@ DECOREBA;Quais são os prazos de conclusão do Inquérito Policial no CPP, na Ju
       let lista = FC_DECK.filter(c => {
         if (idMat && c.idMateria !== idMat) return false;
         if (idTop && c.idTopico !== idTop) return false;
-        if (catExport !== 'TODOS' && c.tipo !== catExport) return false;
+        if (catExport !== 'TODOS' && !fcCardEhModalidade_(c, catExport)) return false;
         return true;
       });
 
