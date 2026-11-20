@@ -19300,7 +19300,10 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
       e.materia = ((ESTADO && ESTADO.materias) || []).find((x) => (x.status === 'Ativo' || (ciclo.pausa && ciclo.pausa.materias && ciclo.pausa.materias[x.id])) && mesmaMateria(x.nome, e.materiaRaw)) || null;
       e.topico = null;
     });
-    const topicos = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || regT[t.id] || cardsDoTopico(t) > 0);
+    /* matéria independente (temporária, ex.: prova de faculdade) não pertence à trilha: nunca é pareada, renomeada nem pausada */
+    const independente = (t) => /tempor[aá]ri/i.test(String((t && t.materia) || ''));
+    const todosAtivosOuPausados = ((ESTADO && ESTADO.topicos) || []).filter((t) => t.status === 'Ativo' || regT[t.id] || cardsDoTopico(t) > 0);
+    const topicos = todosAtivosOuPausados.filter((t) => !independente(t));
     /* matérias com partes ("X – PT.1/2/3"): UM tópico unificado "X – Parte 1, 2 e 3" (bateria, caderno de erros e cartões);
        os PDFs seguem separados no cronograma */
     const mesmaMat = (e, t) => (e.materia ? t.idMateria === e.materia.id : mesmaMateria(t.materia, e.materiaRaw));
@@ -19357,7 +19360,8 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     const protegido = (t) => temProgresso(t) && conteudo.some((m) => metaVista(m) && nomesDaMeta(m).some((c) => casa(c, t.topico)));
     const fora = topicos.filter((t) => !usadosT.has(t.id) && (t.status === 'Ativo') && !protegido(t) && !(typeof ehMateriaLeiSeca_ === 'function' && ehMateriaLeiSeca_(t.materia)));
     const reativar = entradas.filter((e) => e.estudada && e.topico && (e.topico.status !== 'Ativo' || regT[e.topico.id]));
-    const reativarIds = topicos.filter((t) => !usadosT.has(t.id) && protegido(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id);
+    const reativarIds = topicos.filter((t) => !usadosT.has(t.id) && protegido(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id)
+      .concat(todosAtivosOuPausados.filter((t) => independente(t) && (t.status !== 'Ativo' || regT[t.id])).map((t) => t.id));
     return { entradas, metasSair, metasRevisar, metasFicam, metasTitulo, criar, renomear, semMateria, futuros, manter, fora, reativar, reativarIds, grupos, renomearGeral, criarGeral, mesclarGeral };
   }
   /* o cálculo da trilha é pesado: só refaz quando algo que o influencia mudou */
@@ -20053,7 +20057,7 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   setTimeout(ocultarAgenda, 500);
   setTimeout(ocultarAgenda, 2500);
 
-  const VERSAO_TRILHA = 'Trilha 06/11 v18';
+  const VERSAO_TRILHA = 'Trilha 20/11 v19';
   function selo(txt, cor) {
     /* selo flutuante (canto inferior esquerdo) desativado a pedido; a trilha continua funcionando
        e os detalhes seguem acessíveis pelo botão da trilha no Cronograma */
@@ -20087,6 +20091,9 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
           const pl = planoTrilha();
           if (pl.criar.length || pl.criarGeral.length || pl.renomearGeral.length || pl.mesclarGeral.length || pl.reativar.length || (pl.reativarIds && pl.reativarIds.length) || pl.futuros.some((e) => e.topico.status === 'Ativo' && !temProgresso(e.topico))) await aplicarPlanoTrilha(pl, { silencioso: true });
         }
+        /* a bateria do dia é calculada no carregamento ANTES de o cronograma/trilha estarem prontos;
+           sem este recálculo, tópico com teoria em andamento (ex.: ECA) entrava na bateria de hoje */
+        try { await atualizarEstadoGeral(); } catch (er) { /* ignora */ }
         const ativa = ciclo.trilha && ciclo.trilha.ativo;
         const n = planoTrilha().entradas.filter((e) => e.estudada).length;
         selo(ativa ? 'aplicada • ' + n + ' tópicos estudados (clique p/ detalhes)' : 'desfeita (clique p/ reaplicar)', ativa ? '#047857' : '#475569');
