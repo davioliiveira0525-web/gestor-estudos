@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Gestor de Estudos e Metodologia Personalizável | Supabase Cloud</title>
+  <title>Lumen</title>
 
   <!-- Logo / ícones (aba do navegador, tela inicial do iPhone e Android) -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="apple-mobile-web-app-title" content="Estudos">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-title" content="Lumen">
+  <meta name="theme-color" content="#1f1f1d">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -534,7 +534,9 @@
       GR_FC_TELEMETRIA_JSON: { ler: () => LS.get('GR_FC_TELEMETRIA_V2', null), gravar: (v) => LS.set('GR_FC_TELEMETRIA_V2', v), mesclar: mesclarTelemetria },
       Cartoes_Pendentes_Registro: { ler: () => LS.get('GR_CARTOES_PENDENTES_REGISTRO', null), gravar: (v) => { LS.set('GR_CARTOES_PENDENTES_REGISTRO', v); try { if (typeof carregarRegistroCartoesPendentesLocal_ === 'function') carregarRegistroCartoesPendentesLocal_(); } catch (e) { /* ignora */ } }, mesclar: mesclarItens },
       GR_PREFS_JSON: { ler: () => ({ v: lerPrefsLocais() }), gravar: (d) => aplicarPrefsLocais((d && d.v) || {}), mesclar: mesclarSecoes, carimba: true },
-      GR_DEC_STATS_JSON: { ler: () => lerDecLocal(), gravar: (d) => gravarDecLocal(d), mesclar: mesclarDecStats }
+      GR_DEC_STATS_JSON: { ler: () => lerDecLocal(), gravar: (d) => gravarDecLocal(d), mesclar: mesclarDecStats },
+      /* perfil do usuário: nome, nome da plataforma e nome do ambiente (cada conta tem o seu) */
+      GR_PERFIL_JSON: { ler: () => LS.get('GR_PERFIL_V1', null), gravar: (v) => { LS.set('GR_PERFIL_V1', v); try { window.dispatchEvent(new CustomEvent('gr-perfil-atualizado')); } catch (e) { /* ignora */ } }, mesclar: mesclarSecoes, carimba: true }
     };
 
     const DOCS = {
@@ -695,7 +697,7 @@
         recuperar: 'Enviaremos um link para redefinir a senha.',
         nova: 'Digite a nova senha.'
       };
-      ov.innerHTML = '<div class="grl-box"><h2>' + titulos[modo] + ' — Gestor de Estudos</h2><p>' + textos[modo] + '</p>' +
+      ov.innerHTML = '<div class="grl-box"><div class="grl-marca"><svg width="34" height="34" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#1f1f1d"/><circle cx="256" cy="256" r="118" fill="none" stroke="#f5b942" stroke-width="40"/><circle cx="256" cy="256" r="40" fill="#f5b942"/></svg><span>Lumen</span></div><h2>' + titulos[modo] + '</h2><p>' + textos[modo] + '</p>' +
         '<form id="grLoginForm">' +
         (modo !== 'nova' ? '<label>E-mail</label><input id="grLoginEmail" type="email" autocomplete="email" required>' : '') +
         (modo !== 'recuperar' ? '<label>Senha</label><input id="grLoginSenha" type="password" minlength="6" autocomplete="' + (modo === 'entrar' ? 'current-password' : 'new-password') + '" required>' : '') +
@@ -749,7 +751,7 @@
       if (uidAnterior && uidAnterior !== user.id) {
         /* outra conta neste aparelho: guarda o progresso local da conta anterior e começa limpo */
         const copia = {};
-        ['GR_FCX_CICLO_V2', 'GR_FC_TELEMETRIA_V2', 'GR_CARTOES_PENDENTES_REGISTRO'].forEach((k) => { copia[k] = LS.raw(k); LS.del(k); });
+        ['GR_FCX_CICLO_V2', 'GR_FC_TELEMETRIA_V2', 'GR_CARTOES_PENDENTES_REGISTRO', 'GR_PERFIL_V1'].forEach((k) => { copia[k] = LS.raw(k); LS.del(k); });
         LS.setRaw('GR_SYNC_COPIA_CONTA_' + uidAnterior, JSON.stringify(copia));
         DOCS.chaves().forEach((c) => { LS.del(PREFIXO_BASE + c); LS.del(PREFIXO_VER + c); });
         LS.del(K_SUJOS);
@@ -766,6 +768,7 @@
       pronto = true;
       atualizarIndicador();
       agendarEnvio(500);
+      try { window.dispatchEvent(new CustomEvent('gr-sync-pronto', { detail: { email: emailAtual } })); } catch (e) { /* ignora */ }
     }
 
     /* chamado pelo carregamento do sistema; só libera depois do login */
@@ -864,6 +867,8 @@
      * ===================================================================== */
     window.SYNC = {
       fetch: fetchSync,
+      email: () => emailAtual,
+      uid: () => uidAtual,
       dispositivoId,
       garantirLogin,
       marcarDoc,
@@ -1695,15 +1700,15 @@
     <div class="w-full px-4 py-2 flex flex-wrap items-center justify-between gap-2">
       <!-- Identidade do Sistema -->
       <div class="flex items-center gap-2.5">
-        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-extrabold text-xs text-white">GE</div>
+        <svg class="lumen-logo" width="32" height="32" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#1f1f1d"/><circle cx="256" cy="256" r="118" fill="none" stroke="#f5b942" stroke-width="40"/><circle cx="256" cy="256" r="40" fill="#f5b942"/></svg>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-sm font-extrabold leading-tight text-white">Gestor de Estudos e Metodologia Ativa</h1>
+            <h1 id="marcaNomePlataforma" class="lumen-marca text-[15px] font-bold leading-tight text-white">Lumen</h1>
+            <span id="marcaNomeAmbiente" class="lumen-ambiente text-[11px] text-slate-400 hidden"></span>
             <span id="statusConexaoBadge" onclick="abrirModalConexaoSupabase()" class="cursor-pointer px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-700/60" title="Configurar conexão Supabase">
               Supabase Cloud
             </span>
           </div>
-          <p class="text-[10px] text-slate-400 hidden sm:block">Agenda Diária em Tela Cheia | Conteúdo do Dia | Aquecimento das Baterias | Questões</p>
         </div>
       </div>
 
@@ -1769,11 +1774,57 @@
             <button type="button" onclick="abrirModalConexaoSupabase(); fecharSubmenuAcoes();" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-slate-300">
               <span>Credenciais Supabase</span>
             </button>
+            <div class="border-t border-slate-800 my-1"></div>
+            <button type="button" onclick="abrirModalPerfil(); fecharSubmenuAcoes();" class="w-full text-left px-3.5 py-2 hover:bg-slate-800 flex items-center justify-between font-semibold text-amber-300">
+              <span>Meu perfil e personalização</span>
+            </button>
           </div>
         </div>
+
+        <!-- Perfil do usuário (nome discreto + avatar) -->
+        <button type="button" id="btnPerfilUsuario" onclick="abrirModalPerfil()" class="lumen-perfil-btn flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-slate-800 transition" title="Meu perfil">
+          <span id="perfilNomeCabecalho" class="text-[12px] text-slate-300 hidden sm:inline">Meu perfil</span>
+          <span id="perfilAvatarCabecalho" class="lumen-avatar">?</span>
+        </button>
       </div>
     </div>
   </header>
+
+  <!-- MODAL: PERFIL E PERSONALIZAÇÃO -->
+  <div id="modalPerfil" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+    <div class="bg-slate-900 rounded-xl max-w-md w-full shadow-2xl border border-slate-700 overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-800 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <span id="perfilAvatarModal" class="lumen-avatar lumen-avatar-lg">?</span>
+          <div>
+            <h3 class="text-sm font-bold">Meu perfil</h3>
+            <p id="perfilEmailModal" class="text-[11px] text-slate-400"></p>
+          </div>
+        </div>
+        <button type="button" onclick="fecharModalPerfil()" class="text-slate-400 hover:text-white text-xs font-bold">Fechar</button>
+      </div>
+      <form id="formPerfil" onsubmit="salvarPerfil(event)" class="p-4 space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Seu nome</label>
+          <input type="text" id="perfilNome" maxlength="40" placeholder="Como você quer ser chamado" class="w-full rounded-lg border px-2.5 py-1.5">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Nome da plataforma</label>
+          <input type="text" id="perfilPlataforma" maxlength="30" placeholder="Lumen" class="w-full rounded-lg border px-2.5 py-1.5">
+          <p class="text-[10px] text-slate-500 mt-1">Deixe em branco para usar “Lumen”.</p>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Nome do seu ambiente de estudo</label>
+          <input type="text" id="perfilAmbiente" maxlength="40" placeholder="Delegado PF" class="w-full rounded-lg border px-2.5 py-1.5">
+          <p class="text-[10px] text-slate-500 mt-1">Aparece discreto ao lado do nome da plataforma. Opcional.</p>
+        </div>
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-800">
+          <button type="button" onclick="fecharModalPerfil()" class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800 font-semibold">Cancelar</button>
+          <button type="submit" class="lumen-btn-primario px-3.5 py-1.5 rounded-lg font-bold">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- MODAL: ESTUDEI A TEORIA HOJE -->
   <div id="modalTeoriaHoje" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 no-print">
@@ -22577,5 +22628,97 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
 })();
 </script>
 
+<!-- =====================================================================
+     IDENTIDADE LUMEN + PERFIL DO USUÁRIO (nome, plataforma, ambiente)
+     ===================================================================== -->
+<style>
+  :root { --lumen-grafite: #1f1f1d; --lumen-grafite-2: #2a2a27; --lumen-ambar: #f5b942; --lumen-ambar-escuro: #8a5a0b; }
+  html.dark #appHeaderPrincipal { background-color: rgba(31, 31, 29, 0.96) !important; border-color: #34342f !important; }
+  .lumen-logo { flex-shrink: 0; border-radius: 9px; }
+  .lumen-marca { letter-spacing: -0.3px; }
+  .lumen-ambiente::before { content: "·"; margin-right: 6px; color: #6b6b64; }
+  .main-area-active { background-color: var(--lumen-ambar) !important; color: var(--lumen-grafite) !important; border-color: var(--lumen-ambar) !important; box-shadow: none !important; }
+  .main-area-active span { color: var(--lumen-grafite) !important; }
+  .lumen-avatar { width: 28px; height: 28px; border-radius: 999px; background: var(--lumen-ambar); color: var(--lumen-grafite); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; letter-spacing: 0.3px; }
+  .lumen-avatar-lg { width: 38px; height: 38px; font-size: 13px; }
+  .lumen-btn-primario { background: var(--lumen-ambar) !important; color: var(--lumen-grafite) !important; }
+  .lumen-btn-primario:hover { filter: brightness(1.06); }
+  html:not(.dark) .lumen-perfil-btn:hover { background: #e7e5de; }
+  html:not(.dark) .lumen-ambiente::before { color: #a3a29a; }
+  #grLoginOverlay .grl-marca { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 20px; font-weight: 700; letter-spacing: -0.3px; color: #f8fafc; }
+</style>
+<script>
+(function () {
+  'use strict';
+  const K = 'GR_PERFIL_V1';
+  const PADRAO = 'Lumen';
+  const $ = (id) => document.getElementById(id);
+  const ler = () => { try { const v = JSON.parse(localStorage.getItem(K) || 'null'); return (v && v.p) || {}; } catch (e) { return {}; } };
+  const limpar = (t, max) => String(t || '').replace(/\s+/g, ' ').trim().slice(0, max);
+  const email = () => { try { return (window.SYNC && window.SYNC.email && window.SYNC.email()) || ''; } catch (e) { return ''; } };
+  function iniciais(nome) {
+    const partes = limpar(nome, 60).split(' ').filter(Boolean);
+    if (!partes.length) { const e = email(); return e ? e[0].toUpperCase() : '?'; }
+    return (partes.length === 1 ? partes[0].slice(0, 2) : partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+  }
+
+  function aplicarPerfil() {
+    const p = ler();
+    const plataforma = limpar(p.plataforma, 30) || PADRAO;
+    const ambiente = limpar(p.ambiente, 40);
+    const nome = limpar(p.nome, 40);
+    const h1 = $('marcaNomePlataforma'); if (h1) h1.textContent = plataforma;
+    const amb = $('marcaNomeAmbiente');
+    if (amb) { amb.textContent = ambiente; amb.classList.toggle('hidden', !ambiente); }
+    const nc = $('perfilNomeCabecalho'); if (nc) nc.textContent = nome || 'Meu perfil';
+    const ini = iniciais(nome);
+    ['perfilAvatarCabecalho', 'perfilAvatarModal'].forEach((id) => { const el = $(id); if (el) el.textContent = ini; });
+    document.title = ambiente ? plataforma + ' · ' + ambiente : plataforma;
+  }
+
+  window.abrirModalPerfil = function () {
+    const p = ler();
+    $('perfilNome').value = p.nome || '';
+    $('perfilPlataforma').value = p.plataforma || '';
+    $('perfilAmbiente').value = p.ambiente || '';
+    $('perfilEmailModal').textContent = email();
+    aplicarPerfil();
+    $('modalPerfil').classList.remove('hidden');
+    setTimeout(() => { try { $('perfilNome').focus(); } catch (e) { /* ignora */ } }, 50);
+  };
+  window.fecharModalPerfil = function () { $('modalPerfil').classList.add('hidden'); };
+
+  window.salvarPerfil = function (ev) {
+    if (ev) ev.preventDefault();
+    let atual = null;
+    try { atual = JSON.parse(localStorage.getItem(K) || 'null'); } catch (e) { atual = null; }
+    const doc = (atual && typeof atual === 'object') ? atual : {};
+    doc.p = Object.assign({}, doc.p || {}, {
+      nome: limpar($('perfilNome').value, 40),
+      plataforma: limpar($('perfilPlataforma').value, 30),
+      ambiente: limpar($('perfilAmbiente').value, 40)
+    });
+    try { localStorage.setItem(K, JSON.stringify(doc)); } catch (e) { /* sem espaço */ }
+    try { if (window.SYNC && window.SYNC.marcarDoc) window.SYNC.marcarDoc('GR_PERFIL_JSON'); } catch (e) { /* ignora */ }
+    aplicarPerfil();
+    window.fecharModalPerfil();
+    try { if (typeof notificar === 'function') notificar('Perfil salvo.'); } catch (e) { /* ignora */ }
+  };
+
+  window.addEventListener('gr-perfil-atualizado', aplicarPerfil);
+  window.addEventListener('gr-doc-sincronizado', (e) => { if (e && e.detail && e.detail.chave === 'GR_PERFIL_JSON') aplicarPerfil(); });
+  /* primeiro acesso da conta: pede o nome uma única vez, já com os dados da nuvem carregados */
+  window.addEventListener('gr-sync-pronto', () => {
+    aplicarPerfil();
+    const p = ler();
+    if (!p.nome && !sessionStorage.getItem('GR_PERFIL_PERGUNTADO')) {
+      try { sessionStorage.setItem('GR_PERFIL_PERGUNTADO', '1'); } catch (e) { /* ignora */ }
+      window.abrirModalPerfil();
+    }
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('modalPerfil').classList.contains('hidden')) window.fecharModalPerfil(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aplicarPerfil); else aplicarPerfil();
+})();
+</script>
 </body>
 </html>
