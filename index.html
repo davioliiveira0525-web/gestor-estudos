@@ -22768,6 +22768,17 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   html.dark #mainContainerDemaisAreas :is(.bg-slate-950, .bg-slate-950\/80, .bg-slate-950\/90):not(#fcSessaoPlayer *) { background-color: #191918 !important; }
   html.dark #mainContainerDemaisAreas :is(.border-slate-800, .border-slate-700):not(#fcSessaoPlayer *) { border-color: #2f2f2b !important; }
 
+  /* modo escuro: tons grafite no lugar do azul-marinho (menu, sub-abas, botões neutros) */
+  html.dark .lumen-logo rect { fill: #2c2c29; }
+  html.dark #appHeaderPrincipal :is(.bg-slate-800, .bg-slate-900) { background-color: #262623 !important; border-color: #34342f !important; }
+  html.dark #appHeaderPrincipal :is(.hover\:bg-slate-700, .hover\:bg-slate-800):hover { background-color: #2f2f2b !important; }
+  html.dark #dropdownSubmenuAcoes { background-color: #1f1f1d !important; border-color: #34342f !important; }
+  html.dark .subtab-inactive:not(#fcSessaoPlayer *) { background-color: #262623 !important; color: #b5b4ad !important; border-color: #34342f !important; }
+  html.dark .subtab-inactive:not(#fcSessaoPlayer *):hover { background-color: #2f2f2b !important; color: #f2f1ec !important; }
+  html.dark #mainContainerDemaisAreas :is(.bg-slate-800):not(#fcSessaoPlayer *) { background-color: #262623 !important; }
+  html.dark :is(#modalPerfil, #modalTeoriaHoje, #modalConexaoSupabase) > div { background-color: #1f1f1d !important; border-color: #34342f !important; }
+  @media print { body { padding-left: 0 !important; padding-bottom: 0 !important; } }
+
   /* ---------- componentes próprios ---------- */
   .lu-card { border: 1px solid var(--lu-borda); background: var(--lu-sup); border-radius: 14px; }
   .lu-kpi { background: var(--lu-sup2); border-radius: 12px; padding: 12px 14px; }
@@ -23045,6 +23056,18 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     $('luDesNota').textContent = 'O registro diário dos cartões começou em ' + (inicioHist ? fmtBR(inicioHist) : fmtBR(hoje())) + '. Em “Tudo”, os totais de cartões incluem todo o histórico anterior.';
   }
   window.lumenRenderDesempenho = renderDesempenho;
+  /* ao trocar claro/escuro, o gráfico e as telas do celular são redesenhados com as cores certas */
+  const origTema = window.alternarTemaGlobal;
+  if (typeof origTema === 'function') {
+    window.alternarTemaGlobal = function () {
+      const r = origTema.apply(this, arguments);
+      setTimeout(() => {
+        if (areaAtual === 'desempenho') renderDesempenho();
+        if (ehMobile() && abaMob === 'mais') renderMobMais();
+      }, 60);
+      return r;
+    };
+  }
 
   /* =====================================================================
    * 3) NAVEGAÇÃO: rótulos limpos, ícones, entrada "Desempenho"
