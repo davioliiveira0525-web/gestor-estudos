@@ -536,6 +536,19 @@
       GR_PREFS_JSON: { ler: () => ({ v: lerPrefsLocais() }), gravar: (d) => aplicarPrefsLocais((d && d.v) || {}), mesclar: mesclarSecoes, carimba: true },
       GR_DEC_STATS_JSON: { ler: () => lerDecLocal(), gravar: (d) => gravarDecLocal(d), mesclar: mesclarDecStats },
       /* perfil do usuário: nome, nome da plataforma e nome do ambiente (cada conta tem o seu) */
+      /* histórico diário de cartões por aparelho (aba Desempenho): soma por aparelho, maior valor vence */
+      GR_HIST_JSON: { ler: () => LS.get('GR_LUMEN_HIST_V1', null), gravar: (v) => LS.set('GR_LUMEN_HIST_V1', v), mesclar: (l, n) => {
+        const res = { dias: {} }; const dl = (l && l.dias) || {}, dn = (n && n.dias) || {};
+        new Set(Object.keys(dl).concat(Object.keys(dn))).forEach((d) => {
+          const a = dl[d] || {}, b = dn[d] || {}; res.dias[d] = {};
+          new Set(Object.keys(a).concat(Object.keys(b))).forEach((dev) => {
+            const x = a[dev] || {}, y = b[dev] || {}; const o = {};
+            new Set(Object.keys(x).concat(Object.keys(y))).forEach((f) => { o[f] = Math.max(Number(x[f] || 0), Number(y[f] || 0)); });
+            res.dias[d][dev] = o;
+          });
+        });
+        return res;
+      } },
       GR_PERFIL_JSON: { ler: () => LS.get('GR_PERFIL_V1', null), gravar: (v) => { LS.set('GR_PERFIL_V1', v); try { window.dispatchEvent(new CustomEvent('gr-perfil-atualizado')); } catch (e) { /* ignora */ } }, mesclar: mesclarSecoes, carimba: true }
     };
 
@@ -8527,6 +8540,8 @@
 
       mapa[card.id] = atual;
       salvarMapaTelemetriaLocalCartoes_(mapa);
+      /* histórico diário (aba Desempenho): só registra, não altera a resolução */
+      try { if (window.LUMEN_HIST) window.LUMEN_HIST.registrar(card.id, acertou, atual.ultimoTempoSeg, atual.vezesRealizado, atual.ultimaDataEstudo); } catch (e) { /* ignora */ }
     }
 
     /* ==========================================================================
@@ -18916,6 +18931,8 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     };
   }
   window.fcxPlanoDeHoje = planoDeHoje;
+  window.fcxCotaCelula = cotaCelula;
+  window.fcxCelulaExigida = celulaExigida;
 
   /* Reorganização só por decisão do usuário, quando há atraso:
      a atividade atrasada mais antiga passa a ser a de hoje e as demais atividades abertas acompanham o mesmo deslocamento. */
@@ -22718,6 +22735,530 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('modalPerfil').classList.contains('hidden')) window.fecharModalPerfil(); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', aplicarPerfil); else aplicarPerfil();
+})();
+</script>
+<!-- =====================================================================
+     LUMEN — NOVA ROUPAGEM
+     PC: barra lateral fixa + aba Desempenho.  Celular: abas no rodapé
+     (Estudo / Cartões / Questões / Mais).  A tela de resolução dos cartões
+     (#fcSessaoPlayer) fica fora de todas as regras visuais abaixo.
+     ===================================================================== -->
+<style>
+  /* ---------- tipografia e superfícies mais calmas (fora do player de cartões) ---------- */
+  body { font-feature-settings: "cv11", "ss01"; }
+  #mainContainerDemaisAreas .uppercase:not(#fcSessaoPlayer *), #modalPerfil .uppercase { text-transform: none !important; letter-spacing: 0 !important; }
+  #mainContainerDemaisAreas .font-extrabold:not(#fcSessaoPlayer *) { font-weight: 650 !important; }
+  #mainContainerDemaisAreas .shadow-sm:not(#fcSessaoPlayer *), #mainContainerDemaisAreas .shadow:not(#fcSessaoPlayer *), #mainContainerDemaisAreas .shadow-md:not(#fcSessaoPlayer *), #mainContainerDemaisAreas .shadow-lg:not(#fcSessaoPlayer *) { box-shadow: none !important; }
+  #mainContainerDemaisAreas .rounded-xl:not(#fcSessaoPlayer *) { border-radius: 14px !important; }
+
+  /* ---------- paleta Lumen: índigo/azul/roxo viram grafite (claro) ou âmbar (escuro) ---------- */
+  html:not(.dark) :is(.bg-indigo-600, .bg-indigo-700, .bg-blue-600, .bg-purple-600, .bg-violet-600, .subtab-active):not(#fcSessaoPlayer *) { background-color: #1f1f1d !important; color: #fff !important; border-color: #1f1f1d !important; }
+  html:not(.dark) :is(.hover\:bg-indigo-500, .hover\:bg-indigo-700, .hover\:bg-blue-500, .hover\:bg-purple-500):hover:not(#fcSessaoPlayer *) { background-color: #3a3a36 !important; }
+  html.dark :is(.bg-indigo-600, .bg-indigo-700, .bg-blue-600, .bg-purple-600, .bg-violet-600, .subtab-active):not(#fcSessaoPlayer *) { background-color: #f5b942 !important; color: #1f1f1d !important; border-color: #f5b942 !important; }
+  html.dark :is(.hover\:bg-indigo-500, .hover\:bg-blue-500, .hover\:bg-purple-500):hover:not(#fcSessaoPlayer *) { background-color: #f8c865 !important; }
+  html:not(.dark) :is(.text-indigo-300, .text-indigo-400, .text-indigo-500, .text-indigo-600, .text-indigo-700, .text-purple-300, .text-purple-400):not(#fcSessaoPlayer *):not(.subtab-active):not(.bg-indigo-600) { color: #8a5a0b !important; }
+  html.dark :is(.text-indigo-300, .text-indigo-400, .text-indigo-500, .text-purple-300, .text-purple-400):not(#fcSessaoPlayer *) { color: #f5c76a !important; }
+  html:not(.dark) :is(.bg-indigo-950, .bg-indigo-950\/30, .bg-indigo-950\/50, .bg-indigo-950\/90, .bg-indigo-50, .bg-indigo-100):not(#fcSessaoPlayer *) { background-color: #f7f0e1 !important; }
+  html.dark :is(.bg-indigo-950, .bg-indigo-950\/30, .bg-indigo-950\/50, .bg-indigo-950\/90):not(#fcSessaoPlayer *) { background-color: rgba(245, 185, 66, 0.08) !important; }
+  html:not(.dark) :is(.border-indigo-500, .border-indigo-600, .border-indigo-700, .border-indigo-800, .border-indigo-800\/60):not(#fcSessaoPlayer *) { border-color: #e4cf9f !important; }
+  html.dark :is(.border-indigo-500, .border-indigo-600, .border-indigo-700, .border-indigo-800, .border-indigo-800\/60):not(#fcSessaoPlayer *) { border-color: rgba(245, 185, 66, 0.35) !important; }
+  :is(.ring-indigo-500, .ring-indigo-500\/60):not(#fcSessaoPlayer *) { --tw-ring-color: rgba(245, 185, 66, 0.55) !important; }
+  html.dark body { background-color: #161615; }
+  html.dark #mainContainerDemaisAreas :is(.bg-slate-900):not(#fcSessaoPlayer *) { background-color: #1f1f1d !important; }
+  html.dark #mainContainerDemaisAreas :is(.bg-slate-950, .bg-slate-950\/80, .bg-slate-950\/90):not(#fcSessaoPlayer *) { background-color: #191918 !important; }
+  html.dark #mainContainerDemaisAreas :is(.border-slate-800, .border-slate-700):not(#fcSessaoPlayer *) { border-color: #2f2f2b !important; }
+
+  /* ---------- componentes próprios ---------- */
+  .lu-card { border: 1px solid var(--lu-borda); background: var(--lu-sup); border-radius: 14px; }
+  .lu-kpi { background: var(--lu-sup2); border-radius: 12px; padding: 12px 14px; }
+  .lu-kpi span { display: block; font-size: 12px; color: var(--lu-txt2); }
+  .lu-kpi b { display: block; font-size: 22px; font-weight: 600; letter-spacing: -0.4px; color: var(--lu-txt); margin-top: 2px; }
+  .lu-kpi small { display: block; font-size: 11px; color: var(--lu-txt3); margin-top: 2px; }
+  .lu-seg { display: inline-flex; background: var(--lu-sup2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .lu-seg button { font-size: 12px; padding: 5px 12px; border-radius: 8px; color: var(--lu-txt2); font-weight: 500; }
+  .lu-seg button.on { background: var(--lu-sup); color: var(--lu-txt); box-shadow: 0 0 0 1px var(--lu-borda); }
+  .lu-h { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; color: var(--lu-txt); }
+  .lu-sub { font-size: 12px; color: var(--lu-txt2); }
+  .lu-link { font-size: 12px; color: var(--lu-acento-txt); font-weight: 500; }
+  .lu-link:hover { text-decoration: underline; }
+  .lu-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .lu-tab th { text-align: left; font-weight: 500; color: var(--lu-txt3); padding: 8px 10px; border-bottom: 1px solid var(--lu-borda); }
+  .lu-tab td { padding: 9px 10px; border-bottom: 1px solid var(--lu-borda); color: var(--lu-txt); }
+  .lu-tab td.n, .lu-tab th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  :root { --lu-txt: #1c1c1a; --lu-txt2: #5f5e5a; --lu-txt3: #8a8982; --lu-borda: #e6e4dd; --lu-sup: #ffffff; --lu-sup2: #f3f2ee; --lu-acento: #f5b942; --lu-acento-txt: #8a5a0b; --lu-grafite: #1f1f1d; }
+  html.dark { --lu-txt: #f2f1ec; --lu-txt2: #b5b4ad; --lu-txt3: #85847d; --lu-borda: #2f2f2b; --lu-sup: #1f1f1d; --lu-sup2: #262623; --lu-acento-txt: #f5c76a; }
+
+  /* ---------- PC: barra lateral fixa ---------- */
+  .lu-nav-ico { width: 18px; height: 18px; flex-shrink: 0; opacity: .85; }
+  .lu-nav-rotulo { display: inline-flex; align-items: center; gap: 10px; }
+  #nav-area-desempenho { display: none; }
+  @media (min-width: 1024px) {
+    body { padding-left: 236px; }
+    #appHeaderPrincipal { position: fixed !important; top: 0; left: 0; bottom: 0; width: 236px; border-bottom: 0 !important; border-right: 1px solid var(--lu-borda) !important; overflow-y: auto; }
+    html:not(.dark) #appHeaderPrincipal { background: #fbfaf7 !important; }
+    #appHeaderPrincipal > div { flex-direction: column !important; flex-wrap: nowrap !important; align-items: stretch !important; justify-content: flex-start !important; height: 100%; padding: 20px 14px 16px !important; gap: 26px !important; }
+    #appHeaderPrincipal > div > div:first-child { padding: 0 6px; flex-wrap: wrap; }
+    #appHeaderPrincipal > div > div:first-child > div > div { flex-wrap: wrap; row-gap: 4px; }
+    #marcaNomeAmbiente { flex-basis: 100%; }
+    #marcaNomeAmbiente::before { content: none; }
+    #appHeaderPrincipal nav { flex-direction: column !important; align-items: stretch !important; gap: 2px !important; flex-wrap: nowrap !important; }
+    #appHeaderPrincipal nav button { width: 100%; justify-content: space-between !important; border: 0 !important; padding: 9px 10px !important; font-size: 13.5px !important; border-radius: 9px !important; box-shadow: none !important; background: transparent !important; color: var(--lu-txt2) !important; font-weight: 500 !important; }
+    #appHeaderPrincipal nav button:hover { background: var(--lu-sup2) !important; color: var(--lu-txt) !important; }
+    #appHeaderPrincipal nav button.main-area-active { background: rgba(245, 185, 66, 0.16) !important; color: var(--lu-txt) !important; font-weight: 600 !important; }
+    #appHeaderPrincipal nav button.main-area-active span { color: inherit !important; }
+    #appHeaderPrincipal nav button.main-area-active .lu-nav-ico { color: #c88a12; opacity: 1; }
+    #nav-area-desempenho { display: flex; }
+    #appHeaderPrincipal > div > div:last-child { margin-top: auto; flex-direction: column !important; align-items: stretch !important; gap: 6px !important; }
+    #appHeaderPrincipal > div > div:last-child > button, #btnSubmenuAcoes { width: 100%; justify-content: center; }
+    #containerSubmenuAcoes #dropdownSubmenuAcoes { right: auto !important; left: 0; bottom: calc(100% + 6px); top: auto; margin-top: 0 !important; }
+    #btnPerfilUsuario { justify-content: flex-start !important; padding: 8px !important; border-top: 1px solid var(--lu-borda); border-radius: 0 !important; margin-top: 6px; flex-direction: row-reverse; gap: 10px !important; }
+    #btnPerfilUsuario #perfilNomeCabecalho { display: inline !important; font-size: 13px; color: var(--lu-txt) !important; }
+    #mainContainerDemaisAreas { max-width: 1240px !important; padding: 22px 28px 40px !important; }
+  }
+
+  /* ---------- celular: abas no rodapé ---------- */
+  #luTabbar, #luMobHoje, #luMobQuestoes, #luMobMais { display: none; }
+  @media (max-width: 767px) {
+    #appHeaderPrincipal nav, #appHeaderPrincipal > div > div:last-child > button:not(#btnPerfilUsuario), #containerSubmenuAcoes, #statusConexaoBadge { display: none !important; }
+    #appHeaderPrincipal > div { padding: 10px 16px !important; flex-wrap: nowrap !important; padding-top: calc(10px + env(safe-area-inset-top)) !important; }
+    #perfilNomeCabecalho { display: none !important; }
+    body.lu-mob-on { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+    body.lu-mob-on #luTabbar { display: flex; }
+    body.lu-player-on #luTabbar { display: none !important; }
+    body.lu-player-on { padding-bottom: 0; }
+    body.lu-tab-estudo #mainContainerDemaisAreas, body.lu-tab-questoes #mainContainerDemaisAreas, body.lu-tab-mais #mainContainerDemaisAreas { display: none !important; }
+    body.lu-tab-estudo #luMobHoje, body.lu-tab-questoes #luMobQuestoes, body.lu-tab-mais #luMobMais { display: block; }
+  }
+  #luTabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; background: var(--lu-sup); border-top: 1px solid var(--lu-borda); padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); justify-content: space-around; }
+  #luTabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; font-size: 11px; color: var(--lu-txt3); font-weight: 500; border-radius: 10px; min-height: 52px; position: relative; }
+  #luTabbar button svg { width: 23px; height: 23px; }
+  #luTabbar button.on { color: var(--lu-txt); }
+  #luTabbar button.on svg { color: #c88a12; }
+  #luTabbar .lu-bolinha { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f5b942; color: #1f1f1d; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .lu-mob { padding: 18px 16px 24px; max-width: 560px; margin: 0 auto; }
+  .lu-mob-data { font-size: 13px; color: var(--lu-txt3); text-transform: capitalize; }
+  .lu-mob-titulo { font-size: 26px; font-weight: 650; letter-spacing: -0.6px; color: var(--lu-txt); margin: 2px 0 14px; }
+  .lu-mob-resumo { display: flex; gap: 10px; margin-bottom: 16px; }
+  .lu-mob-resumo > div { flex: 1; background: var(--lu-sup2); border-radius: 14px; padding: 12px 14px; }
+  .lu-mob-resumo span { display: block; font-size: 12px; color: var(--lu-txt2); }
+  .lu-mob-resumo b { display: block; font-size: 24px; font-weight: 650; letter-spacing: -0.5px; color: var(--lu-txt); }
+  .lu-mob-item { display: flex; align-items: center; gap: 12px; background: var(--lu-sup); border: 1px solid var(--lu-borda); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+  .lu-mob-item .lu-mi-txt { flex: 1; min-width: 0; }
+  .lu-mob-item .lu-mi-mat { font-size: 12px; color: var(--lu-acento-txt); font-weight: 500; }
+  .lu-mob-item .lu-mi-nome { font-size: 15px; font-weight: 600; color: var(--lu-txt); line-height: 1.3; margin-top: 1px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .lu-mob-item .lu-mi-info { font-size: 12.5px; color: var(--lu-txt2); margin-top: 3px; }
+  .lu-mob-item.feito .lu-mi-nome { text-decoration: line-through; color: var(--lu-txt3); }
+  .lu-check { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--lu-borda); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: transparent; }
+  .lu-check.on { background: #1d9e75; border-color: #1d9e75; color: #fff; }
+  .lu-check svg { width: 22px; height: 22px; }
+  .lu-btn-grande { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 56px; border-radius: 16px; font-size: 16px; font-weight: 600; background: #1f1f1d; color: #fff; margin-top: 6px; }
+  html.dark .lu-btn-grande { background: #f5b942; color: #1f1f1d; }
+  .lu-btn-sec { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border-radius: 16px; font-size: 15px; font-weight: 500; border: 1px solid var(--lu-borda); color: var(--lu-txt); background: var(--lu-sup); margin-top: 10px; }
+  .lu-mob-secao { font-size: 13px; font-weight: 600; color: var(--lu-txt2); margin: 20px 2px 8px; }
+  .lu-mob-vazio { text-align: center; padding: 28px 12px; color: var(--lu-txt2); font-size: 14px; background: var(--lu-sup2); border-radius: 16px; }
+  .lu-mob-acao { min-height: 44px; padding: 0 16px; border-radius: 12px; font-size: 14px; font-weight: 600; background: #1f1f1d; color: #fff; flex-shrink: 0; }
+  html.dark .lu-mob-acao { background: #f5b942; color: #1f1f1d; }
+  .lu-mob-menu button { display: flex; width: 100%; align-items: center; justify-content: space-between; min-height: 54px; padding: 0 16px; font-size: 15px; color: var(--lu-txt); border-bottom: 1px solid var(--lu-borda); text-align: left; }
+  .lu-mob-menu button:last-child { border-bottom: 0; }
+  .lu-mob-menu { background: var(--lu-sup); border: 1px solid var(--lu-borda); border-radius: 16px; overflow: hidden; margin-bottom: 14px; }
+  .lu-mob-menu svg { width: 18px; height: 18px; color: var(--lu-txt3); }
+</style>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const lerJ = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
+  const gravarJ = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem espaço */ } };
+  const ymdLocal = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const hoje = () => (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) || ymdLocal(new Date());
+  const addDias = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); return ymdLocal(new Date(y, m - 1, d + n)); };
+  const fmtBR = (ymd) => { const [y, m, d] = String(ymd).split('-'); return d + '/' + m; };
+  const fmtDur = (s) => { s = Math.round(s || 0); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? h + 'h ' + String(m).padStart(2, '0') + 'm' : (m ? m + 'min' : s + 's'); };
+  const num = (n) => Number(n || 0).toLocaleString('pt-BR');
+  const ehMobile = () => window.matchMedia('(max-width: 767px)').matches;
+  const ICO = {
+    cron: '<path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+    quest: '<path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+    cart: '<rect x="3.5" y="6" width="13" height="14" rx="2.5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M8 3.5h10.5a2 2 0 0 1 2 2V17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+    desemp: '<path d="M4 20V10M10 20V4M16 20v-7M21 20H3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>',
+    livro: '<path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5M12 6.5c2-1.5 5-2 8-1.5v13c-3-.5-6 0-8 1.5M12 6.5v13" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none"/>',
+    mais: '<circle cx="5.5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="18.5" cy="12" r="1.7" fill="currentColor"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+    seta: '<path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'
+  };
+  const svg = (k, cls) => '<svg class="' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICO[k] + '</svg>';
+
+  /* =====================================================================
+   * 1) HISTÓRICO DIÁRIO DOS CARTÕES (alimenta a aba Desempenho)
+   * ===================================================================== */
+  const K_HIST = 'GR_LUMEN_HIST_V1';
+  function dispositivo() { try { return (window.SYNC && window.SYNC.dispositivoId) || 'local'; } catch (e) { return 'local'; } }
+  window.LUMEN_HIST = {
+    registrar(id, acertou, seg, vezes, dataEstudo) {
+      const d = dataEstudo || hoje();
+      const dev = dispositivo();
+      const doc = lerJ(K_HIST, null) || { dias: {} };
+      if (!doc.dias) doc.dias = {};
+      const dia = doc.dias[d] || (doc.dias[d] = {});
+      const o = dia[dev] || (dia[dev] = { r: 0, a: 0, e: 0, s: 0, n: 0, v: 0 });
+      o.r += 1; if (acertou) o.a += 1; else o.e += 1;
+      o.s += Math.max(0, Number(seg || 0));
+      if (Number(vezes || 0) > 1) o.v += 1;
+      const kIds = 'GR_LUMEN_HIST_IDS_' + d;
+      const ids = lerJ(kIds, []);
+      if (ids.indexOf(id) < 0) { ids.push(id); gravarJ(kIds, ids); o.n += 1; }
+      gravarJ(K_HIST, doc);
+      try { if (window.SYNC && window.SYNC.marcarDoc) window.SYNC.marcarDoc('GR_HIST_JSON'); } catch (e) { /* ignora */ }
+    }
+  };
+  /* limpa a lista de ids de dias antigos (só serve para contar cartões únicos do dia) */
+  try { Object.keys(localStorage).forEach((k) => { if (/^GR_LUMEN_HIST_IDS_/.test(k) && k.slice(-10) < addDias(hoje(), -2)) localStorage.removeItem(k); }); } catch (e) { /* ignora */ }
+
+  function histPorDia() {
+    const doc = lerJ(K_HIST, null) || { dias: {} };
+    const out = {};
+    Object.keys(doc.dias || {}).forEach((d) => {
+      const t = { r: 0, a: 0, e: 0, s: 0, n: 0, v: 0 };
+      Object.values(doc.dias[d] || {}).forEach((o) => Object.keys(t).forEach((f) => { t[f] += Number(o[f] || 0); }));
+      out[d] = t;
+    });
+    return out;
+  }
+  function questoesPorDia() {
+    const out = {};
+    const ses = (typeof ESTADO !== 'undefined' && ESTADO && ESTADO.sessoes) || [];
+    ses.forEach((x) => {
+      const d = String(x.dataSessao || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+      const o = out[d] || (out[d] = { q: 0, a: 0, e: 0 });
+      o.q += Number(x.resolvidas || 0); o.a += Number(x.acertos || 0); o.e += Number(x.erros || 0);
+    });
+    return out;
+  }
+  function totaisTelemetria() {
+    const tel = lerJ('GR_FC_TELEMETRIA_V2', {}) || {};
+    const t = { n: 0, r: 0, v: 0, a: 0, e: 0, s: 0 };
+    Object.values(tel).forEach((c) => {
+      const v = Number((c && c.vezesRealizado) || 0);
+      if (v <= 0) return;
+      t.n += 1; t.r += v; t.v += Math.max(0, v - 1);
+      t.a += Number(c.acertos || 0); t.e += Number(c.erros || 0); t.s += Number(c.segundosAcumulados || 0);
+    });
+    return t;
+  }
+
+  /* =====================================================================
+   * 2) ABA DESEMPENHO (PC e celular)
+   * ===================================================================== */
+  let periodo = 'tudo';
+  let grafico = null;
+  function criarAreaDesempenho() {
+    const main = $('mainContainerDemaisAreas');
+    if (!main || $('area-desempenho')) return;
+    const div = document.createElement('div');
+    div.id = 'area-desempenho';
+    div.className = 'hidden space-y-4';
+    div.innerHTML =
+      '<div class="flex flex-wrap items-end justify-between gap-3"><div><div class="lu-h">Desempenho</div><div class="lu-sub" id="luDesSub"></div></div>' +
+      '<div class="lu-seg" id="luDesSeg"><button data-p="hoje">Hoje</button><button data-p="7">7 dias</button><button data-p="30">30 dias</button><button data-p="tudo">Tudo</button></div></div>' +
+      '<div class="lu-card p-4"><div class="flex items-center justify-between mb-3"><span class="text-[13px] font-semibold" style="color:var(--lu-txt)">Cartões</span><button type="button" class="lu-link" onclick="irParaAreaPrincipal(\'cartoes\'); if (typeof irParaSubAbaCartoes===\'function\') irParaSubAbaCartoes(\'desempenho\')">Análise detalhada por cartão</button></div>' +
+      '<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2.5" id="luDesKpis"></div></div>' +
+      '<div class="lu-card p-4"><div class="flex items-center justify-between mb-3"><span class="text-[13px] font-semibold" style="color:var(--lu-txt)">Questões</span><button type="button" class="lu-link" onclick="irParaAreaPrincipal(\'questoes\'); if (typeof irParaSubAbaQuestoes===\'function\') irParaSubAbaQuestoes(\'estatisticas\')">Estatísticas detalhadas</button></div>' +
+      '<div class="grid grid-cols-3 gap-2.5" id="luDesKpisQ"></div></div>' +
+      '<div class="lu-card p-4"><div class="flex flex-wrap items-center justify-between gap-2 mb-2"><span class="text-[13px] font-semibold" style="color:var(--lu-txt)">Evolução diária</span><span class="lu-sub" id="luDesLeg"></span></div><div style="position:relative;height:220px"><canvas id="luDesGrafico"></canvas></div></div>' +
+      '<div class="lu-card p-4"><div class="text-[13px] font-semibold mb-2" style="color:var(--lu-txt)">Histórico</div><div class="overflow-x-auto"><table class="lu-tab"><thead><tr><th>Dia</th><th class="n">Cartões</th><th class="n">Respostas</th><th class="n">Acertos</th><th class="n">Erros</th><th class="n">Tempo</th><th class="n">Questões</th><th class="n">Aprov.</th></tr></thead><tbody id="luDesHist"></tbody></table></div><div class="lu-sub mt-2" id="luDesNota"></div></div>';
+    main.appendChild(div);
+    div.querySelectorAll('#luDesSeg button').forEach((b) => b.addEventListener('click', () => { periodo = b.dataset.p; renderDesempenho(); }));
+  }
+  function diasDoPeriodo() {
+    const h = hoje();
+    if (periodo === 'hoje') return [h];
+    if (periodo === '7' || periodo === '30') { const n = Number(periodo); const arr = []; for (let i = n - 1; i >= 0; i--) arr.push(addDias(h, -i)); return arr; }
+    return null;
+  }
+  function renderDesempenho() {
+    criarAreaDesempenho();
+    const area = $('area-desempenho'); if (!area) return;
+    area.querySelectorAll('#luDesSeg button').forEach((b) => b.classList.toggle('on', b.dataset.p === periodo));
+    const hist = histPorDia(), qd = questoesPorDia();
+    const dias = diasDoPeriodo();
+    const inicioHist = Object.keys(hist).sort()[0];
+    let c;
+    if (!dias) { c = totaisTelemetria(); }
+    else { c = { n: 0, r: 0, v: 0, a: 0, e: 0, s: 0 }; dias.forEach((d) => { const o = hist[d]; if (o) { c.n += o.n; c.r += o.r; c.v += o.v; c.a += o.a; c.e += o.e; c.s += o.s; } }); }
+    const taxa = (c.a + c.e) ? Math.round((c.a * 100) / (c.a + c.e)) : 0;
+    const kpi = (r, v, sub) => '<div class="lu-kpi"><span>' + r + '</span><b>' + v + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>';
+    $('luDesKpis').innerHTML =
+      kpi('Cartões feitos', num(c.n), c.r ? num(c.r) + ' respostas' : '') +
+      kpi('Revisões', num(c.v), 'cartões refeitos') +
+      kpi('Acertos', num(c.a), (c.a + c.e) ? taxa + '% de acerto' : '') +
+      kpi('Erros', num(c.e), (c.a + c.e) ? (100 - taxa) + '% das respostas' : '') +
+      kpi('Tempo total', fmtDur(c.s), '') +
+      kpi('Média por cartão', c.r ? Math.round(c.s / c.r) + 's' : '—', 'por resposta');
+    let q = { q: 0, a: 0, e: 0 };
+    Object.keys(qd).forEach((d) => { if (!dias || dias.indexOf(d) >= 0) { q.q += qd[d].q; q.a += qd[d].a; q.e += qd[d].e; } });
+    const aprov = q.q ? Math.round((q.a * 100) / q.q) : 0;
+    $('luDesKpisQ').innerHTML = kpi('Resolvidas', num(q.q), '') + kpi('Acertos', num(q.a), q.e ? num(q.e) + ' erros' : '') + kpi('Aproveitamento', q.q ? aprov + '%' : '—', '');
+    const rot = { hoje: 'Hoje, ' + fmtBR(hoje()), '7': 'Últimos 7 dias', '30': 'Últimos 30 dias', tudo: 'Desde o início' }[periodo];
+    $('luDesSub').textContent = rot;
+    /* gráfico: sempre os últimos 30 dias (ou 7, quando escolhido) */
+    const diasG = []; const nG = periodo === '7' ? 7 : 30; for (let i = nG - 1; i >= 0; i--) diasG.push(addDias(hoje(), -i));
+    const cart = diasG.map((d) => (hist[d] ? hist[d].r : 0));
+    const ques = diasG.map((d) => (qd[d] ? qd[d].q : 0));
+    $('luDesLeg').textContent = 'Barras: respostas de cartões · Linha: questões resolvidas';
+    if (typeof Chart !== 'undefined') {
+      const escuro = document.documentElement.classList.contains('dark');
+      const cor = escuro ? '#85847d' : '#8a8982', grade = escuro ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+      const dados = { labels: diasG.map(fmtBR), datasets: [
+        { type: 'bar', label: 'Respostas de cartões', data: cart, backgroundColor: '#f5b942', borderRadius: 4, maxBarThickness: 22, yAxisID: 'y' },
+        { type: 'line', label: 'Questões resolvidas', data: ques, borderColor: escuro ? '#f2f1ec' : '#1f1f1d', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 2, tension: 0.3, yAxisID: 'y' }
+      ] };
+      const opcoes = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        scales: { x: { grid: { display: false }, ticks: { color: cor, maxRotation: 0, autoSkip: true, maxTicksLimit: 10, font: { size: 11 } } }, y: { beginAtZero: true, grid: { color: grade }, ticks: { color: cor, precision: 0, font: { size: 11 } } } } };
+      try { if (grafico) grafico.destroy(); grafico = new Chart($('luDesGrafico'), { data: dados, options: opcoes }); } catch (e) { /* gráfico indisponível */ }
+    }
+    /* histórico (mais recente primeiro) */
+    let listaDias = Array.from(new Set(Object.keys(hist).concat(Object.keys(qd)))).sort().reverse();
+    if (dias) listaDias = listaDias.filter((d) => dias.indexOf(d) >= 0);
+    listaDias = listaDias.filter((d) => d <= hoje());
+    $('luDesHist').innerHTML = listaDias.length ? listaDias.slice(0, 120).map((d) => {
+      const o = hist[d] || { n: 0, r: 0, a: 0, e: 0, s: 0 }, x = qd[d] || { q: 0, a: 0 };
+      const ap = x.q ? Math.round((x.a * 100) / x.q) + '%' : '—';
+      return '<tr><td>' + fmtBR(d) + (d === hoje() ? ' <span style="color:var(--lu-acento-txt)">hoje</span>' : '') + '</td><td class="n">' + (o.n || '—') + '</td><td class="n">' + (o.r || '—') + '</td><td class="n">' + (o.r ? o.a : '—') + '</td><td class="n">' + (o.r ? o.e : '—') + '</td><td class="n">' + (o.s ? fmtDur(o.s) : '—') + '</td><td class="n">' + (x.q || '—') + '</td><td class="n">' + ap + '</td></tr>';
+    }).join('') : '<tr><td colspan="8" style="color:var(--lu-txt3);text-align:center;padding:18px">Sem registros neste período.</td></tr>';
+    $('luDesNota').textContent = 'O registro diário dos cartões começou em ' + (inicioHist ? fmtBR(inicioHist) : fmtBR(hoje())) + '. Em “Tudo”, os totais de cartões incluem todo o histórico anterior.';
+  }
+  window.lumenRenderDesempenho = renderDesempenho;
+
+  /* =====================================================================
+   * 3) NAVEGAÇÃO: rótulos limpos, ícones, entrada "Desempenho"
+   * ===================================================================== */
+  function prepararNav() {
+    const nav = document.querySelector('#appHeaderPrincipal nav');
+    if (!nav || nav.dataset.lu) return;
+    nav.dataset.lu = '1';
+    const rot = { organizacao: ['Cronograma', 'cron'], questoes: ['Questões', 'quest'], cartoes: ['Cartões', 'cart'] };
+    Object.keys(rot).forEach((a) => {
+      const b = $('nav-area-' + a); if (!b) return;
+      const s = b.querySelector('span'); if (s) { s.className = 'lu-nav-rotulo'; s.innerHTML = svg(rot[a][1], 'lu-nav-ico') + '<span>' + rot[a][0] + '</span>'; }
+    });
+    if (!$('nav-area-desempenho')) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.id = 'nav-area-desempenho';
+      b.className = 'px-3.5 py-1.5 rounded-lg border transition flex items-center gap-1.5 main-area-inactive';
+      b.innerHTML = '<span class="lu-nav-rotulo">' + svg('desemp', 'lu-nav-ico') + '<span>Desempenho</span></span>';
+      b.onclick = () => window.irParaAreaPrincipal('desempenho');
+      nav.appendChild(b);
+    }
+  }
+  function marcarNav(area) {
+    ['organizacao', 'questoes', 'cartoes', 'desempenho'].forEach((a) => {
+      const b = $('nav-area-' + a); if (!b) return;
+      b.classList.toggle('main-area-active', a === area);
+      b.classList.toggle('main-area-inactive', a !== area);
+    });
+  }
+  let areaAtual = 'organizacao';
+  const origIr = window.irParaAreaPrincipal;
+  window.irParaAreaPrincipal = function (area) {
+    const des = $('area-desempenho');
+    if (area === 'desempenho') {
+      criarAreaDesempenho();
+      const main = $('mainContainerDemaisAreas'); if (main) main.classList.remove('hidden');
+      const ag = $('area-agenda'); if (ag) ag.classList.add('hidden');
+      ['organizacao', 'questoes', 'cartoes'].forEach((a) => { const d = $('area-' + a); if (d) d.classList.add('hidden'); });
+      $('area-desempenho').classList.remove('hidden');
+      areaAtual = 'desempenho';
+      marcarNav('desempenho');
+      renderDesempenho();
+    } else {
+      if (des) des.classList.add('hidden');
+      const r = origIr ? origIr.apply(this, arguments) : undefined;
+      areaAtual = area === 'agenda' ? 'organizacao' : area;
+      marcarNav(areaAtual);
+      if (typeof window.lumenAoMudarArea === 'function') window.lumenAoMudarArea(areaAtual);
+      return r;
+    }
+    if (typeof window.lumenAoMudarArea === 'function') window.lumenAoMudarArea(areaAtual);
+  };
+  window.addEventListener('gr-doc-sincronizado', (e) => { if (e && e.detail && e.detail.chave === 'GR_HIST_JSON' && areaAtual === 'desempenho') renderDesempenho(); });
+
+  /* =====================================================================
+   * 4) CELULAR: Estudo / Cartões / Questões / Mais
+   * ===================================================================== */
+  let abaMob = 'estudo';
+  function montarMobile() {
+    if ($('luTabbar')) return;
+    const bar = document.createElement('nav');
+    bar.id = 'luTabbar'; bar.className = 'no-print'; bar.setAttribute('aria-label', 'Navegação');
+    bar.innerHTML =
+      '<button type="button" data-t="estudo">' + svg('livro') + '<span>Estudo</span></button>' +
+      '<button type="button" data-t="cartoes">' + svg('cart') + '<span>Cartões</span><i class="lu-bolinha" id="luBolCartoes" hidden></i></button>' +
+      '<button type="button" data-t="questoes">' + svg('quest') + '<span>Questões</span><i class="lu-bolinha" id="luBolQuest" hidden></i></button>' +
+      '<button type="button" data-t="mais">' + svg('mais') + '<span>Mais</span></button>';
+    document.body.appendChild(bar);
+    bar.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => abrirAbaMob(b.dataset.t)));
+    const main = $('mainContainerDemaisAreas');
+    const criar = (id) => { const s = document.createElement('section'); s.id = id; s.className = 'lu-mob no-print'; main.parentNode.insertBefore(s, main); return s; };
+    criar('luMobHoje'); criar('luMobQuestoes'); criar('luMobMais');
+  }
+  function abrirAbaMob(t) {
+    abaMob = t;
+    document.body.classList.remove('lu-tab-estudo', 'lu-tab-cartoes', 'lu-tab-questoes', 'lu-tab-mais', 'lu-tab-area');
+    if (t === 'cartoes') { document.body.classList.add('lu-tab-cartoes'); origIr ? window.irParaAreaPrincipal('cartoes') : null; }
+    else if (t === 'area') { document.body.classList.add('lu-tab-area'); }
+    else document.body.classList.add('lu-tab-' + t);
+    if (t === 'estudo') renderMobHoje();
+    if (t === 'questoes') renderMobQuestoes();
+    if (t === 'mais') renderMobMais();
+    const bar = $('luTabbar');
+    if (bar) bar.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === t || (t === 'area' && b.dataset.t === 'mais')));
+    try { window.scrollTo(0, 0); } catch (e) { /* ignora */ }
+  }
+  /* quando o resto do site muda de área (ex.: "Resolver questões"), o celular mostra essa área */
+  window.lumenAoMudarArea = function (area) {
+    if (!ehMobile()) return;
+    if (area === 'cartoes') { if (abaMob !== 'cartoes') { abaMob = 'cartoes'; document.body.classList.remove('lu-tab-estudo', 'lu-tab-questoes', 'lu-tab-mais', 'lu-tab-area'); document.body.classList.add('lu-tab-cartoes'); marcarTab('cartoes'); } }
+    else if (abaMob === 'cartoes' || abaMob === 'area') { abaMob = 'area'; document.body.classList.remove('lu-tab-cartoes'); document.body.classList.add('lu-tab-area'); marcarTab('mais'); }
+  };
+  function marcarTab(t) { const bar = $('luTabbar'); if (bar) bar.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === t)); }
+  function irArea(area) { abaMob = 'area'; document.body.classList.remove('lu-tab-estudo', 'lu-tab-questoes', 'lu-tab-mais', 'lu-tab-cartoes'); document.body.classList.add('lu-tab-area'); marcarTab(area === 'cartoes' ? 'cartoes' : 'mais'); window.irParaAreaPrincipal(area); try { window.scrollTo(0, 0); } catch (e) { /* ignora */ } }
+  window.lumenIrArea = irArea;
+
+  function itensDeHoje() {
+    let plano = null;
+    try { plano = typeof window.fcxPlanoDeHoje === 'function' ? window.fcxPlanoDeHoje() : null; } catch (e) { plano = null; }
+    if (!plano) return null;
+    const cota = window.fcxCotaCelula, exig = window.fcxCelulaExigida;
+    const hojeItens = [];
+    (plano.hojeLista || []).forEach(({ m, p }) => {
+      (m.subtopicos || []).forEach((st, i) => {
+        if (typeof exig === 'function' && !exig(st, m.totalPartes, p)) return;
+        const pag = typeof cota === 'function' ? Number(cota(st, m.totalPartes, p) || 0) : 0;
+        const feito = !!(st.partesStatus && st.partesStatus[p] && st.partesStatus[p].concluida);
+        hojeItens.push({ m, p, i, st, pag, feito });
+      });
+    });
+    (plano.previstasHojeConcluidas || []).forEach(({ m, p }) => {
+      (m.subtopicos || []).forEach((st, i) => {
+        if (typeof exig === 'function' && !exig(st, m.totalPartes, p)) return;
+        if (hojeItens.some((x) => x.m.id === m.id && x.p === p && x.i === i)) return;
+        hojeItens.push({ m, p, i, st, pag: typeof cota === 'function' ? Number(cota(st, m.totalPartes, p) || 0) : 0, feito: true });
+      });
+    });
+    return { hojeItens, pend: plano.pendencias || [] };
+  }
+  function linhaEstudo(x) {
+    const nome = String(x.st.nome || '').replace(/\s+/g, ' ');
+    return '<div class="lu-mob-item' + (x.feito ? ' feito' : '') + '"><div class="lu-mi-txt"><div class="lu-mi-mat">' + esc(x.m.materia) + '</div><div class="lu-mi-nome">' + esc(nome) + '</div><div class="lu-mi-info">' + (x.pag > 0 ? x.pag + ' páginas' : 'sem contagem de páginas') + (x.desde ? ' · desde ' + fmtBR(x.desde) : '') + '</div></div>' +
+      '<button type="button" class="lu-check' + (x.feito ? ' on' : '') + '" aria-label="' + (x.feito ? 'Desfazer conclusão' : 'Marcar como estudado') + '" onclick="lumenMarcarEstudo(\'' + esc(x.m.id) + '\',' + x.p + ',' + x.i + ',' + (!x.feito) + ', this)">' + svg('check') + '</button></div>';
+  }
+  window.lumenMarcarEstudo = async function (id, p, i, marcar, btn) {
+    if (btn) btn.disabled = true;
+    try { if (typeof window.alternarConclusaoCelulaCron === 'function') await window.alternarConclusaoCelulaCron(id, p, i, marcar); } catch (e) { /* o próprio cronograma avisa */ }
+    setTimeout(renderMobHoje, 150);
+  };
+  function contarCartoesHoje() {
+    const b = $('badgeMenuDecoreba');
+    const n = b ? parseInt((b.textContent || '').replace(/\D+/g, ''), 10) : NaN;
+    return isNaN(n) ? null : n;
+  }
+  function atividadesQuestoes() { try { return (ESTADO && ESTADO.painel && ESTADO.painel.atividadesHoje) || []; } catch (e) { return []; } }
+  let ultimaAssinatura = '', ultimaAssQ = '';
+  function assinaturaHoje() {
+    const d = itensDeHoje();
+    if (!d) return 'nulo';
+    return JSON.stringify([d.hojeItens.map((x) => [x.m.id, x.p, x.i, x.feito, x.pag]), d.pend.length, contarCartoesHoje(), atividadesQuestoes().length]);
+  }
+  function renderMobHoje() {
+    const el = $('luMobHoje'); if (!el) return;
+    ultimaAssinatura = assinaturaHoje();
+    const dados = itensDeHoje();
+    const dataTxt = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const nCart = contarCartoesHoje();
+    const qs = atividadesQuestoes().filter((a) => a.situacao !== 'Realizada');
+    if (!dados) { el.innerHTML = '<div class="lu-mob-data">' + esc(dataTxt) + '</div><div class="lu-mob-titulo">Hoje</div><div class="lu-mob-vazio">Carregando o seu dia…</div>'; return; }
+    const pagRest = dados.hojeItens.reduce((s, x) => s + (x.feito ? 0 : x.pag), 0);
+    const pagTot = dados.hojeItens.reduce((s, x) => s + x.pag, 0);
+    const feitos = dados.hojeItens.filter((x) => x.feito).length;
+    let h = '<div class="lu-mob-data">' + esc(dataTxt) + '</div><div class="lu-mob-titulo">Hoje</div>' +
+      '<div class="lu-mob-resumo"><div><span>Páginas previstas</span><b>' + pagTot + '</b>' + (pagTot && pagRest !== pagTot ? '<span>faltam ' + pagRest + '</span>' : '') + '</div><div><span>Assuntos</span><b>' + feitos + '/' + dados.hojeItens.length + '</b><span>estudados</span></div></div>';
+    h += dados.hojeItens.length ? dados.hojeItens.map(linhaEstudo).join('') : '<div class="lu-mob-vazio">Nada novo programado para hoje.</div>';
+    h += '<button type="button" class="lu-btn-grande" onclick="lumenIrCartoes()">' + svg('cart', '') .replace('<svg', '<svg width="22" height="22"') + 'Fazer cartões' + (nCart != null ? ' · ' + nCart : '') + '</button>';
+    h += '<button type="button" class="lu-btn-sec" onclick="lumenAbrirAbaMob(\'questoes\')">Questões do dia' + (qs.length ? ' · ' + qs.length : '') + '</button>';
+    if (dados.pend.length) {
+      h += '<div class="lu-mob-secao">Pendentes de dias anteriores (' + dados.pend.length + ')</div>';
+      h += dados.pend.slice(0, 12).map((x) => linhaEstudo({ m: x.m, p: x.p, i: x.i, st: x.st, pag: x.pag, feito: false, desde: x.desde })).join('');
+    }
+    el.innerHTML = h;
+    atualizarBolinhas();
+  }
+  window.lumenIrCartoes = function () { abrirAbaMob('cartoes'); };
+  window.lumenAbrirAbaMob = abrirAbaMob;
+  function renderMobQuestoes() {
+    const el = $('luMobQuestoes'); if (!el) return;
+    const at = atividadesQuestoes();
+    const pend = at.filter((a) => a.situacao !== 'Realizada'), feitas = at.filter((a) => a.situacao === 'Realizada');
+    const linha = (a, feita) => '<div class="lu-mob-item' + (feita ? ' feito' : '') + '"><div class="lu-mi-txt"><div class="lu-mi-mat">' + esc(a.materia) + (a.situacao === 'Atrasada' ? ' · <span style="color:#d85a30">atrasada</span>' : '') + '</div><div class="lu-mi-nome">' + esc(a.topico) + '</div><div class="lu-mi-info">Meta: ' + (a.questoesPlanejadas || 0) + ' questões' + (a.resolvidasTotal > 0 ? ' · ' + a.resolvidasTotal + ' já resolvidas' : '') + '</div></div>' +
+      (feita ? '<span class="lu-check on">' + svg('check') + '</span>' : '<button type="button" class="lu-mob-acao" onclick="lumenResolverQuestoes(\'' + esc(a.idMateria) + '\',\'' + esc(a.idTopico) + '\',' + Number(a.questoesPlanejadas || 0) + ')">Lançar</button>') + '</div>';
+    let h = '<div class="lu-mob-data">' + esc(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })) + '</div><div class="lu-mob-titulo">Questões do dia</div>';
+    const meta = pend.reduce((s, a) => s + Number(a.questoesPlanejadas || 0), 0);
+    h += '<div class="lu-mob-resumo"><div><span>Baterias</span><b>' + pend.length + '</b><span>para hoje</span></div><div><span>Questões</span><b>' + meta + '</b><span>planejadas</span></div></div>';
+    h += pend.length ? pend.map((a) => linha(a, false)).join('') : '<div class="lu-mob-vazio">Nenhuma bateria pendente para hoje.</div>';
+    if (feitas.length) h += '<div class="lu-mob-secao">Feitas hoje (' + feitas.length + ')</div>' + feitas.map((a) => linha(a, true)).join('');
+    h += '<button type="button" class="lu-btn-sec" onclick="lumenIrArea(\'questoes\')">Abrir área completa de questões</button>';
+    el.innerHTML = h;
+  }
+  window.lumenResolverQuestoes = function (idM, idT, q) {
+    irArea('questoes');
+    try { if (typeof window.atalhoRegistrarEstudo === 'function') window.atalhoRegistrarEstudo(idM, idT, q); } catch (e) { /* ignora */ }
+  };
+  function renderMobMais() {
+    const el = $('luMobMais'); if (!el) return;
+    const item = (rot, acao) => '<button type="button" onclick="' + acao + '"><span>' + rot + '</span>' + svg('seta') + '</button>';
+    const escuro = document.documentElement.classList.contains('dark');
+    el.innerHTML = '<div class="lu-mob-titulo" style="margin-top:4px">Mais</div>' +
+      '<div class="lu-mob-menu">' + item('Desempenho', "lumenIrArea('desempenho')") + item('Cronograma completo', "lumenIrArea('organizacao')") + item('Questões (área completa)', "lumenIrArea('questoes')") + '</div>' +
+      '<div class="lu-mob-menu">' + item('Matérias e tópicos', "lumenIrArea('organizacao'); irParaAba('cadastros')") + item('Configurações de estudo', "lumenIrArea('organizacao'); irParaAba('config')") + item('+ Estudei a teoria hoje', 'abrirModalTeoriaHoje()') + '</div>' +
+      '<div class="lu-mob-menu">' + item('Meu perfil e personalização', 'abrirModalPerfil()') + item(escuro ? 'Modo claro' : 'Modo escuro', 'alternarTemaGlobal(); setTimeout(function(){lumenAbrirAbaMob(\'mais\')},50)') + item('Sincronizar agora', 'carregarSistema()') + item('Exportar relatório (.xlsx)', 'exportarRelatorioExcel()') + item('Credenciais Supabase', 'abrirModalConexaoSupabase()') + '</div>';
+  }
+  function atualizarBolinhas() {
+    const n = contarCartoesHoje(), bc = $('luBolCartoes');
+    if (bc) { bc.hidden = !n; bc.textContent = n || ''; }
+    const q = atividadesQuestoes().filter((a) => a.situacao !== 'Realizada').length, bq = $('luBolQuest');
+    if (bq) { bq.hidden = !q; bq.textContent = q || ''; }
+  }
+  /* esconde o rodapé enquanto a resolução de cartões está aberta (ela fica intocada) */
+  function vigiarPlayer() {
+    const pl = $('fcSessaoPlayer');
+    const on = !!(pl && !pl.classList.contains('hidden') && pl.offsetParent !== null);
+    document.body.classList.toggle('lu-player-on', on);
+  }
+  function aplicarModo() {
+    const mob = ehMobile();
+    document.body.classList.toggle('lu-mob-on', mob);
+    if (mob) { montarMobile(); if (!document.body.className.match(/lu-tab-/)) abrirAbaMob('estudo'); }
+    else document.body.classList.remove('lu-tab-estudo', 'lu-tab-cartoes', 'lu-tab-questoes', 'lu-tab-mais', 'lu-tab-area');
+  }
+
+  function iniciar() {
+    prepararNav();
+    criarAreaDesempenho();
+    aplicarModo();
+    window.matchMedia('(max-width: 767px)').addEventListener('change', aplicarModo);
+    setInterval(() => {
+      vigiarPlayer();
+      if (!ehMobile()) return;
+      atualizarBolinhas();
+      if (abaMob === 'estudo' && !document.hidden) { const sig = assinaturaHoje(); if (sig !== ultimaAssinatura) renderMobHoje(); }
+      if (abaMob === 'questoes' && !document.hidden) { const sq = JSON.stringify(atividadesQuestoes().map((a) => [a.idTopico, a.situacao, a.resolvidasTotal])); if (sq !== ultimaAssQ) { ultimaAssQ = sq; renderMobQuestoes(); } }
+    }, 700);
+    window.addEventListener('gr-sync-pronto', () => setTimeout(() => { if (ehMobile() && abaMob === 'estudo') renderMobHoje(); if (areaAtual === 'desempenho') renderDesempenho(); }, 600));
+    window.addEventListener('gr-doc-sincronizado', () => { if (ehMobile() && abaMob === 'estudo') renderMobHoje(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(iniciar, 0)); else setTimeout(iniciar, 0);
 })();
 </script>
 </body>
