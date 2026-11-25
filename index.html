@@ -595,7 +595,14 @@
     }
 
     /* puxa da nuvem, mescla com o aparelho e, se o aparelho tinha novidades, envia */
+    /* (2026-11-25) "segurar" documentos por alguns segundos: enquanto o Ctrl+Z dos cartões puder desfazer
+       uma resposta, o progresso fica só no aparelho (marcado como pendente) e sobe para a nuvem depois */
+    const docsSegurados = {};
+    function docSegurado(c) { return Number(docsSegurados[c] || 0) > Date.now(); }
+    function segurarDocs(lista, ms) { const ate = Date.now() + Math.max(0, Number(ms || 0)); (lista || []).forEach((c) => { docsSegurados[c] = ate; }); }
+    function liberarDocs(lista) { (lista || Object.keys(docsSegurados)).forEach((c) => { delete docsSegurados[c]; }); }
     async function sincronizarDoc(c, opts) {
+      if (docSegurado(c)) { DOCS.marcar(c); return { mudouLocal: false }; }
       const d = DEF_DOCS[c];
       for (let tentativa = 0; tentativa < 6; tentativa++) {
         const nuvem = await lerDocNuvem(c);
@@ -823,8 +830,9 @@
         else { agendarEnvio(200); verificarDocsLocais(); verificarRemoto(false); }
       });
       window.addEventListener('focus', () => verificarRemoto(false));
-      window.addEventListener('pagehide', () => { verificarDocsLocais(); });
+      window.addEventListener('pagehide', () => { liberarDocs(); verificarDocsLocais(); });
       window.addEventListener('beforeunload', (e) => {
+        liberarDocs();
         verificarDocsLocais();
         /* a fila fica guardada no aparelho; apenas avisa se ainda não foi enviada */
         if (LS.get(K_FILA, []).length && navigator.onLine) { e.preventDefault(); e.returnValue = ''; }
@@ -885,6 +893,8 @@
       dispositivoId,
       garantirLogin,
       marcarDoc,
+      segurarDocs,
+      liberarDocs,
       ehDoc: (c) => DOCS.ehDoc(c),
       estado,
       atualizarIndicador,
@@ -3928,7 +3938,7 @@
                   <!-- Botão Virar (Lei Seca / Decoreba) -->
                   <div id="fcBarraVirarCard" class="hidden flex justify-center">
                     <button type="button" onclick="revelarVersoCardAtualFC()" class="w-full md:w-auto min-w-[260px] py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow transition">
-                      Virar Cartão e Ver Explicação Completa [Espaço]
+                      Virar Cartão e Ver Explicação Completa [Espaço / Enter]
                     </button>
                   </div>
 
@@ -3936,11 +3946,11 @@
                   <div id="fcBarraCertoErradoPdfBase" class="hidden grid grid-cols-2 gap-3 max-w-md mx-auto">
                     <button type="button" onclick="julgarCardCertoErradoFC('CERTO')" class="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-1.5">
                       <span>CERTO</span>
-                      <span class="text-[10px] opacity-80 font-mono hidden sm:inline">[C]</span>
+                      <span class="text-[10px] opacity-80 font-mono hidden sm:inline">[C / +]</span>
                     </button>
                     <button type="button" onclick="julgarCardCertoErradoFC('ERRADO')" class="py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow transition flex items-center justify-center gap-1.5">
                       <span>ERRADO</span>
-                      <span class="text-[10px] opacity-80 font-mono hidden sm:inline">[E]</span>
+                      <span class="text-[10px] opacity-80 font-mono hidden sm:inline">[E / −]</span>
                     </button>
                   </div>
 
@@ -23298,6 +23308,268 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     window.addEventListener('gr-doc-sincronizado', () => { if (ehMobile() && abaMob === 'estudo') renderMobHoje(); });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(iniciar, 0)); else setTimeout(iniciar, 0);
+})();
+</script>
+<script>
+/* ==========================================================================
+ * CARTÕES — DESFAZER (Ctrl+Z) E ATALHOS EXTRAS (2026-11-25)
+ *  • Ctrl+Z (ou ⌘+Z): volta ao cartão anterior, na frente, desfazendo tudo o que a última resposta
+ *    registrou (fila, bloco, contadores, histórico, decoreba do dia e agendamento no banco).
+ *    Pode ser apertado várias vezes seguidas (até 15 respostas), enquanto o estudo estiver em andamento.
+ *  • + / − : mesmo que C / E nos cartões de Certo ou Errado (só na frente do cartão).
+ *  • Enter : vira os cartões de memorização (decoreba / lei seca), como o Espaço.
+ * ========================================================================== */
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const sessao = () => (typeof FC_SESSAO !== 'undefined' ? FC_SESSAO : null);
+  const avisar = (m, erro) => { try { notificar(m, Boolean(erro)); } catch (e) { console.log(m); } };
+  const hoje = () => ((typeof ESTADO !== 'undefined' && ESTADO && ESTADO.hojeYMD) ? ESTADO.hojeYMD : formatarDataYMD_(new Date()));
+
+  const LIMITE = 15;
+  const JANELA_MS = 90000; /* tempo em que o progresso fica só no aparelho, para o desfazer ser exato */
+  const DOCS = ['GR_FC_TELEMETRIA_JSON', 'GR_FC_CICLO_INTELIGENTE_JSON', 'GR_FCX_CICLO_JSON', 'GR_HIST_JSON', 'GR_DEC_STATS_JSON'];
+  const CAMPOS_BLOCO = ['respondidosSet', 'dominadosSet', 'emReforcoSet', 'statusPorCard', 'acertosPorCard', 'concluido'];
+  const CAMPOS_DB = 'etapa,intervalo_dias,fator_facilidade,data_proxima_revisao,ultima_avaliacao,is_novo,total_erros,total_revisoes';
+
+  let pilha = [];
+  let timerJanela = null;
+  let desfazendo = false;
+
+  function chavesLS() {
+    const d = hoje();
+    return ['GR_FC_TELEMETRIA_V2', 'GR_FC_CICLO_INTELIGENTE_V1', 'GR_FCX_CICLO_V2', 'GR_LUMEN_HIST_V1',
+      'GR_LUMEN_HIST_IDS_' + d, 'GR_DEC_STATS_' + d, 'GR_DEC_FEITOS_' + d];
+  }
+  function clonar(v) {
+    if (typeof structuredClone === 'function') return structuredClone(v);
+    return JSON.parse(JSON.stringify(v));
+  }
+  const playerVisivel = () => { const p = $('fcSessaoPlayer'); return Boolean(p && !p.classList.contains('hidden')); };
+  const diagVisivel = () => { const p = $('fcPainelDiagnosticoFinal'); return Boolean(p && !p.classList.contains('hidden')); };
+  function idSessao(S) {
+    if (!S.__undoSessao) S.__undoSessao = 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    return S.__undoSessao;
+  }
+  const marcaApresentacao = (S) => String(S.cardAtual && S.cardAtual.id) + '#' + Number(S.respostasComputadas || 0);
+
+  function limparPilha() {
+    pilha = [];
+    if (timerJanela) { clearTimeout(timerJanela); timerJanela = null; }
+    atualizarBotoes();
+  }
+  function prorrogarJanela() {
+    try { if (window.SYNC && window.SYNC.segurarDocs) window.SYNC.segurarDocs(DOCS, JANELA_MS); } catch (e) { /* ignora */ }
+    if (timerJanela) clearTimeout(timerJanela);
+    /* passada a janela, o progresso sobe para a nuvem e as respostas anteriores deixam de poder ser desfeitas */
+    timerJanela = setTimeout(() => { timerJanela = null; pilha = []; atualizarBotoes(); }, JANELA_MS - 1500);
+  }
+
+  /* fotografa o estado ANTES da 1ª ação sobre o cartão que está na tela */
+  function capturar() {
+    if (desfazendo) return;
+    const S = sessao();
+    if (!S || !S.cardAtual) return;
+    const sid = idSessao(S);
+    if (pilha.length && pilha[pilha.length - 1].sid !== sid) pilha = [];
+    const marca = marcaApresentacao(S);
+    const topo = pilha[pilha.length - 1];
+    if (topo && topo.marca === marca) { prorrogarJanela(); return; }
+    let foto;
+    try {
+      const ref = S.refBlocoEstado;
+      S.refBlocoEstado = null;
+      try { foto = clonar(S); } finally { S.refBlocoEstado = ref; }
+      const bloco = {};
+      if (ref) CAMPOS_BLOCO.forEach((k) => { if (k in ref) bloco[k] = clonar(ref[k]); });
+      const ls = {};
+      chavesLS().forEach((k) => { ls[k] = localStorage.getItem(k); });
+      pilha.push({ sid, marca, sessao: foto, bloco: ref ? bloco : null, ls, supa: [] });
+      if (pilha.length > LIMITE) pilha.shift();
+    } catch (e) {
+      console.warn('[desfazer] não foi possível guardar o estado do cartão', e);
+      return;
+    }
+    prorrogarJanela();
+    atualizarBotoes();
+  }
+
+  function envolver(nome, fn) {
+    const orig = window[nome];
+    if (typeof orig !== 'function') return;
+    window[nome] = function () {
+      return fn.apply(this, [orig.bind(this)].concat(Array.prototype.slice.call(arguments)));
+    };
+  }
+  ['julgarCardCertoErradoFC', 'revelarVersoCardAtualFC', 'conferirInterativoFC', 'avaliarCardSessaoFC'].forEach((nome) => {
+    envolver(nome, (orig, ...args) => {
+      const S = sessao();
+      /* só fotografa quando a ação vai de fato acontecer */
+      const age = S && S.cardAtual && (nome === 'avaliarCardSessaoFC' || !S.versoRevelado);
+      if (age) capturar();
+      return orig(...args);
+    });
+  });
+
+  /* "Dominado" grava o novo agendamento no banco: guarda os valores anteriores para poder voltar */
+  envolver('persistirEscalonamentoCardNoSupabase_', async (orig, card, aval) => {
+    const topo = pilha[pilha.length - 1];
+    if (!desfazendo && topo && card && typeof supabaseClient !== 'undefined' && supabaseClient) {
+      const prev = supabaseClient.from('flashcards').select(CAMPOS_DB).eq('id', card.id).limit(1)
+        .then((r) => (r && !r.error && r.data && r.data[0]) || null).catch(() => null);
+      topo.supa.push({ id: card.id, prev });
+      await prev;
+    }
+    return orig(card, aval);
+  });
+
+  async function desfazer() {
+    if (desfazendo) return;
+    const S = sessao();
+    const foto = pilha[pilha.length - 1];
+    if (!S || !foto || foto.sid !== S.__undoSessao) {
+      limparPilha();
+      avisar('Nada para desfazer.');
+      return;
+    }
+    pilha.pop();
+    desfazendo = true;
+    try {
+      prorrogarJanela();
+      /* 1) aparelho: progresso, histórico e decoreba do dia */
+      Object.keys(foto.ls).forEach((k) => {
+        try { if (foto.ls[k] === null) localStorage.removeItem(k); else localStorage.setItem(k, foto.ls[k]); } catch (e) { /* ignora */ }
+      });
+      DOCS.forEach((c) => { try { window.dispatchEvent(new CustomEvent('gr-doc-sincronizado', { detail: { chave: c } })); } catch (e) { /* ignora */ } });
+      try { if (window.SYNC) DOCS.forEach((c) => window.SYNC.marcarDoc(c)); } catch (e) { /* ignora */ }
+
+      /* 2) sessão e bloco */
+      const ref = S.refBlocoEstado;
+      const nova = foto.sessao;
+      nova.refBlocoEstado = ref;
+      if (ref && foto.bloco) CAMPOS_BLOCO.forEach((k) => { if (k in foto.bloco) ref[k] = foto.bloco[k]; });
+      nova.inicioTimestamp = S.inicioTimestamp;
+      nova.segundosDecorridos = S.segundosDecorridos;
+      FC_SESSAO = nova;
+
+      /* 3) se a última resposta tinha encerrado o bloco, reabre o player */
+      if (!playerVisivel()) {
+        const diag = $('fcPainelDiagnosticoFinal');
+        if (diag) diag.classList.add('hidden');
+        const sel = $('fcPainelSelecao');
+        if (sel) sel.classList.add('hidden');
+        const prox = $('fcBtnAvancarProximoBloco');
+        if (prox) prox.classList.add('hidden');
+        $('fcSessaoPlayer').classList.remove('hidden');
+        try { ativarModoTelaCheiaFC_(); } catch (e) { /* ignora */ }
+        try { iniciarCronometroSessaoFC_(); } catch (e) { /* ignora */ }
+      }
+
+      /* 4) recoloca o cartão na tela, de frente */
+      const alvo = nova.cardAtual && nova.cardAtual.id;
+      carregarProximoCardSessaoFC_();
+      const S2 = sessao();
+      if (S2 && alvo != null && (!S2.cardAtual || S2.cardAtual.id !== alvo)) {
+        const i = S2.filaAtiva.findIndex((c) => c && c.id === alvo);
+        if (i > 0) S2.filaAtiva.unshift(S2.filaAtiva.splice(i, 1)[0]);
+        S2.cardAtual = S2.filaAtiva[0];
+        S2.versoRevelado = false;
+        S2.escolhaUsuarioCE = null;
+        S2.inicioCardTimestamp = Date.now();
+        renderizarCardAtualNoPlayerFC_();
+      }
+
+      /* 5) banco: devolve o agendamento anterior do cartão (quando tinha sido marcado como Dominado) */
+      for (const x of foto.supa) {
+        try {
+          const prev = await x.prev;
+          if (prev && typeof supabaseClient !== 'undefined' && supabaseClient) {
+            const r = await supabaseClient.from('flashcards').update(prev).eq('id', x.id);
+            if (r && r.error) throw r.error;
+          }
+        } catch (e) { console.warn('[desfazer] agendamento no banco', e); avisar('Cartão restaurado, mas não consegui desfazer o agendamento no banco.', true); }
+      }
+      avisar('↶ Resposta desfeita — cartão anterior de volta.');
+    } catch (e) {
+      console.warn('[desfazer]', e);
+      avisar('Não foi possível desfazer.', true);
+    } finally {
+      desfazendo = false;
+      atualizarBotoes();
+    }
+  }
+  window.fcDesfazerUltimaResposta = desfazer;
+
+  /* botões visíveis (úteis no celular, onde não há Ctrl+Z) */
+  function criarBotao(id, extra) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.id = id;
+    b.className = 'hidden px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-[11px] transition ' + (extra || '');
+    b.title = 'Volta ao cartão anterior e desfaz a última resposta (Ctrl+Z)';
+    b.textContent = '↶ Desfazer última resposta [Ctrl+Z]';
+    b.onclick = (ev) => { ev.preventDefault(); b.blur(); desfazer(); };
+    return b;
+  }
+  function montarBotoes() {
+    const rod = $('fcCardRodape');
+    if (rod && !$('fcBtnDesfazer')) {
+      const w = document.createElement('div');
+      w.className = 'flex justify-center';
+      w.appendChild(criarBotao('fcBtnDesfazer'));
+      rod.appendChild(w);
+    }
+    const diag = $('fcPainelDiagnosticoFinal');
+    if (diag && !$('fcBtnDesfazerDiag')) {
+      const w = document.createElement('div');
+      w.className = 'flex justify-center mb-2';
+      w.appendChild(criarBotao('fcBtnDesfazerDiag'));
+      diag.insertBefore(w, diag.firstChild);
+    }
+  }
+  function atualizarBotoes() {
+    const S = sessao();
+    const ok = Boolean(S && pilha.length && pilha[pilha.length - 1].sid === S.__undoSessao);
+    ['fcBtnDesfazer', 'fcBtnDesfazerDiag'].forEach((id) => { const b = $(id); if (b) b.classList.toggle('hidden', !ok); });
+  }
+  envolver('carregarProximoCardSessaoFC_', (orig, ...args) => { const r = orig(...args); try { atualizarBotoes(); } catch (e) { /* ignora */ } return r; });
+
+  /* ---------- teclado ---------- */
+  window.addEventListener('keydown', (ev) => {
+    const area = $('area-cartoes');
+    if (!area || area.classList.contains('hidden')) return;
+    const ae = document.activeElement;
+    if (ae && (['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName) || ae.isContentEditable)) return;
+    const S = sessao();
+    const k = ev.key || '';
+
+    /* Ctrl+Z / ⌘+Z — durante o estudo ou na tela de fim do bloco */
+    if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && k.toLowerCase() === 'z') {
+      if (!S || !(playerVisivel() || diagVisivel())) return;
+      ev.preventDefault();
+      desfazer();
+      return;
+    }
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (!playerVisivel() || !S || !S.cardAtual || S.versoRevelado) return;
+    const c = S.cardAtual;
+    const isCE = c.tipo === 'PDF_BASE' || c.tipo === 'CADERNO_ERROS';
+    const interativo = typeof fcEhInterativo_ === 'function' && fcEhInterativo_(c.tipo);
+
+    /* + / − valem como C / E (inclui o teclado numérico) */
+    if (isCE && (k === '+' || k === '-' || k === '−' || ev.code === 'NumpadAdd' || ev.code === 'NumpadSubtract')) {
+      ev.preventDefault();
+      julgarCardCertoErradoFC((k === '+' || ev.code === 'NumpadAdd') ? 'CERTO' : 'ERRADO');
+      return;
+    }
+    /* Enter vira os cartões de memorização, como o Espaço (os interativos já conferem com Enter) */
+    if ((k === 'Enter' || ev.code === 'NumpadEnter') && !isCE && !interativo) {
+      ev.preventDefault();
+      revelarVersoCardAtualFC();
+    }
+  });
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montarBotoes); else montarBotoes();
 })();
 </script>
 </body>
