@@ -23572,5 +23572,138 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montarBotoes); else montarBotoes();
 })();
 </script>
+<script>
+/* ========================================================================
+ * PONTE LUMEN → LUMEN FOCO
+ * Publica o plano de execução que o Lumen já calcula (leitura por PDF e parte,
+ * baterias de questões e cartões do dia) na chave LUMEN_FOCO_PLANO_JSON.
+ * Só lê o estado do Lumen; não altera nenhum dado dele.
+ * ======================================================================== */
+(function () {
+  'use strict';
+  var CHAVE = 'LUMEN_FOCO_PLANO_JSON';
+  var DIAS_FRENTE = 14, DIAS_ATRAS = 45;
+  var ultimaAssinatura = '';
+  var timer = null;
+
+  function ymd(d) { var z = function (n) { return String(n).padStart(2, '0'); }; return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); }
+  function somar(s, n) { var p = s.split('-').map(Number); var d = new Date(p[0], p[1] - 1, p[2]); d.setDate(d.getDate() + n); return ymd(d); }
+  function cota(st, n, p) {
+    if (typeof window.fcxCotaCelula === 'function') return Number(window.fcxCotaCelula(st, n, p) || 0);
+    var pag = Math.max(0, Number(st.paginas || 0)); return Math.floor(pag / n) + (p < (pag % n) ? 1 : 0);
+  }
+  function exigida(st, n, p) {
+    if (typeof window.fcxCelulaExigida === 'function') return !!window.fcxCelulaExigida(st, n, p);
+    return Number(st.paginas || 0) === 0 ? true : cota(st, n, p) > 0;
+  }
+  function ehLeiSeca(st) { try { if (typeof ehItemLeiSeca_ === 'function') return !!ehItemLeiSeca_(st); } catch (e) { /* ignora */ } return st && st.categoria === 'LEI_SECA'; }
+  function cartoesHoje() { var b = document.getElementById('badgeMenuDecoreba'); var n = b ? parseInt((b.textContent || '').replace(/\D+/g, ''), 10) : NaN; return isNaN(n) ? null : n; }
+
+  function montarPlano() {
+    if (typeof CRON_METAS === 'undefined' || !Array.isArray(CRON_METAS) || !CRON_METAS.length) return null;
+    if (typeof ESTADO === 'undefined' || !ESTADO) return null;
+    /* garante datas fixas das partes e status derivado, como o próprio Lumen faz ao abrir o Hoje */
+    try { if (typeof window.fcxPlanoDeHoje === 'function') window.fcxPlanoDeHoje(); } catch (e) { /* ignora */ }
+    var hoje = ESTADO.hojeYMD || ymd(new Date());
+    var ate = somar(hoje, DIAS_FRENTE), desde = somar(hoje, -DIAS_ATRAS);
+    var itens = [];
+
+    /* 1) Leitura: uma célula por (meta, parte, PDF) — exatamente a unidade de controle do Lumen */
+    CRON_METAS.forEach(function (m) {
+      try {
+        if (typeof window.fcxDerivarStatusMeta === 'function') window.fcxDerivarStatusMeta(m);
+        var n = Math.max(1, Number(m.totalPartes || 1));
+        (m.detalhesPartes || []).forEach(function (pt, p) {
+          var data = pt.dataPlanejada || pt.dataPrevistaParte || '';
+          if (!data || data > ate) return;
+          (m.subtopicos || []).forEach(function (st, i) {
+            if (!exigida(st, n, p)) return;
+            var cel = (st.partesStatus || [])[p] || {};
+            /* passado: só o que ainda está pendente (atrasado) ou foi concluído hoje */
+            if (data < hoje && cel.concluida && cel.data !== hoje) return;
+            if (data < desde && cel.concluida) return;
+            var q = cota(st, n, p);
+            var ini = 0; for (var k = 0; k < p; k++) ini += cota(st, n, k);
+            itens.push({
+              id: 'L|' + m.id + '|' + p + '|' + i,
+              tipo: ehLeiSeca(st) ? 'leitura_lei' : 'leitura_pdf',
+              data: data,
+              materia: m.materia || '',
+              meta: m.topico || '',
+              semana: m.numeroSemana || null,
+              numeroMeta: m.numeroMeta || null,
+              parte: p + 1, totalPartes: n,
+              nome: st.nome || m.topico || '',
+              paginas: q,
+              paginaInicial: q > 0 ? ini + 1 : null,
+              paginaFinal: q > 0 ? ini + q : null,
+              paginasPdf: Number(st.paginas || 0) || null,
+              tempo: m.sumulas || m.detalhesSumulas || '',
+              concluida: !!cel.concluida,
+              dataConclusao: cel.data || ''
+            });
+          });
+        });
+      } catch (e) { /* uma meta com problema não derruba o plano */ }
+    });
+
+    /* 2) Baterias de questões de hoje: a fila que o Lumen montou (respeita o limite diário) */
+    var idsHoje = {};
+    ((ESTADO.painel && ESTADO.painel.atividadesHoje) || []).forEach(function (a) {
+      idsHoje[a.idRevisao] = 1;
+      itens.push({
+        id: 'Q|' + a.idRevisao, tipo: 'questoes', data: a.dataPlanejada || hoje,
+        materia: a.materia || '', idMateria: a.idMateria || null, nome: a.topico || '', idTopico: a.idTopico || null,
+        etapa: a.etapaLabel || '', questoes: Number(a.questoesPlanejadas || 0), ordem: a.ordemNoDia || null,
+        concluida: false
+      });
+    });
+    /* baterias já feitas hoje e revisões futuras previstas */
+    (ESTADO.revisoes || []).forEach(function (r) {
+      if (idsHoje[r.id]) return;
+      if (r.status === 'Concluída') {
+        if (r.dataConclusao === hoje) itens.push({ id: 'Q|' + r.id, tipo: 'questoes', data: hoje, materia: r.materia || '', idMateria: r.idMateria || null, nome: r.topico || '', etapa: 'Etapa ' + r.etapa + '/' + r.totalEtapas, questoes: null, concluida: true, dataConclusao: hoje });
+        return;
+      }
+      var d = r.dataPrevistaAtual || '';
+      if (!d || d <= hoje || d > ate) return; /* atrasadas além do limite do dia: o Lumen as recoloca na fila dos próximos dias */
+      itens.push({ id: 'Q|' + r.id, tipo: 'questoes', data: d, materia: r.materia || '', idMateria: r.idMateria || null, nome: r.topico || '', etapa: 'Etapa ' + r.etapa + '/' + r.totalEtapas + ' (previsão)', questoes: null, previsao: true, concluida: false });
+    });
+
+    /* 3) Cartões do dia */
+    var nc = cartoesHoje();
+    if (nc !== null) itens.push({ id: 'C|' + hoje, tipo: 'cartoes', data: hoje, nome: 'Cartões do dia', cartoes: nc, concluida: nc === 0 });
+
+    var materias = ((ESTADO.materias) || []).map(function (x) { return { id: x.id, nome: x.nome, ordem: x.ordem, status: x.status }; });
+    return { versao: 1, geradoEm: new Date().toISOString(), hoje: hoje, ate: ate, materias: materias, itens: itens };
+  }
+
+  async function publicar(forcar) {
+    try {
+      if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+      var plano = montarPlano();
+      if (!plano) return;
+      var ass = JSON.stringify([plano.hoje, plano.itens]);
+      if (!forcar && ass === ultimaAssinatura) return;
+      ultimaAssinatura = ass;
+      await supabaseClient.from('configuracoes').upsert(
+        { chave: CHAVE, valor: JSON.stringify(plano), descricao: 'Plano de execução publicado para o Lumen Foco' },
+        { onConflict: 'chave' }
+      );
+      window.__LUMEN_FOCO_ULTIMO__ = { em: plano.geradoEm, itens: plano.itens.length };
+    } catch (e) { console.warn('[Lumen Foco] ponte: falha ao publicar', e); }
+  }
+  function agendar() { clearTimeout(timer); timer = setTimeout(publicar, 2500); }
+
+  window.lumenFocoPublicar = function () { return publicar(true); };
+  window.lumenFocoPlano = montarPlano;
+  /* publica ao abrir, a cada 30 s se algo mudou, ao voltar para a aba e após cliques/edições */
+  setTimeout(function () { publicar(true); }, 8000);
+  setInterval(publicar, 30000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') agendar(); });
+  document.addEventListener('click', agendar, true);
+  document.addEventListener('change', agendar, true);
+})();
+</script>
 </body>
 </html>
