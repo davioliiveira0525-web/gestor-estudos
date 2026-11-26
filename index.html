@@ -18717,6 +18717,8 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
     });
   }
 
+  window.fcxDadosRevisoesDoDia = dadosRevisoesDoDia; /* usado pela ponte do Lumen Foco */
+
   function htmlTopicoRevisao(d) {
     const a = d.a, id = a.idTopico;
     const pct = d.cards.length ? Math.round((d.dom / d.cards.length) * 100) : 0;
@@ -23649,13 +23651,27 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
 
     /* 2) Baterias de questões de hoje: a fila que o Lumen montou (respeita o limite diário) */
     var idsHoje = {};
+    var aq = {};
+    try { (typeof window.fcxDadosRevisoesDoDia === 'function' ? window.fcxDadosRevisoesDoDia() : []).forEach(function (d) { aq[d.a.idTopico] = d; }); } catch (e) { /* ignora */ }
     ((ESTADO.painel && ESTADO.painel.atividadesHoje) || []).forEach(function (a) {
       idsHoje[a.idRevisao] = 1;
+      var feita = a.situacao === 'Realizada';
+      /* aquecimento: cartões do mesmo tópico da bateria, feitos antes das questões no TEC */
+      var d = aq[a.idTopico];
+      if (d) {
+        var nb = (d.blocos || []).length;
+        itens.push({
+          id: 'A|' + a.idRevisao, tipo: 'aquecimento', data: a.dataPlanejada || hoje,
+          materia: a.materia || '', idMateria: a.idMateria || null, nome: a.topico || '', idTopico: a.idTopico || null,
+          cartoes: (d.cards || []).length, revisadosHoje: d.feitosHoje || 0, blocos: nb, blocosConcluidos: d.bConc || 0,
+          ordem: a.ordemNoDia || null, concluida: feita || (nb > 0 && d.bConc >= nb)
+        });
+      }
       itens.push({
         id: 'Q|' + a.idRevisao, tipo: 'questoes', data: a.dataPlanejada || hoje,
         materia: a.materia || '', idMateria: a.idMateria || null, nome: a.topico || '', idTopico: a.idTopico || null,
         etapa: a.etapaLabel || '', questoes: Number(a.questoesPlanejadas || 0), ordem: a.ordemNoDia || null,
-        concluida: false
+        concluida: feita
       });
     });
     /* baterias já feitas hoje e revisões futuras previstas */
@@ -23672,10 +23688,10 @@ SELECAO;Quais são os fundamentos da República Federativa do Brasil?;Opções: 
 
     /* 3) Cartões do dia */
     var nc = cartoesHoje();
-    if (nc !== null) itens.push({ id: 'C|' + hoje, tipo: 'cartoes', data: hoje, nome: 'Cartões do dia', cartoes: nc, concluida: nc === 0 });
+    if (nc !== null) itens.push({ id: 'C|' + hoje, tipo: 'decoreba', data: hoje, nome: 'Decoreba do dia', cartoes: nc, concluida: nc === 0 });
 
     var materias = ((ESTADO.materias) || []).map(function (x) { return { id: x.id, nome: x.nome, ordem: x.ordem, status: x.status }; });
-    return { versao: 1, geradoEm: new Date().toISOString(), hoje: hoje, ate: ate, materias: materias, itens: itens };
+    return { versao: 2, geradoEm: new Date().toISOString(), hoje: hoje, ate: ate, materias: materias, itens: itens };
   }
 
   async function publicar(forcar) {
